@@ -1,0 +1,1 @@
+{"ProcessId":37136,"ParentProcessId":26648,"Name":"pwsh.exe","CommandLine":"\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\" -noexit -command \"try { . \\\"c:\\Users\\Lenovo\\AppData\\Local\\Programs\\Microsoft VS Code\\61b3d0ab13\\resources\\app\\out\\vs\\workbench\\contrib\\terminal\\common\\scripts\\shellIntegration.ps1\\\" } catch {}\""}

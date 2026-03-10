@@ -1,0 +1,7 @@
+{
+  "butler_bot": {
+    "script": "butler_bot/butler_bot.py",
+    "config": "configs/butler_bot.json",
+    "description": "管家bot：Cursor CLI 助手，接收飞书命令后由 Agent 处理并回复"
+  }
+}

@@ -1,0 +1,71 @@
+########################
+# 通用缓存 & 构建产物
+########################
+__pycache__/
+*.py[cod]
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+node_modules/
+
+########################
+# 虚拟环境
+########################
+.venv/
+venv/
+
+########################
+# 日志 & 临时文件
+########################
+*.log
+logs/
+*.tmp
+*.temp
+~$*
+
+########################
+# 环境配置 & 本地密钥
+########################
+.env
+.env.*
+*.env
+
+########################
+# 编辑器本地配置
+########################
+.vscode/
+
+########################
+# 与个人记忆/临时工作区相关内容
+########################
+工作区/
+
+########################
+# Butler 运行时状态 & 私有记忆
+########################
+# 运行时快照、状态
+butler_main/butler_bot_code/run/
+
+# agent 最近记忆、状态、私有画像与本地长期记忆默认忽略
+butler_main/butler_bot_agent/agents/recent_memory/
+butler_main/butler_bot_agent/agents/state/
+butler_main/butler_bot_agent/agents/local_memory/*
+
+# local_memory 中允许公开进入仓库的结构文件
+!butler_main/butler_bot_agent/agents/local_memory/readme.md
+!butler_main/butler_bot_agent/agents/local_memory/Butler_SOUL.md
+!butler_main/butler_bot_agent/agents/local_memory/Current_User_Profile.template.md
+!butler_main/butler_bot_agent/agents/local_memory/heartbeat_branch_contract.md
+!butler_main/butler_bot_agent/agents/local_memory/heartbeat_persona_bridge.md
+
+# local_memory 中明确保持私有/运行态的内容
+butler_main/butler_bot_agent/agents/local_memory/Current_User_Profile.private.md
+butler_main/butler_bot_agent/agents/local_memory/.relations.json
+butler_main/butler_bot_agent/agents/local_memory/L0_index.json
+butler_main/butler_bot_agent/agents/local_memory/L1_summaries/
+butler_main/butler_bot_agent/agents/local_memory/L2_details/
+butler_main/butler_bot_agent/agents/local_memory/heartbeat_long_tasks.json
+butler_main/butler_bot_agent/agents/local_memory/heartbeat_planner_state.json
+butler_main/butler_bot_agent/agents/local_memory/local_memory_write_journal.jsonl
+

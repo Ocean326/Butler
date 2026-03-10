@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GuardianRequestV1",
+  "type": "object",
+  "required": [
+    "request_id",
+    "source",
+    "request_type",
+    "title",
+    "reason",
+    "risk_level",
+    "review_status"
+  ],
+  "properties": {
+    "request_id": { "type": "string" },
+    "source": { "type": "string", "enum": ["heartbeat", "butler", "guardian", "user"] },
+    "request_type": { "type": "string", "enum": ["record-only", "auto-fix", "code-fix", "restart", "architecture"] },
+    "title": { "type": "string" },
+    "reason": { "type": "string" },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "files": { "type": "array", "items": { "type": "string" } },
+        "modules": { "type": "array", "items": { "type": "string" } },
+        "runtime_objects": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "planned_actions": { "type": "array", "items": { "type": "string" } },
+    "requires_code_change": { "type": "boolean" },
+    "requires_restart": { "type": "boolean" },
+    "verification": { "type": "array", "items": { "type": "string" } },
+    "rollback": { "type": "array", "items": { "type": "string" } },
+    "risk_level": { "type": "string", "enum": ["low", "medium", "high"] },
+    "review_status": { "type": "string", "enum": ["pending", "approve", "reject", "need-info", "executing", "done", "rolled-back"] },
+    "review_notes": { "type": "array", "items": { "type": "string" } },
+    "execution_notes": { "type": "array", "items": { "type": "string" } },
+    "requested_tests": { "type": "array", "items": { "type": "string" } },
+    "patch_plan": {
+      "type": ["object", "null"],
+      "description": "Required before any code change is executed."
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,12 @@
+[guardian] standard restart: stop heartbeat sidecar
+[guardian] standard restart: restart butler talk
+SUCCESS: The process with PID 37140 (child process of PID 39344) has been terminated.
+SUCCESS: The process with PID 13660 (child process of PID 7216) has been terminated.
+SUCCESS: The process with PID 39344 (child process of PID 7216) has been terminated.
+SUCCESS: The process with PID 7216 (child process of PID 7304) has been terminated.
+已停止 butler_bot (PID=7216) 及子进程
+已启动 butler_bot (PID=29480)，日志: C:\Users\Lenovo\Desktop\研究生\Butler\butler_main\butler_bot_code\logs\butler_bot_20260309_001.log
+[guardian] standard restart: start heartbeat sidecar
+[guardian] heartbeat launcher pid=39064
+[guardian] standard restart: verify health
+[guardian] standard restart completed: butler talk + heartbeat are healthy

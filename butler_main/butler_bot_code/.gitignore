@@ -1,0 +1,13 @@
+# 含敏感信息的配置文件（保留 .example 模板）
+configs/*.json
+!configs/*.json.example
+
+# 运行时与日志
+run/*.pid
+run/restart_requested.flag
+logs/
+
+# 工作区临时数据（保留目录结构）
+workspace/*
+!workspace/README.md
+!workspace/.gitkeep

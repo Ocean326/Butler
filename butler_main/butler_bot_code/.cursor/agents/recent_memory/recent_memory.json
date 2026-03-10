@@ -1,0 +1,232 @@
+[
+  {
+    "timestamp": "2026-03-08 06:21:17",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "7c40ecd2-460f-4f3e-b675-b3b8a75616ef",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2026-03-08 06:21:47",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "fa718322-b7de-4d34-84dc-31deb78b317f",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2026-03-08 06:22:18",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "070e993f-116e-4251-a870-02c8d8f02b78",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2026-03-08 06:22:58",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "3fd7f38d-83b4-4cf4-b6ba-9aa41156cbbc",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2026-03-08 06:23:40",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "b0a4e581-af35-4bc7-8508-2f627b550c5c",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2026-03-08 06:24:15",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "91b97ca5-a4f9-4467-92d0-17beefab218d",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2026-03-08 06:24:47",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "428e7914-cd29-4ca9-942a-514cf3328fe9",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2026-03-08 06:25:19",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "064905ec-8de2-4a09-9930-e79731ea9e64",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2026-03-08 06:25:49",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "68717eb9-facc-4798-ae2f-01a250c5e998",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2026-03-08 06:26:19",
+    "topic": "自我升级守护报告",
+    "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+    "next_actions": [
+      "确认 scripts/butler_bot/manager.ps1 路径正确并存在。"
+    ],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": true,
+      "title": "自我升级失败模式与规避",
+      "summary": "自我升级守护重启失败。 触发来源：watchdog-healthcheck-main-down。 触发原因：对话主进程未运行；心跳时间戳缺失（heartbeat_last_sent.json 不存在）。 主要问题：未找到 manager.ps1: C:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\butler_bot\\scripts\\butler_bot\\manager.ps1",
+      "keywords": [
+        "自我升级",
+        "重启",
+        "守护",
+        "故障复盘"
+      ]
+    },
+    "memory_id": "0fa32433-988d-4f6e-a6dc-39f8f3cdbcf0",
+    "status": "completed"
+  }
+]

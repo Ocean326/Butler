@@ -1,0 +1,52 @@
+{
+  "app_id": "cli_xxxxxxxx",
+  "app_secret": "xxxxxxxx",
+  "workspace_root": "c:\\Users\\Lenovo\\Desktop\\研究生\\Bulter",
+  "agent_model": "auto",
+  "model_aliases": {
+    "fast": "auto",
+    "quick": "auto"
+  },
+  "agent_timeout": 300,
+  "max_reply_len": 4000,
+  "features": {
+    "task_ledger": true,
+    "memory_service": true,
+    "governor": true,
+    "legacy_heartbeat_markdown_mirrors": false
+  },
+  "logging": {
+    "level": "info",
+    "check_interval_seconds": 2,
+    "timestamp": true
+  },
+  "startup_notify_open_id": "",
+  "startup_notify_receive_id_type": "open_id",
+  "heartbeat": {
+    "enabled": false,
+    "app_id": "",
+    "app_secret": "",
+    "every_minutes": 5,
+    "startup_delay_seconds": 300,
+    "align_to_interval": false,
+    "message": "管家bot 心跳正常",
+    "receive_id": "",
+    "receive_id_type": "open_id",
+    "planner_model": "auto",
+    "executor_model": "auto",
+    "always_notify": true,
+    "max_short_tasks": 8,
+    "max_long_tasks_in_prompt": 8,
+    "proactive_talk": {
+      "enabled": true,
+      "min_interval_seconds": 5400,
+      "min_heartbeat_runs_since_last": 3,
+      "min_completed_branches": 2,
+      "max_chars": 220
+    },
+    "task_ledger_enabled": true,
+    "heartbeat_stale_seconds": 600
+  },
+  "_comment_startup_notify": "open_id 须为本应用内获取，否则会报 open_id cross app",
+  "_comment_startup_notify": "open_id 须为本应用获取，否则会报 open_id cross app；可改用 user_id + receive_id_type=user_id"
+}
