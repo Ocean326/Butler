@@ -23,6 +23,18 @@
 
 1. `Butler/guardian/manager.ps1`
 
+### 重启前 Git 快照约定（可回滚）
+
+任何**涉及代码或配置改动**并准备通过 `guardian/manager.ps1` 重启 / 上线 / 回滚时，必须先在 Butler 根目录执行一次完整快照：
+
+```bash
+git status           # 确认当前改动
+git add .            # 暂存当前工作树（含 .gitignore 允许的文件）
+git commit -m "说明本次修改与重启原因"
+```
+
+这样可以保证：一旦重启后效果不佳，可以通过 `git log` / `git revert` / `git reset` 等方式快速回滚到重启前的稳定状态。
+
 禁止继续新增以下类型的脚本：
 
 1. 主工程里新的平行 `restart_*.ps1`
