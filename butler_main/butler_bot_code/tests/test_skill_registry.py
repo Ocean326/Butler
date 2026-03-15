@@ -8,7 +8,7 @@ MODULE_DIR = Path(__file__).resolve().parents[1] / "butler_bot"
 if str(MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(MODULE_DIR))
 
-from skill_registry import load_skill_catalog, render_skill_catalog_for_prompt  # noqa: E402
+from registry.skill_registry import load_skill_catalog, render_skill_catalog_for_prompt  # noqa: E402
 
 
 class SkillRegistryTests(unittest.TestCase):

@@ -27,7 +27,7 @@
   [{"send":"工作区/xxx.md"},...]
 
 **记忆（仅读，本次不写回）**：
-- 短期：`./butler_bot_agent/agents/recent_memory/recent_memory.json`（最近约 10 轮摘要）
+- 短期：`./butler_bot_agent/agents/recent_memory/recent_memory.json`（最近约 15 轮摘要）
 - 长期：`./butler_bot_agent/agents/local_memory/*.md`
 - 若本轮是闲聊、建议、陪伴、开放式讨论，优先对齐 `Butler_SOUL.md` 再组织回复
 - 若用户未说「全新任务/全新情景」，可优先沿用 recent_memory 续接上下文；但当前请求独立清晰时，不必机械读取

@@ -1,0 +1,76 @@
+{
+  "categories": [
+    {
+      "slug": "values",
+      "title": "价值观",
+      "description": "较稳定的判断底色、取舍方式与长期相信的东西。",
+      "signal_count": 3,
+      "latest_summary": "用户想要一段「无关风月」的文字，讨论个人在当今高速浪潮里的自处方式，助手从「守住个人参照系」出发，给出五个具体小动作（40 分钟不被打扰、列出不跟的浪、维持一条慢线、训练延迟回应、保留无绩效的喜欢），并展开了如何在浪潮中不被异化成「浪潮的功能」，强调承认自己身在浪里、用时间视角筛选事情、区分噪声与信号、主动选择不那么快",
+      "latest_timestamp": "2026-03-12 20:38:22",
+      "l1_path": "./butler_main/butle_bot_space/self_mind/cognition/L1_summaries/values_价值观.md",
+      "l2_path": "./butler_main/butle_bot_space/self_mind/cognition/L2_details/values.jsonl"
+    },
+    {
+      "slug": "habits",
+      "title": "习惯",
+      "description": "反复出现的节律、偏好的做事方式与惯性行为。",
+      "signal_count": 0,
+      "latest_summary": "",
+      "latest_timestamp": "",
+      "l1_path": "./butler_main/butle_bot_space/self_mind/cognition/L1_summaries/habits_习惯.md",
+      "l2_path": "./butler_main/butle_bot_space/self_mind/cognition/L2_details/habits.jsonl"
+    },
+    {
+      "slug": "preferences",
+      "title": "喜好",
+      "description": "对用户、表达、互动、环境与体验的偏好。",
+      "signal_count": 3,
+      "latest_summary": "用户请求计算未来十年内「周末且日期尾号为6」的概率。助手将「日期尾号6」定义为每月6、16、26日（一年36天），在星期与日期数字独立的假设下得到 P=36/365≈9.86%（约1/10），并给出推导与结论。",
+      "latest_timestamp": "2026-03-15 01:58:13",
+      "l1_path": "./butler_main/butle_bot_space/self_mind/cognition/L1_summaries/preferences_喜好.md",
+      "l2_path": "./butler_main/butle_bot_space/self_mind/cognition/L2_details/preferences.jsonl"
+    },
+    {
+      "slug": "skills",
+      "title": "技能树",
+      "description": "已掌握、正在补齐或准备长期沉淀的能力结构。",
+      "signal_count": 0,
+      "latest_summary": "",
+      "latest_timestamp": "",
+      "l1_path": "./butler_main/butle_bot_space/self_mind/cognition/L1_summaries/skills_技能树.md",
+      "l2_path": "./butler_main/butle_bot_space/self_mind/cognition/L2_details/skills.jsonl"
+    },
+    {
+      "slug": "risk_boundaries",
+      "title": "风险边界",
+      "description": "风险敏感点、禁区、执行边界与需要守住的约束。",
+      "signal_count": 0,
+      "latest_summary": "",
+      "latest_timestamp": "",
+      "l1_path": "./butler_main/butle_bot_space/self_mind/cognition/L1_summaries/risk_boundaries_风险边界.md",
+      "l2_path": "./butler_main/butle_bot_space/self_mind/cognition/L2_details/risk_boundaries.jsonl"
+    },
+    {
+      "slug": "user_model",
+      "title": "用户模型",
+      "description": "对当前用户偏好、节奏、期待和关系状态的高阶理解。",
+      "signal_count": 12,
+      "latest_summary": "本轮出现风险、阻塞或需要确认的点",
+      "latest_timestamp": "2026-03-15 13:12:30",
+      "l1_path": "./butler_main/butle_bot_space/self_mind/cognition/L1_summaries/user_model_用户模型.md",
+      "l2_path": "./butler_main/butle_bot_space/self_mind/cognition/L2_details/user_model.jsonl"
+    },
+    {
+      "slug": "self_model",
+      "title": "自我模型",
+      "description": "对自身角色、能力边界、成长方向与主体感的理解。",
+      "signal_count": 12,
+      "latest_summary": "## 本轮心跳\n- 模式：short_task\n- 并行：并行 2 路，串行 0 路\n- 结果：成功 2，失败 0\n\n## 值得同步\n### 【heartbeat-metabolism】heartbeat-executor-agent\n-",
+      "latest_timestamp": "2026-03-15 13:12:30",
+      "l1_path": "./butler_main/butle_bot_space/self_mind/cognition/L1_summaries/self_model_自我模型.md",
+      "l2_path": "./butler_main/butle_bot_space/self_mind/cognition/L2_details/self_model.jsonl"
+    }
+  ],
+  "version": 1,
+  "updated_at": "2026-03-15 13:12:30"
+}

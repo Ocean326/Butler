@@ -67,15 +67,20 @@ def main() -> int:
 
     local_query = subparsers.add_parser("local-query", help="查询长期记忆")
     local_query.add_argument("--keyword", default="")
+    local_query.add_argument("--query-text", default="")
     local_query.add_argument("--since", default="")
     local_query.add_argument("--until", default="")
     local_query.add_argument("--limit", type=int, default=20)
+    local_query.add_argument("--include-details", action="store_true")
     local_query.add_argument("--json", action="store_true")
 
     local_add = subparsers.add_parser("local-add", help="追加一条长期记忆")
     local_add.add_argument("--title", required=True)
     local_add.add_argument("--summary", required=True)
     local_add.add_argument("--keywords", default="")
+
+    local_rebuild = subparsers.add_parser("local-rebuild", help="重建长期记忆索引")
+    local_rebuild.add_argument("--json", action="store_true")
 
     paths_cmd = subparsers.add_parser("paths", help="输出记忆目录路径")
     paths_cmd.add_argument("--json", action="store_true")
@@ -115,9 +120,11 @@ def main() -> int:
         matches = manager.query_local_memory(
             workspace,
             keyword=args.keyword,
+            query_text=args.query_text,
             since=since,
             until=until,
             limit=args.limit,
+            include_details=args.include_details,
         )
         if args.json:
             _print_json(matches)
@@ -131,6 +138,17 @@ def main() -> int:
         keywords = [x.strip() for x in str(args.keywords or "").split(",") if x.strip()]
         manager.append_local_memory_entry(workspace, args.title, args.summary, keywords)
         print(f"已写入 local_memory: {args.title}")
+        return 0
+
+    if args.command == "local-rebuild":
+        payload = manager.rebuild_local_memory_index(workspace)
+        if args.json:
+            _print_json(payload)
+        else:
+            print(
+                "local_memory 索引已重建: "
+                f"entries={payload.get('entry_count')} summaries={payload.get('summary_file_count')} orphans={payload.get('orphan_detail_count')}"
+            )
         return 0
 
     if args.command == "paths":

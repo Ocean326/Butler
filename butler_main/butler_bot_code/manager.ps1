@@ -291,7 +291,7 @@ function Start-Bot {
     # 配合按天+每文件最多 1000 行的分片策略，避免重启覆盖历史日志。
     $env:PYTHONIOENCODING = "utf-8"
     $pythonExe = Get-PythonExecutable
-    $cmdLine = 'set "BUTLER_EXTERNAL_HEARTBEAT=1" & "' + $pythonExe + '" -X utf8 "' + $bot.Script + '" --config "' + $bot.Config + '" 1>> "' + $logFile + '" 2>> "' + $errFile + '"'
+    $cmdLine = "set `"HTTP_PROXY=`" & set `"HTTPS_PROXY=`" & set `"ALL_PROXY=`" & set `"GIT_HTTP_PROXY=`" & set `"GIT_HTTPS_PROXY=`" & set `"NO_PROXY=localhost,127.0.0.1,::1`" & `"$pythonExe`" -X utf8 `"$($bot.Script)`" --config `"$($bot.Config)`" 1>> `"$logFile`" 2>> `"$errFile`""
     $argList = @('/d', '/c', $cmdLine)
     $p = Start-Process -FilePath "cmd.exe" -ArgumentList $argList -WorkingDirectory (Split-Path -Parent $bot.Script) -WindowStyle Hidden -PassThru
     $p.Id | Out-File -FilePath $pidFile -Encoding utf8
@@ -306,7 +306,7 @@ function Start-Bot {
 
 function Start-HeartbeatSidecar {
     param($Bot)
-    Write-Host "[heartbeat] 已迁移到 guardian，butler manager 不再管理 sidecar"
+    Write-Host "[heartbeat] 现由 butler 主进程内置拉起与看护"
 }
 
 function Stop-HeartbeatSidecar {
@@ -402,7 +402,7 @@ function Show-Status {
         }
     }
 
-    Write-Host "心跳与守护：已迁移到 guardian（请使用 guardian/manager.ps1）"
+    Write-Host "心跳与意识循环：现由 butler 主进程统一管理"
 
 }
 

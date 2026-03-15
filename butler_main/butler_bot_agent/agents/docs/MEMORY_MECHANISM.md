@@ -58,7 +58,7 @@
 
 ### 3.3 长度与压缩
 
-- **长度控制**：如「最近约 10 轮」或「总字符约 10k」（具体可由实现定）。
+- **长度控制**：与 `butler_bot_code/docs/recent_memory_compact_policy.md` 一致，当前为「最近 15 条」、总字符约 15k（TALK_RECENT_MAX_ITEMS=15、TALK_RECENT_MAX_CHARS=15000）。
 - **压缩触发**：超过轮数或长度时，将「较早的条目」压缩：
   - 摘要可合并写入 `recent_archive.md`；
   - 其中 `long_term_candidate.should_write === true` 的条目，择优沉淀到 `local_memory/`（见下），同类记忆优先更新已有文件。

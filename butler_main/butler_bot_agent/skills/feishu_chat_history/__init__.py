@@ -9,6 +9,8 @@ from .chat_history import (
     list_messages,
     list_all_messages,
     download_messages_to_file,
+    get_message_detail,
+    get_chat_id_by_message_id,
 )
 
 __all__ = [
@@ -16,4 +18,6 @@ __all__ = [
     "list_messages",
     "list_all_messages",
     "download_messages_to_file",
+    "get_message_detail",
+    "get_chat_id_by_message_id",
 ]

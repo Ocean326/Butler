@@ -3,12 +3,49 @@
   "app_secret": "xxxxxxxx",
   "workspace_root": "c:\\Users\\Lenovo\\Desktop\\研究生\\Bulter",
   "agent_model": "auto",
+  "cli_runtime": {
+    "active": "cursor",
+    "allow_runtime_override": true,
+    "defaults": {
+      "model": "auto",
+      "profile": "",
+      "speed": "",
+      "config_overrides": [],
+      "extra_args": []
+    },
+    "providers": {
+      "cursor": {
+        "type": "cursor",
+        "enabled": true,
+        "path": "",
+        "known_models": [],
+        "extra_args": []
+      },
+      "codex": {
+        "type": "codex",
+        "enabled": true,
+        "path": "codex",
+        "profile": "",
+        "sandbox": "workspace-write",
+        "ask_for_approval": "never",
+        "skip_git_repo_check": true,
+        "ephemeral": false,
+        "search": false,
+        "known_models": [],
+        "config_overrides_map": {
+          "speed": "model_reasoning_effort"
+        },
+        "extra_args": []
+      }
+    }
+  },
   "model_aliases": {
     "fast": "auto",
     "quick": "auto"
   },
   "agent_timeout": 300,
   "max_reply_len": 4000,
+  "_comment_cursor_cli": "可选 cursor_cli_path 指定 Cursor CLI 可执行文件路径；不设则自动解析 versions 下最新版本或 dist-package",
   "features": {
     "task_ledger": true,
     "memory_service": true,
@@ -22,6 +59,8 @@
   },
   "startup_notify_open_id": "",
   "startup_notify_receive_id_type": "open_id",
+  "tell_user_receive_id": "",
+  "tell_user_receive_id_type": "open_id",
   "heartbeat": {
     "enabled": false,
     "app_id": "",

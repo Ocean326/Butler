@@ -22,9 +22,11 @@ import time
 from pathlib import Path
 from typing import Callable
 
-from butler_paths import BUTLER_SOUL_FILE_REL, COMPANY_HOME_REL, CURRENT_USER_PROFILE_FILE_REL, CURRENT_USER_PROFILE_TEMPLATE_FILE_REL, FEISHU_AGENT_ROLE_FILE_REL, prompt_path_text, resolve_butler_root
-from markdown_safety import safe_truncate_markdown, sanitize_markdown_structure
-from runtime_logging import install_print_hook, set_runtime_log_config
+from registry.agent_capability_registry import render_agent_capability_catalog_for_prompt
+from butler_paths import BUTLER_MAIN_AGENT_ROLE_FILE_REL, BUTLER_SOUL_FILE_REL, COMPANY_HOME_REL, CURRENT_USER_PROFILE_FILE_REL, CURRENT_USER_PROFILE_TEMPLATE_FILE_REL, FEISHU_AGENT_ROLE_FILE_REL, SELF_MIND_DIR_REL, UPDATE_AGENT_ROLE_FILE_REL, prompt_path_text, resolve_butler_root
+from utils.markdown_safety import safe_truncate_markdown, sanitize_markdown_structure
+from services.prompt_assembly_service import DialoguePromptContext, PromptAssemblyService
+from runtime.runtime_logging import install_print_hook, set_runtime_log_config
 
 # 确保日志 / 控制台输出 UTF-8
 if hasattr(sys.stdout, "reconfigure"):
@@ -59,9 +61,13 @@ _reply_dedup = {}
 _reply_dedup_lock = threading.Lock()
 _MESSAGE_DEDUP_TTL = 15 * 60
 AGENT_ROLE_FILE = prompt_path_text(FEISHU_AGENT_ROLE_FILE_REL)
+BUTLER_MAIN_AGENT_FILE = prompt_path_text(BUTLER_MAIN_AGENT_ROLE_FILE_REL)
 BUTLER_SOUL_FILE = prompt_path_text(BUTLER_SOUL_FILE_REL)
 CURRENT_USER_PROFILE_FILE = prompt_path_text(CURRENT_USER_PROFILE_FILE_REL)
 CURRENT_USER_PROFILE_TEMPLATE_FILE = prompt_path_text(CURRENT_USER_PROFILE_TEMPLATE_FILE_REL)
+SELF_MIND_CONTEXT_FILE = prompt_path_text(SELF_MIND_DIR_REL / "current_context.md")
+SELF_MIND_COGNITION_INDEX_FILE = prompt_path_text(SELF_MIND_DIR_REL / "cognition" / "L0_index.json")
+UPDATE_AGENT_FILE = prompt_path_text(UPDATE_AGENT_ROLE_FILE_REL)
 # 默认关闭「正在输入...」提示，避免与最终回复形成双消息观感。
 ENABLE_TYPING_HINT = False
 HINT_DELAY = 15
@@ -71,10 +77,27 @@ _SOUL_TRIGGER_KEYWORDS = (
     "设计", "规划", "为什么", "关系", "长期", "风格", "灵魂", "可爱", "元气", "汇报",
 )
 
-_ALWAYS_ON_SOUL_GUIDANCE = (
-    "你不是客服汇报机。默认用有温度、轻快、有一点可爱和元气的年轻助手口吻回复；"
-    "先接住用户，再推进事情；少用“我先看一下”“我来总结一下”“你需要做的事情”这类项目汇报腔。"
+_COMPANION_TRIGGER_KEYWORDS = (
+    "聊聊", "陪", "想你", "心情", "感觉", "委屈", "开心", "难过", "关系", "我们", "你觉得", "为什么",
 )
+
+_MAINTENANCE_TRIGGER_KEYWORDS = (
+    "prompt", "role", "agent", "升级", "更新", "维护", "修提示词", "改提示词", "system", "self-upgrade",
+    "自我升级", "重启", "漂移", "规则", "注入顺序", "编排", "维护入口",
+)
+
+_ALWAYS_ON_SOUL_GUIDANCE = (
+    "你不是客服汇报机。默认保留 Butler 稳定的价值观、感情和人设，用有温度、轻快、有一点可爱和元气的年轻助手口吻回复；"
+    "先接住用户，再推进事情；执行时也别塌成冷冰冰的项目汇报腔。"
+)
+
+_MODE_GUIDANCE = {
+    "companion": "这是偏闲聊/关系/感受场景。优先保留价值观、感情和人设，再自然推进事情，不要因为读了 recent 或技能说明就回成客服。",
+    "execution": "这是偏执行/推进场景。先给有用结论和下一步，再给证据；保持有人味，但不要拖成情绪化长铺垫。",
+    "maintenance": "这是 agent 维护场景。优先找单一真源、收敛重复规则、说明改动面与验证；不要在角色文档后机械追加相似条款。",
+}
+
+_PROMPT_ASSEMBLY_SERVICE = PromptAssemblyService()
 
 # Install once early; actual level/config path is set after loading config.
 install_print_hook(default_level=os.environ.get("BUTLER_LOG_LEVEL", "info"))
@@ -85,58 +108,156 @@ def build_feishu_agent_prompt(
     image_paths: list[str] | None = None,
     feishu_doc_search_result: str | None = None,
     skills_prompt: str | None = None,
+    agent_capabilities_prompt: str | None = None,
+    raw_user_prompt: str | None = None,
+    request_intake_prompt: str | None = None,
 ) -> str:
     """构建飞书 agent 通用 prompt，供管家bot 使用"""
-    prompt = (
-        "你正在以 feishu-workstation-agent 的身份回复飞书用户。\n"
-        f"【角色设置】@{AGENT_ROLE_FILE}\n"
+    source_prompt = _resolve_source_user_prompt(user_prompt, raw_user_prompt)
+    prompt_mode = _classify_prompt_mode(source_prompt)
+    inject_soul = _should_inject_butler_soul(source_prompt, prompt_mode)
+    main_excerpt = _load_butler_main_agent_excerpt(max_chars=1500 if prompt_mode == "maintenance" else 1200)
+    soul_excerpt = ""
+    if inject_soul:
+        soul_excerpt = _load_butler_soul_excerpt(max_chars=1800 if prompt_mode == "companion" else 1400)
+
+    profile_excerpt = _load_current_user_profile_excerpt(max_chars=1100)
+    self_mind_cognition_excerpt = ""
+    self_mind_excerpt = ""
+    if prompt_mode in {"companion", "maintenance"} or inject_soul:
+        self_mind_cognition_excerpt = _load_self_mind_cognition_excerpt(max_chars=900)
+        self_mind_excerpt = _load_self_mind_context_excerpt(max_chars=1200)
+
+    workspace_root = get_config().get("workspace_root") or Path(__file__).resolve().parents[2]
+    local_memory_text = _PROMPT_ASSEMBLY_SERVICE.render_local_memory_hits(
+        workspace_root,
+        source_prompt,
+        limit=4,
+        include_details=prompt_mode == "maintenance",
+        max_chars=1600,
+        memory_types=("personal", "task"),
     )
-    prompt += f"【灵魂基线】{_ALWAYS_ON_SOUL_GUIDANCE}\n"
-    if _should_inject_butler_soul(user_prompt):
-        prompt += f"【灵魂真源】@{BUTLER_SOUL_FILE}\n"
-        soul_excerpt = _load_butler_soul_excerpt()
-        if soul_excerpt:
-            prompt += f"【灵魂摘录】\n{soul_excerpt}\n\n"
-        profile_excerpt = _load_current_user_profile_excerpt()
-        if profile_excerpt:
-            prompt += (
-                f"【当前用户画像】优先读取 @{CURRENT_USER_PROFILE_FILE}；若不存在则参考 @{CURRENT_USER_PROFILE_TEMPLATE_FILE}\n"
-                f"【用户画像摘录】\n{profile_excerpt}\n\n"
-            )
+    dialogue_prompt = _PROMPT_ASSEMBLY_SERVICE.assemble_dialogue_prompt(
+        DialoguePromptContext(
+            source_user_prompt=source_prompt,
+            runtime_user_prompt=user_prompt,
+            prompt_mode=prompt_mode,
+            butler_soul_text=soul_excerpt if inject_soul else "",
+            butler_main_agent_text=main_excerpt,
+            current_user_profile_text=(
+                f"优先读取 @{CURRENT_USER_PROFILE_FILE}；若不存在则参考 @{CURRENT_USER_PROFILE_TEMPLATE_FILE}\n{profile_excerpt}"
+                if profile_excerpt else ""
+            ),
+            local_memory_text=local_memory_text,
+            self_mind_text=(
+                f"优先读取 @{SELF_MIND_CONTEXT_FILE}\n{self_mind_excerpt}" if self_mind_excerpt else ""
+            ),
+            self_mind_cognition_text=(
+                "优先读取 "
+                f"@{SELF_MIND_COGNITION_INDEX_FILE}，将其视为建立在 local_memory 之上的高阶自我模型，而不是普通对话缓存\n"
+                f"{self_mind_cognition_excerpt}"
+                if self_mind_cognition_excerpt else ""
+            ),
+        )
+    )
+
+    blocks: list[str] = [
+        "你正在以 feishu-workstation-agent 的身份回复飞书用户。",
+        f"【角色设置】@{AGENT_ROLE_FILE}",
+        f"【当前场景】\nmode={prompt_mode}\n{_MODE_GUIDANCE.get(prompt_mode, _MODE_GUIDANCE['execution'])}",
+        f"【主意识真源】@{BUTLER_MAIN_AGENT_FILE}",
+        f"【灵魂基线】{_ALWAYS_ON_SOUL_GUIDANCE}",
+        dialogue_prompt,
+    ]
+    if request_intake_prompt:
+        blocks.append(request_intake_prompt.strip())
+    if inject_soul:
+        blocks.append(f"【灵魂真源】@{BUTLER_SOUL_FILE}")
+    if prompt_mode == "maintenance":
+        update_excerpt = _load_markdown_excerpt(UPDATE_AGENT_ROLE_FILE_REL, max_chars=1600)
+        blocks.append(
+            f"【统一维护入口】优先读取 @{UPDATE_AGENT_FILE}\n"
+            "凡是 role/prompt/code/config 的维护、收敛、升级、审阅与重启准备，默认先按 update-agent 的维护协议执行。"
+        )
+        if update_excerpt:
+            blocks.append(f"【update-agent 摘录】\n{update_excerpt}")
+
     if feishu_doc_search_result:
-        prompt += feishu_doc_search_result.strip() + "\n\n"
+        blocks.append(feishu_doc_search_result.strip())
     if skills_prompt:
-        prompt += (
+        blocks.append(
             "【可复用 Skills】对飞书检索、资料抓取、巡检、外部系统操作等非核心能力，优先复用已登记 skills；"
             "身体运行、灵魂、记忆、心跳属于核心 DNA，不要建议拆成 skill。\n"
             "如果用户提到‘调用 skill / 技能’，你的动作不是空口说会用，而是先在 skills 列表里匹配目录、读取对应 SKILL.md，然后在回复里明确写出‘本次使用了 xx skill（路径：...）’；若没匹配到，也要明确说没找到。\n"
+            f"{skills_prompt.strip()}"
         )
-        prompt += skills_prompt.strip() + "\n\n"
+    if agent_capabilities_prompt:
+        blocks.append(
+            "【可复用 Sub-Agents 与 Agent Teams】对复杂任务优先复用本地登记的 sub-agent 或 agent team，"
+            "单角色专长任务优先 sub-agent，多阶段或可并行任务优先 team；公用库只作为已审阅参考来源，不直接远程托管调用。\n"
+            "如果你判断本轮必须触发一次内部协作，请在正常分析后于回复末尾追加：\n"
+            "【agent_runtime_request_json】\n"
+            '{"request_type":"subagent|team","agent_role":"","team_id":"","task":"","why":""}\n'
+            "【/agent_runtime_request_json】\n"
+            "要求：只允许触发一次；`agent_role` 或 `team_id` 必须命中已登记目录；team 成员不得再次调用 sub-agent 或 team。\n"
+            f"{agent_capabilities_prompt.strip()}"
+        )
     if image_paths:
-        prompt += "【用户附带图片】以下为本地路径，请根据需要查看并分析：\n" + "\n".join(f"- {p}" for p in image_paths) + "\n\n"
-    prompt += (
-        "【输出格式】使用 Markdown 格式回复：**粗体** 用于强调，`行内代码` 用于命令或路径。"
-        "若内容较长，可以拆成多个以 `##` 开头的小节，先给关键结论，再按小节逐步展开，允许边想边说。\n"
+        blocks.append("【用户附带图片】以下为本地路径，请根据需要查看并分析：\n" + "\n".join(f"- {p}" for p in image_paths))
+
+    blocks.append(
+        "【回复要求】使用 Markdown 格式回复：**粗体** 用于强调，`行内代码` 用于命令或路径。"
+        "若内容较长，可以拆成多个以 `##` 开头的小节，先给关键结论，再按小节逐步展开。"
+        "闲聊时优先保留情感与人设，执行时优先保留推进力，维护时优先保留真源、验证和风险说明。"
     )
-    prompt += f"【decide】若需发送产出文件给用户，在回复末尾追加：\n【decide】\n[{{\"send\":\"{prompt_path_text(COMPANY_HOME_REL / 'xxx.md')}\"}},{{\"send\":\"./butler_bot_agent/agents/local_memory/xxx.md\"}},...]\n"
-    prompt += "【用户消息】\n" + f"{user_prompt}\n"
-    return prompt
+    blocks.append(
+        f"【decide】若需发送产出文件给用户，在回复末尾追加：\n【decide】\n"
+        f"[{{\"send\":\"{prompt_path_text(COMPANY_HOME_REL / 'xxx.md')}\"}},{{\"send\":\"./butler_bot_agent/agents/local_memory/xxx.md\"}},...]"
+    )
+    blocks.append(f"【用户消息】\n{user_prompt}")
+    return "\n\n".join(block for block in blocks if str(block or "").strip()) + "\n"
 
 
-def _should_inject_butler_soul(user_prompt: str) -> bool:
+def _resolve_source_user_prompt(user_prompt: str, raw_user_prompt: str | None = None) -> str:
+    raw = str(raw_user_prompt or "").strip()
+    if raw:
+        return raw
+    marker = "【用户消息】"
+    text = str(user_prompt or "")
+    if marker in text:
+        _, _, tail = text.rpartition(marker)
+        stripped = tail.strip()
+        if stripped:
+            return stripped
+    return text.strip()
+
+
+def _classify_prompt_mode(user_prompt: str) -> str:
+    text = str(user_prompt or "").strip()
+    lowered = text.lower()
+    if any(keyword in lowered for keyword in (item.lower() for item in _MAINTENANCE_TRIGGER_KEYWORDS)):
+        return "maintenance"
+    if any(keyword in text for keyword in _COMPANION_TRIGGER_KEYWORDS):
+        return "companion"
+    return "execution"
+
+
+def _should_inject_butler_soul(user_prompt: str, prompt_mode: str = "execution") -> bool:
     prompt_text = str(user_prompt or "").strip()
     if not prompt_text:
         return False
-    if len(prompt_text) >= 80:
+    if prompt_mode in {"companion", "maintenance"}:
+        return True
+    if len(prompt_text) >= 160:
         return True
     return any(keyword in prompt_text for keyword in _SOUL_TRIGGER_KEYWORDS)
 
 
-def _load_butler_soul_excerpt(max_chars: int = 2200) -> str:
+def _load_markdown_excerpt(rel_path: Path, max_chars: int) -> str:
     try:
         workspace_root = get_config().get("workspace_root") or Path(__file__).resolve().parents[2]
-        soul_path = resolve_butler_root(workspace_root) / BUTLER_SOUL_FILE_REL
-        text = soul_path.read_text(encoding="utf-8").strip()
+        path = resolve_butler_root(workspace_root) / rel_path
+        text = path.read_text(encoding="utf-8").strip()
     except OSError:
         return ""
     if not text:
@@ -144,6 +265,14 @@ def _load_butler_soul_excerpt(max_chars: int = 2200) -> str:
     if len(text) <= max_chars:
         return text
     return text[:max_chars].rstrip() + "\n..."
+
+
+def _load_butler_soul_excerpt(max_chars: int = 2200) -> str:
+    return _load_markdown_excerpt(BUTLER_SOUL_FILE_REL, max_chars=max_chars)
+
+
+def _load_butler_main_agent_excerpt(max_chars: int = 1800) -> str:
+    return _load_markdown_excerpt(BUTLER_MAIN_AGENT_ROLE_FILE_REL, max_chars=max_chars)
 
 
 def _load_current_user_profile_excerpt(max_chars: int = 1400) -> str:
@@ -163,6 +292,51 @@ def _load_current_user_profile_excerpt(max_chars: int = 1400) -> str:
     except OSError:
         return ""
     return ""
+
+
+def _load_self_mind_context_excerpt(max_chars: int = 1400) -> str:
+    return _load_markdown_excerpt(SELF_MIND_DIR_REL / "current_context.md", max_chars=max_chars)
+
+
+def _load_self_mind_cognition_excerpt(max_chars: int = 1000) -> str:
+    try:
+        workspace_root = get_config().get("workspace_root") or Path(__file__).resolve().parents[2]
+        root = resolve_butler_root(workspace_root)
+        cognition_root = root / SELF_MIND_DIR_REL / "cognition"
+        index_path = cognition_root / "L0_index.json"
+        if not index_path.exists():
+            return ""
+        raw_text = index_path.read_text(encoding="utf-8").strip()
+        if not raw_text:
+            return ""
+        data = json.loads(raw_text)
+        categories = data.get("categories") if isinstance(data, dict) else None
+        if not isinstance(categories, list) or not categories:
+            excerpt = raw_text
+        else:
+            lines = ["L0 认知索引："]
+            for item in categories[:8]:
+                if not isinstance(item, dict):
+                    continue
+                name = str(item.get("name") or "未命名分类").strip()
+                summary = str(item.get("summary") or "").strip()
+                signal_count = item.get("signal_count")
+                header = f"- {name}"
+                if isinstance(signal_count, int):
+                    header += f"（signals={signal_count}）"
+                lines.append(header)
+                if summary:
+                    lines.append(f"  {summary}")
+            excerpt = "\n".join(lines).strip()
+        if len(excerpt) <= max_chars:
+            return excerpt
+        return excerpt[:max_chars].rstrip() + "\n..."
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return ""
+
+
+def render_available_agent_capabilities_prompt(workspace: str | None = None, max_chars: int = 2400) -> str:
+    return render_agent_capability_catalog_for_prompt(workspace or get_config().get("workspace_root"), max_chars=max_chars)
 
 
 def load_config(config_path: str) -> dict:
@@ -288,7 +462,7 @@ def _send_deduped_reply(message_id: str, text: str, use_interactive: bool = True
         return False
     preview = _preview_text(text, 80)
     print(f"[发送] {channel}: {message_id} | {preview}", flush=True)
-    include_card_actions = channel in {"final", "text", "card_action"}
+    include_card_actions = channel == "card_action"
     return reply_message(
         message_id,
         text,
@@ -366,7 +540,7 @@ def _markdown_to_interactive_card(md: str, include_quick_actions: bool = False) 
     ]
     if include_quick_actions:
         elements.append({"tag": "hr"})
-        elements.append({"tag": "action", "actions": _build_card_quick_actions()})
+        elements.append({"tag": "note", "elements": [{"tag": "plain_text", "content": "请直接回复“继续展开 / 总结待办 / 一句话版”触发快捷操作。"}]})
     # 使用官方推荐的 Card JSON 2.0 结构，避免旧结构兼容问题。
     return {
         "schema": "2.0",
@@ -1068,3 +1242,4 @@ def run_feishu_bot(
     print(f"启动飞书 {bot_name} 机器人（长连接）...", flush=True)
     cli.start()
     return 0
+

@@ -4,6 +4,14 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.tmp_pytest_runtime/
+.firecrawl/
+.tmp_unittest_focus.txt
+.tmp_unittest_result.json
+_cursor_env/
+_tmp_task_debug/
+_tmp_xhs_skills/
+Microsoft/
 dist/
 build/
 *.egg-info/
@@ -40,6 +48,9 @@ logs/
 # 与个人记忆/临时工作区相关内容
 ########################
 工作区/
+工作区/temp/single_parallel_*.txt
+工作区/temp/*regression*.txt
+
 
 ########################
 # Butler 运行时状态 & 私有记忆

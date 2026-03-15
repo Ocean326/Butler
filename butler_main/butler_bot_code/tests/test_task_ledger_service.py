@@ -7,7 +7,7 @@ import unittest
 MODULE_DIR = Path(__file__).resolve().parents[1] / "butler_bot"
 sys.path.insert(0, str(MODULE_DIR))
 
-from task_ledger_service import TaskLedgerService  # noqa: E402
+from services.task_ledger_service import TaskLedgerService  # noqa: E402
 
 
 class TaskLedgerServiceTests(unittest.TestCase):
@@ -39,6 +39,9 @@ class TaskLedgerServiceTests(unittest.TestCase):
             self.assertEqual(len(items), 2)
             self.assertEqual({item["task_type"] for item in items}, {"short", "long"})
             self.assertTrue(service.path.exists())
+            self.assertTrue((service.task_workspaces_dir / "未进行").exists())
+            self.assertTrue((service.task_workspaces_dir / "进行中").exists())
+            self.assertTrue((service.task_workspaces_dir / "已完成").exists())
 
     def test_apply_heartbeat_result_updates_items_and_records_run(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -84,8 +87,12 @@ class TaskLedgerServiceTests(unittest.TestCase):
             self.assertNotEqual(items["long-1"]["next_due_at"], "2026-03-07 09:00:00")
             self.assertEqual(len(payload["runs"]), 1)
 
-            workspace_file = service.task_workspaces_dir / "task-1.json"
-            self.assertTrue(workspace_file.exists())
+            short_meta = next(service.task_workspaces_dir.glob("已完成/*/task_meta.json"))
+            long_meta = next(service.task_workspaces_dir.glob("进行中/*/task_meta.json"))
+            self.assertTrue(short_meta.exists())
+            self.assertTrue(long_meta.exists())
+            self.assertTrue(short_meta.parent.joinpath("final_report.md").exists())
+            self.assertTrue(long_meta.parent.joinpath("progress.md").exists())
 
     def test_render_task_workspace_context_includes_recent_notes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -131,6 +138,58 @@ class TaskLedgerServiceTests(unittest.TestCase):
             self.assertIn("最近动作", context)
             self.assertIn("short-task-1", context)
 
+    def test_apply_heartbeat_result_records_runtime_and_acceptance_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            service = TaskLedgerService(str(workspace))
+            service.ensure_bootstrapped(
+                short_tasks=[
+                    {
+                        "task_id": "task-1",
+                        "title": "升级调度骨架",
+                        "detail": "拆分 manager / executor / acceptance",
+                        "status": "pending",
+                    }
+                ]
+            )
+
+            payload = service.apply_heartbeat_result(
+                {
+                    "run_id": "run-acceptance",
+                    "program_id": "program-1",
+                    "chosen_mode": "long_task",
+                    "execution_mode": "parallel",
+                    "reason": "经理决定进入验收收口",
+                    "selected_task_ids": ["task-1"],
+                    "updates": {"complete_task_ids": ["task-1"], "touch_long_task_ids": [], "defer_task_ids": []},
+                    "deferred_task_ids": [],
+                },
+                "已完成实现，并通过最终验收。",
+                [
+                    {
+                        "branch_id": "acceptance-1",
+                        "ok": True,
+                        "process_role": "acceptance",
+                        "selected_task_ids": ["task-1"],
+                        "complete_task_ids": ["task-1"],
+                        "touch_long_task_ids": [],
+                        "defer_task_ids": [],
+                        "runtime_profile": {"cli": "codex", "model": "gpt-5", "why": "acceptance"},
+                        "output": "验收通过",
+                    }
+                ],
+            )
+
+            item = {entry["task_id"]: entry for entry in payload["items"]}["task-1"]
+            self.assertEqual(item["status"], "done")
+            self.assertEqual(item["program_id"], "program-1")
+            self.assertEqual(item["acceptance_status"], "accepted")
+            self.assertEqual(item["runtime_profile"]["cli"], "codex")
+            final_report = next(service.task_workspaces_dir.glob("已完成/*/final_report.md")).read_text(encoding="utf-8")
+            self.assertIn("验收摘要", final_report)
+            self.assertIn('"cli": "codex"', final_report)
+
 
 if __name__ == "__main__":
     unittest.main()
+

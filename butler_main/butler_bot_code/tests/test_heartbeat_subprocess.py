@@ -26,9 +26,12 @@ class HeartbeatSubprocessTests(unittest.TestCase):
 
     def test_run_model_subprocess_tolerates_non_utf8_stderr(self):
         """CLI 可能输出 GBK；run 使用 encoding=utf-8, errors=replace 后 stderr 已是 str，此处仅验证失败时返回 stderr 内容。"""
+        proc = mock.MagicMock()
+        proc.communicate.return_value = ("", "启动失败，请查看日志")
+        proc.returncode = 1
         with mock.patch("memory_manager.os.path.isfile", return_value=True), mock.patch(
-            "memory_manager.subprocess.run",
-            return_value=mock.MagicMock(returncode=1, stdout="", stderr="启动失败，请查看日志"),
+            "memory_manager.subprocess.Popen",
+            return_value=proc,
         ):
             out, ok = memory_manager._run_model_subprocess("test", ".", 5, "auto")
 
@@ -38,13 +41,17 @@ class HeartbeatSubprocessTests(unittest.TestCase):
     def test_run_model_subprocess_uses_rotated_cursor_api_key(self):
         captured = {}
 
-        def _fake_run(*args, **kwargs):
+        proc = mock.MagicMock()
+        proc.communicate.return_value = ('{"result":"ok"}', "")
+        proc.returncode = 0
+
+        def _fake_popen(*args, **kwargs):
             captured["env"] = kwargs.get("env") or {}
-            return mock.MagicMock(returncode=0, stdout='{"result":"ok"}', stderr="")
+            return proc
 
         with mock.patch("memory_manager.os.path.isfile", return_value=True), \
              mock.patch("memory_manager.random.choice", return_value="key-b"), \
-             mock.patch("memory_manager.subprocess.run", side_effect=_fake_run):
+             mock.patch("memory_manager.subprocess.Popen", side_effect=_fake_popen):
             out, ok = memory_manager._run_model_subprocess("test", ".", 5, "auto", {"cursor_api_keys": ["key-a", "key-b"]})
 
         self.assertTrue(ok)

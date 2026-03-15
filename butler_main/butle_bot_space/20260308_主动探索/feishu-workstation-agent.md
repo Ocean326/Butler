@@ -52,7 +52,7 @@ agent -p --force --trust --approve-mcps --output-format json --workspace <worksp
 
 **本地记忆**统一保存在：`.cursor/agents/local_memory`。
 
-**短期记忆**统一保存在：`.cursor/agents/recent_memory/recent_memory.json`（由管家bot 自动维护最近 10 轮）。
+**短期记忆**统一保存在：`.cursor/agents/recent_memory/recent_memory.json`（由管家bot 自动维护最近 15 轮）。
 
 用于存放：
 

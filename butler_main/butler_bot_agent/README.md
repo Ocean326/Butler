@@ -37,9 +37,10 @@
 
 - planner 角色真源：`agents/heartbeat-planner-agent.md`
 - planner context 真源：`agents/heartbeat-planner-context.md`
-- heartbeat prompt 模板真源：`butler_bot_code/prompts/heart_beat.md`
-- 任务结构真源：`agents/state/task_ledger.json`
-- planner 任务读口：`agents/local_memory/heartbeat_tasks.md`
+- heartbeat prompt 模板真源：`agents/heartbeat-planner-prompt.md`
+- 任务执行账本真源：`agents/state/task_ledger.json`
+- planner 任务读口真源：`agents/local_memory/heartbeat_tasks.md` + `agents/local_memory/heartbeat_tasks/*.md`
+- 心跳任务变更日志：`agents/local_memory/heartbeat_tasks/task_change_log.jsonl`
 - 长期记忆实现层：`agents/local_memory/`
 - 工作区 `local_memory`：治理镜像、说明与草稿层，不等于单一运行真源
 

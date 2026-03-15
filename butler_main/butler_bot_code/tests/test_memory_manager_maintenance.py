@@ -12,11 +12,54 @@ MODULE_DIR = Path(__file__).resolve().parents[1] / "butler_bot"
 sys.path.insert(0, str(MODULE_DIR))
 
 from memory_manager import BEAT_RECENT_POOL, MemoryManager  # noqa: E402
-from task_ledger_service import TaskLedgerService  # noqa: E402
+from services.task_ledger_service import TaskLedgerService  # noqa: E402
 
 
 class MemoryManagerMaintenanceTests(unittest.TestCase):
-    def test_start_background_services_skips_embedded_heartbeat_when_external_enabled(self):
+    def test_upsert_heartbeat_task_board_item_quarantines_non_utf8_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=lambda *_: ("", False),
+            )
+
+            manager._ensure_heartbeat_task_board(str(workspace))
+            path = manager._heartbeat_task_category_path(str(workspace), "work")
+            path.write_bytes(b"\x89PNG\r\n\x1a\nnot-markdown")
+
+            manager._upsert_heartbeat_task_board_item(
+                str(workspace),
+                {"task_id": "task-utf8", "title": "普通任务", "detail": "恢复可读 markdown", "task_category": "work"},
+                long_term=False,
+                action="update",
+                source="test",
+            )
+
+            content = path.read_text(encoding="utf-8")
+            self.assertIn("task_id=task-utf8", content)
+            quarantine_dir = manager._heartbeat_task_board_quarantine_dir(str(workspace))
+            quarantined = list(quarantine_dir.glob("*.corrupt"))
+            self.assertTrue(quarantined)
+
+    def test_safe_read_heartbeat_task_board_text_retries_permission_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=lambda *_: ("", False),
+            )
+
+            manager._ensure_heartbeat_task_board(str(workspace))
+            path = manager._heartbeat_task_category_path(str(workspace), "work")
+            expected = path.read_text(encoding="utf-8")
+
+            with mock.patch("memory_manager.Path.read_text", side_effect=[PermissionError("busy"), expected]):
+                content = manager._safe_read_heartbeat_task_board_text(str(workspace), path)
+
+            self.assertEqual(content, expected)
+
+    def test_start_background_services_skips_embedded_heartbeat_when_external_runtime_is_forced(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
             manager = MemoryManager(
@@ -24,7 +67,7 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
                     "workspace_root": str(workspace),
                     "agent_timeout": 60,
                     "agent_model": "auto",
-                    "heartbeat": {"enabled": True, "external_process": True},
+                    "heartbeat": {"enabled": True},
                 },
                 run_model_fn=lambda *_: ("", False),
             )
@@ -34,6 +77,7 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
 
             with mock.patch.object(manager, "_run_local_memory_maintenance_once", return_value={"skipped": True}), \
                  mock.patch.object(manager, "_run_recent_memory_maintenance_once", return_value={"before_count": 0, "after_count": 0, "compacted": False, "reflections_count": 0}), \
+                 mock.patch.object(manager, "_use_external_heartbeat_process", return_value=True), \
                  mock.patch("memory_manager.threading.Thread") as thread_cls, \
                  mock.patch("memory_manager.multiprocessing.Process") as proc_cls:
                 proc_cls.return_value.start = lambda: None
@@ -42,6 +86,7 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
                 manager.start_background_services()
 
             self.assertEqual(launches, [])
+            self.assertTrue(manager._self_mind_started)
 
     def test_heartbeat_watchdog_enters_cooldown_after_burst_restarts(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -151,6 +196,30 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
             self.assertEqual(decision["decision"], "approve-restart")
             stored = manager._read_heartbeat_upgrade_request(str(workspace))
             self.assertEqual(str(stored.get("status") or ""), "approved")
+
+    def test_pending_upgrade_request_approve_execute_keeps_update_agent_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(config_provider=lambda: {"workspace_root": str(workspace)}, run_model_fn=lambda *_: ("", False))
+            manager._write_heartbeat_upgrade_request(
+                str(workspace),
+                {
+                    "request_id": "req-2",
+                    "status": "pending",
+                    "action": "execute_prompt",
+                    "reason": "需要收敛 prompt 注入",
+                    "summary": "统一维护入口执行",
+                    "execute_prompt": "请修改 prompt builder 并补测试。",
+                    "maintainer_agent_role": "update-agent",
+                    "target_paths": ["./butler_main/butler_bot_code/butler_bot/agent.py"],
+                },
+            )
+
+            decision = manager.inspect_pending_upgrade_request_prompt(str(workspace), "同意按计划执行 req-2")
+
+            self.assertEqual(decision["decision"], "approve-execute")
+            self.assertIn("update-agent", decision["execute_prompt"])
+            self.assertIn("prompt builder", decision["execute_prompt"])
 
     def test_heartbeat_watchdog_skips_respawn_during_restart_handover(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -335,6 +404,33 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
             self.assertEqual(len(calls), 1)
             self.assertEqual(sleeps, [180.0])
 
+    def test_heartbeat_loop_bootstrap_failure_marks_watchdog_degraded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {
+                    "workspace_root": str(workspace),
+                    "heartbeat": {"enabled": True, "every_minutes": 3, "startup_delay_seconds": 15, "align_to_interval": False},
+                },
+                run_model_fn=lambda *_: ("", False),
+            )
+
+            manager._send_heartbeat_start_notification = lambda *args, **kwargs: None
+            manager._run_heartbeat_once = mock.Mock(side_effect=RuntimeError("bad bootstrap"))
+
+            def fake_sleep(seconds: float):
+                raise RuntimeError("stop-loop")
+
+            with mock.patch("memory_manager.time.sleep", side_effect=fake_sleep):
+                with self.assertRaises(RuntimeError):
+                    manager._heartbeat_loop(run_immediately=True)
+
+            state = manager._read_heartbeat_watchdog_state(str(workspace))
+            self.assertEqual(str(state.get("state") or ""), "degraded")
+            run_payload = json.loads(manager._heartbeat_run_state_file(str(workspace)).read_text(encoding="utf-8"))
+            self.assertEqual(str(run_payload.get("state") or ""), "failed")
+            self.assertEqual(str(run_payload.get("phase") or ""), "bootstrap")
+
     def test_heartbeat_planner_runs_without_legacy_agent_prompt_and_completes_selected_short_task(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
@@ -395,7 +491,7 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
             ledger_items = {item["task_id"]: item for item in ledger.get("items") or []}
             self.assertEqual(ledger_items["task-1"]["status"], "done")
             self.assertTrue(sent)
-            self.assertIn("本次心跳先处理短期任务", sent[0])
+            self.assertTrue(any("本次心跳先处理短期任务" in text for text in sent))
 
     def test_heartbeat_due_long_task_runs_through_planner(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -468,7 +564,7 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
             ledger_items = {item["task_id"]: item for item in ledger.get("items") or []}
             self.assertTrue(str(ledger_items["long-1"].get("last_run_at") or "").strip())
             self.assertTrue(sent)
-            self.assertIn("到期长期任务", sent[0])
+            self.assertTrue(any("到期长期任务" in text for text in sent))
 
     def test_heartbeat_apply_plan_cleans_retired_markdown_mirrors_when_disabled(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -575,9 +671,51 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
                 {"enabled": True, "message": "fallback", "receive_id": "u", "receive_id_type": "open_id", "every_seconds": 5},
             )
 
-            self.assertEqual(len(calls), 3)
+            self.assertEqual(len(calls), 2)
             self.assertTrue(sent)
-            self.assertIn("长期记忆", sent[0])
+            self.assertTrue(any("长期记忆" in text for text in sent))
+
+    def test_heartbeat_emits_progress_receipt_before_final_message(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace), "agent_timeout": 60},
+                run_model_fn=lambda *_: ("", False),
+            )
+
+            manager._plan_heartbeat_action = lambda *args, **kwargs: {
+                "chosen_mode": "short_task",
+                "execution_mode": "single",
+                "reason": "先推进一条明确短任务",
+                "user_message": "本轮先推进一条短任务。",
+                "task_groups": [
+                    {
+                        "group_id": "g1",
+                        "branches": [
+                            {"branch_id": "b1", "prompt": "执行一次短任务", "selected_task_ids": ["task-1"], "can_run_parallel": False}
+                        ],
+                    }
+                ],
+                "updates": {"complete_task_ids": ["task-1"], "defer_task_ids": [], "touch_long_task_ids": []},
+            }
+            manager._execute_heartbeat_plan = lambda *args, **kwargs: ("已完成短任务。", [])
+            manager._apply_heartbeat_plan = lambda *args, **kwargs: None
+            manager._persist_heartbeat_snapshot_to_recent = lambda *args, **kwargs: None
+            manager._check_and_perform_restart = lambda *_: None
+
+            sent = []
+            manager._send_private_message = lambda cfg, text, **kwargs: sent.append(text) or True
+
+            manager._run_heartbeat_once(
+                {"workspace_root": str(workspace), "agent_timeout": 60, "features": {"heartbeat_debug_receipts": True}},
+                {"enabled": True, "message": "fallback", "receive_id": "u", "receive_id_type": "open_id"},
+            )
+
+            self.assertGreaterEqual(len(sent), 3)
+            self.assertIn("阶段：新一轮已开始，正在规划", sent[0])
+            self.assertTrue(any("阶段：已完成规划，开始执行" in text for text in sent))
+            self.assertTrue(any("本轮先推进一条短任务" in text for text in sent))
+            self.assertIn("已完成短任务", sent[-1])
 
     def test_build_planning_prompt_tolerates_legacy_literal_braces(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -736,8 +874,9 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
             )
             self.assertTrue(sent_msgs)
             sent_msg = sent_msgs[-1]
-            self.assertIn("并行执行", sent_msg)
-            self.assertIn("已延后到下轮", sent_msg)
+            self.assertIn("## 本轮心跳", sent_msg)
+            self.assertIn("并行 3 路", sent_msg)
+            self.assertIn("## 延后", sent_msg)
 
     def test_long_task_due_time_not_advanced_without_touch(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -787,16 +926,43 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
         self.assertLessEqual(len(truncated), 4000)
         self.assertIn("消息已截断", truncated)
 
-    def test_reflective_tell_user_is_composed_and_sent_on_next_round(self):
+    def test_heartbeat_send_path_keeps_markdown_summary_without_truncation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace), "agent_timeout": 60},
+                run_model_fn=lambda *_: ("", False),
+            )
+
+            long_markdown = "## 本轮心跳\n- " + ("A" * 4500)
+            sent = {}
+            manager._plan_heartbeat_action = lambda *args, **kwargs: {"user_message": "本轮心跳", "task_groups": [], "updates": {}}
+            manager._execute_heartbeat_plan = lambda *args, **kwargs: (long_markdown, [])
+            manager._apply_heartbeat_plan = lambda *args, **kwargs: None
+            manager._persist_heartbeat_snapshot_to_recent = lambda *args, **kwargs: None
+            manager._check_and_perform_restart = lambda *_: None
+
+            def fake_send(cfg: dict, text: str, **kwargs) -> bool:
+                sent["text"] = text
+                return True
+
+            manager._send_private_message = fake_send
+            manager._continue_reflective_tell_user = lambda *args, **kwargs: ("", None)
+
+            manager._run_heartbeat_once(
+                {"workspace_root": str(workspace), "agent_timeout": 60},
+                {"enabled": True, "message": "fallback", "receive_id": "u", "receive_id_type": "open_id"},
+            )
+
+            self.assertIn(long_markdown, sent.get("text") or "")
+            self.assertNotIn("消息已截断", sent.get("text") or "")
+
+    def test_heartbeat_round_no_longer_pushes_talk_intent_into_self_mind_main_path(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
             planner_calls = {"count": 0}
-            compose_calls = {"count": 0}
 
             def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
-                if "承接上一轮 heartbeat 留下的心理活动" in prompt:
-                    compose_calls["count"] += 1
-                    return "我刚刚顺着上一轮又想了一下，想跟你同步个小进展。", True
                 if "JSON Schema" in prompt:
                     planner_calls["count"] += 1
                     if planner_calls["count"] == 1:
@@ -873,7 +1039,6 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
                 "agent_timeout": 60,
                 "tell_user_receive_id": "talk-u",
                 "tell_user_receive_id_type": "open_id",
-                "startup_notify_open_id": "talk-u",
             }
             heartbeat_cfg = {
                 "enabled": True,
@@ -884,16 +1049,11 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
             }
 
             manager._run_heartbeat_once(runtime_cfg, heartbeat_cfg)
-            self.assertEqual(compose_calls["count"], 0)
-            pending_intent = manager._load_heartbeat_tell_user_intent(str(workspace))
-            self.assertEqual(str(pending_intent.get("status") or ""), "pending")
-
-            manager._run_heartbeat_once(runtime_cfg, heartbeat_cfg)
-
-            self.assertEqual(compose_calls["count"], 1)
-            self.assertTrue(any("想跟你同步个小进展" in text for text in sent_texts))
-            refreshed_state = manager._load_heartbeat_tell_user_state(str(workspace))
-            self.assertTrue(str(refreshed_state.get("last_message_preview") or "").strip())
+            legacy_intents = [path for path in workspace.rglob("*talk_intent*.json")]
+            self.assertEqual(legacy_intents, [])
+            beat_recent = manager.get_recent_entries(str(workspace), pool="beat")
+            self.assertTrue(beat_recent)
+            self.assertTrue(any("本轮先把文档整理收口" in text or "已完成文档整理" in text for text in sent_texts))
 
 
 if __name__ == "__main__":

@@ -9,8 +9,12 @@ import re
 import time
 import uuid
 
+from registry.agent_capability_registry import load_team_catalog, load_team_definition
+from execution.agent_team_executor import AgentTeamExecutor
 from butler_paths import SKILLS_HOME_REL, prompt_path_text, resolve_butler_root
-from task_ledger_service import TaskLedgerService
+from services.prompt_assembly_service import PlannerPromptContext, PromptAssemblyService
+from runtime.runtime_router import RuntimeRouter
+from services.task_ledger_service import TaskLedgerService
 
 
 HEARTBEAT_MAX_PARALLEL_DEFAULT = 8
@@ -19,6 +23,10 @@ BEAT_RECENT_POOL = "beat"
 HEARTBEAT_PLANNER_MIN_INTERVAL_SECONDS = 60
 HEARTBEAT_PLANNER_FAILURE_BACKOFF_MAX_SECONDS = 10 * 60
 HEARTBEAT_PLANNER_TIMEOUT_CAP_SECONDS = 240
+HEARTBEAT_TELL_USER_MARKDOWN_START = "【heartbeat_tell_user_markdown】"
+HEARTBEAT_TELL_USER_MARKDOWN_END = "【/heartbeat_tell_user_markdown】"
+UPDATE_EXECUTION_KINDS = {"maintenance", "upgrade", "prompt_update", "code_update", "agent_update"}
+UPDATE_CAPABILITY_TYPES = {"agent_maintenance", "prompt_maintenance", "code_maintenance", "self_upgrade"}
 
 
 @dataclass(frozen=True)
@@ -32,6 +40,9 @@ class HeartbeatPlanningContext:
     recent_text: str
     local_memory_text: str
     skills_text: str
+    subagents_text: str
+    teams_text: str
+    public_library_text: str
     context_text: str
     max_parallel: int
     max_serial_per_group: int
@@ -47,6 +58,21 @@ class HeartbeatPlanningContext:
 class HeartbeatOrchestrator:
     def __init__(self, manager) -> None:
         self._manager = manager
+        self._team_executor = AgentTeamExecutor(manager._run_model_fn)
+        self._prompt_assembly_service = PromptAssemblyService()
+        self._runtime_router = RuntimeRouter()
+
+    def _extract_tell_user_markdown(self, text: str) -> str:
+        raw = str(text or "")
+        if not raw:
+            return ""
+        start = raw.find(HEARTBEAT_TELL_USER_MARKDOWN_START)
+        if start < 0:
+            return ""
+        start += len(HEARTBEAT_TELL_USER_MARKDOWN_START)
+        end = raw.find(HEARTBEAT_TELL_USER_MARKDOWN_END, start)
+        block = raw[start:] if end < 0 else raw[start:end]
+        return str(block or "").strip()
 
     def _resolve_branch_skill_file(self, workspace: str, branch: dict) -> Path | None:
         root = resolve_butler_root(workspace)
@@ -190,6 +216,19 @@ class HeartbeatOrchestrator:
         tasks_md_text = self._manager._load_heartbeat_tasks_md(workspace)
         if not str(tasks_md_text or "").strip():
             tasks_md_text = self._manager._render_legacy_heartbeat_tasks_md(workspace)
+        recent_text = self._manager._render_unified_heartbeat_recent_context(workspace)
+        context_text = self._manager._load_heartbeat_context_excerpt(workspace, heartbeat_cfg)
+        local_memory_query = "\n\n".join(
+            part for part in [tasks_md_text, context_text, recent_text[:1200]] if str(part or "").strip()
+        )
+        local_memory_hits = self._manager._render_heartbeat_local_memory_query_hits(workspace, local_memory_query)
+        local_memory_baseline = self._manager._render_heartbeat_local_memory_snippet(workspace)
+        local_memory_parts: list[str] = []
+        if str(local_memory_hits or "").strip():
+            local_memory_parts.append(local_memory_hits.strip())
+        if str(local_memory_baseline or "").strip() and local_memory_baseline.strip() not in local_memory_parts:
+            local_memory_parts.append(local_memory_baseline.strip())
+        local_memory_text = "\n\n".join(local_memory_parts).strip()
         return HeartbeatPlanningContext(
             workspace=workspace,
             now_text=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -197,10 +236,13 @@ class HeartbeatOrchestrator:
             role_text=self._manager._load_heartbeat_role_excerpt(workspace),
             tasks_md_text=tasks_md_text,
             task_workspace_text=self._manager._render_heartbeat_task_workspace_context(workspace),
-            recent_text=self._manager._render_unified_heartbeat_recent_context(workspace),
-            local_memory_text=self._manager._render_heartbeat_local_memory_snippet(workspace),
+            recent_text=recent_text,
+            local_memory_text=local_memory_text,
             skills_text=self._manager._render_available_skills_prompt(workspace),
-            context_text=self._manager._load_heartbeat_context_excerpt(workspace, heartbeat_cfg),
+            subagents_text=self._manager._render_available_subagents_prompt(workspace),
+            teams_text=self._manager._render_available_teams_prompt(workspace),
+            public_library_text=self._manager._render_public_agent_library_prompt(workspace),
+            context_text=context_text,
             max_parallel=self.resolve_parallel_limit(heartbeat_cfg),
             max_serial_per_group=self.resolve_serial_limit(heartbeat_cfg),
             allow_autonomous_explore=self.allow_autonomous_explore(heartbeat_cfg),
@@ -368,7 +410,8 @@ class HeartbeatOrchestrator:
             "从以下方向中选一个能在单轮内形成可见进展的小步：\n"
             "1. 阅读最近与心跳、记忆、智能、守护相关的项目文档，并补一条自我认知或升级建议；\n"
             "2. 扫描可复用 skills，找一个适合当前系统的能力做学习/整理；\n"
-            "3. 如运行环境允许，再做一次轻量外部研究，但不要陷入开放式长时间发散。\n"
+            "3. 如运行环境允许，可做一次轻量公开能力检索：优先官方文档、可信 GitHub 仓库、公开技能库；\n"
+            "4. 若真发现关键能力缺口，按‘检索公开方案 -> 安全审阅 -> 形成 skill/MCP 落地稿 -> 回到原任务重试’推进，不要只停在调研汇报。\n"
             "要求：优先高效率、高质量、可收口；不要压过显式任务，不要把本轮拖成无限探索。"
         )
         return {
@@ -454,8 +497,8 @@ class HeartbeatOrchestrator:
             plan = {
                 "chosen_mode": "short_task",
                 "execution_mode": "single",
-                "reason": f"{reason_prefix}，采用本地兜底策略恢复短期任务：{str(task.get('title') or task.get('detail') or '未命名任务').strip()}",
-                "user_message": f"规划器本轮没有稳定给出结果，我先按本地兜底策略推进一条明确的短期任务：{str(task.get('title') or task.get('detail') or '未命名任务').strip()}。",
+                "reason": f"{reason_prefix}，采用本地兜底策略恢复一条短期任务。",
+                "user_message": f"规划器未稳定返回，已切换本地兜底。先处理一条短期任务：{str(task.get('title') or task.get('detail') or '未命名任务').strip()}。",
                 "tell_user": "",
                 "tell_user_candidate": "",
                 "tell_user_reason": "",
@@ -477,8 +520,8 @@ class HeartbeatOrchestrator:
             plan = {
                 "chosen_mode": "long_task",
                 "execution_mode": "single",
-                "reason": f"{reason_prefix}，采用本地兜底策略恢复长期任务：{str(task.get('title') or task.get('detail') or '未命名任务').strip()}",
-                "user_message": f"规划器本轮没有稳定给出结果，我先按本地兜底策略推进一条到期的长期任务：{str(task.get('title') or task.get('detail') or '未命名任务').strip()}。",
+                "reason": f"{reason_prefix}，采用本地兜底策略恢复一条到期长期任务。",
+                "user_message": f"规划器未稳定返回，已切换本地兜底。先处理一条到期长期任务：{str(task.get('title') or task.get('detail') or '未命名任务').strip()}。",
                 "tell_user": "",
                 "tell_user_candidate": "",
                 "tell_user_reason": "",
@@ -556,12 +599,15 @@ class HeartbeatOrchestrator:
                     {
                         "branch_id": branch_id,
                         "agent_role": str(branch.get("agent_role") or "executor").strip() or "executor",
+                        "team_id": str(branch.get("team_id") or "").strip(),
+                        "process_role": str(branch.get("process_role") or "").strip() or "executor",
                         "execution_kind": str(branch.get("execution_kind") or "task").strip() or "task",
                         "capability_id": str(branch.get("capability_id") or "").strip(),
                         "capability_type": str(branch.get("capability_type") or "").strip(),
                         "skill_name": str(branch.get("skill_name") or "").strip(),
                         "skill_dir": str(branch.get("skill_dir") or "").strip(),
                         "requires_skill_read": bool(branch.get("requires_skill_read", False)),
+                        "runtime_profile": dict(branch.get("runtime_profile") or {}) if isinstance(branch.get("runtime_profile"), dict) else {},
                         "prompt": prompt,
                         "selected_task_ids": self.sanitize_id_list(branch.get("selected_task_ids"), limit=10),
                         "complete_task_ids": self.sanitize_id_list(branch.get("complete_task_ids"), limit=10),
@@ -590,12 +636,15 @@ class HeartbeatOrchestrator:
                             {
                                 "branch_id": "legacy-1",
                                 "agent_role": "executor",
+                                "team_id": "",
+                                "process_role": "executor",
                                 "execution_kind": "task",
                                 "capability_id": "",
                                 "capability_type": "",
                                 "skill_name": "",
                                 "skill_dir": "",
                                 "requires_skill_read": False,
+                                "runtime_profile": {},
                                 "prompt": legacy_prompt,
                                 "selected_task_ids": self.sanitize_id_list(plan.get("selected_task_ids"), limit=10),
                                 "complete_task_ids": [],
@@ -610,61 +659,68 @@ class HeartbeatOrchestrator:
                 )
         return normalized_groups
 
-    def run_branch(self, branch: dict, workspace: str, branch_timeout: int, model: str) -> dict:
-        started = time.time()
-        role_name = str(branch.get("agent_role") or "executor").strip() or "executor"
-        branch_id = str(branch.get("branch_id") or "").strip() or "branch"
-        skill_block, skill_error = self._load_branch_skill_block(workspace, branch)
-        if skill_error:
-            duration = time.time() - started
-            return {
-                "branch_id": branch_id,
-                "agent_role": role_name,
-                "capability_id": str(branch.get("capability_id") or "").strip(),
-                "capability_type": str(branch.get("capability_type") or "").strip(),
-                "skill_name": str(branch.get("skill_name") or "").strip(),
-                "skill_dir": str(branch.get("skill_dir") or "").strip(),
-                "requires_skill_read": bool(branch.get("requires_skill_read", False)),
-                "ok": False,
-                "output": "",
-                "error": skill_error,
-                "duration_seconds": round(duration, 2),
-                "selected_task_ids": self.sanitize_id_list(branch.get("selected_task_ids"), limit=10),
-                "complete_task_ids": self.sanitize_id_list(branch.get("complete_task_ids"), limit=10),
-                "defer_task_ids": self.sanitize_id_list(branch.get("defer_task_ids"), limit=10),
-                "touch_long_task_ids": self.sanitize_id_list(branch.get("touch_long_task_ids"), limit=10),
-            }
+    def _build_executor_protocol_block(self) -> str:
+        return (
+            "【heartbeat 执行协议】\n"
+            "1. 你是执行者，不是机械流水线；在 branch 目标与边界内，自主选择最高效路径，优先做成事。\n"
+            "2. 除非 branch 明确要求细拆，否则默认先用较大颗粒度完成目标，再在必要处自行补微步骤。\n"
+            "3. 遇到外部调用失败、权限错误、配置错位、ID 不匹配、接口异常等可恢复问题时，不要只报失败；先完成至少一轮“诊断 -> 换路/修正 -> 复试”。\n"
+            "4. 对 chat_id、open_id、receive_id、container_id、user_id 一类外部标识，默认先核实类型与来源；错误码若暗示对象不在会话、类型不对或权限不符，应主动怀疑拿错 ID 或应用上下文。\n"
+            "5. 若命中明确错误码，请解释它意味着什么、你尝试了哪些替代路径、为什么最终仍成功或仍受阻。像 Feishu 230002 这类错误，不能只原样抄回执。\n"
+            "6. 完成前做首轮自验收：写清目标是否达成、证据是什么、剩余不确定性是什么、若继续迭代最值得补哪一步。\n\n"
+        )
 
-        role_excerpt = self._manager._load_subagent_role_excerpt(workspace, role_name)
-        prompt_parts = [self._manager._heartbeat_workspace_hint]
-        if role_excerpt:
-            prompt_parts.append(f"【执行角色】\n{role_excerpt}\n\n")
-        if skill_block:
-            prompt_parts.append(skill_block)
-        prompt_parts.append(str(branch.get("prompt") or "").strip())
-        prompt = "".join(prompt_parts).strip()
-        output = ""
-        ok = False
-        error_text = ""
-        try:
-            output, ok = self._manager._run_model_fn(prompt, workspace, branch_timeout, model)
-        except Exception as exc:
-            error_text = str(exc)
-            ok = False
-            output = ""
-        duration = time.time() - started
-        out_text = str(output or "").strip()
+    def _build_update_agent_protocol_block(self) -> str:
+        return (
+            "【统一维护入口协议】\n"
+            "1. 本分支属于 role/prompt/code/config 的维护升级任务时，优先按 update-agent 的维护协议执行。\n"
+            "2. 先找单一真源，再做替换或收敛；不要在角色文档末尾野蛮追加相似规则。\n"
+            "3. Soul 保留稳定价值观、感情和人设；运行机制、维护流程、升级闸门优先落在 role/prompt/config/docs，而不是继续塞回 Soul。\n"
+            "4. 结果至少写清：改了什么、为什么这样改、验证了什么、还有什么风险。\n\n"
+        )
+
+    def _resolve_branch_agent_role(self, branch: dict) -> str:
+        role_name = str(branch.get("agent_role") or "executor").strip() or "executor"
+        execution_kind = str(branch.get("execution_kind") or "").strip().lower()
+        capability_type = str(branch.get("capability_type") or "").strip().lower()
+        if role_name in {"executor", "heartbeat-executor-agent"} and (
+            execution_kind in UPDATE_EXECUTION_KINDS or capability_type in UPDATE_CAPABILITY_TYPES
+        ):
+            return "update-agent"
+        return role_name
+
+    def _resolve_branch_process_role(self, branch: dict) -> str:
+        process_role = str(branch.get("process_role") or "").strip().lower()
+        if process_role:
+            return process_role
+        execution_kind = str(branch.get("execution_kind") or "").strip().lower()
+        if execution_kind in {"review", "acceptance"}:
+            return "acceptance"
+        if execution_kind in {"maintenance", "test", "evaluate"}:
+            return "test"
+        return "executor"
+
+    def _build_process_role_block(self, process_role: str) -> str:
+        role = str(process_role or "executor").strip() or "executor"
+        return (
+            "【流程角色】\n"
+            f"- 当前阶段={role}\n"
+            "本分支回执至少包含：阶段目标、结果、证据、风险、下一步。\n"
+            "如果当前阶段不是执行，而是测试/评估/验收，请显式判断是否通过、未通过原因、返工建议。\n\n"
+        )
+
+    def _branch_result_base(self, branch: dict, branch_id: str, role_name: str, team_id: str, duration: float) -> dict:
         return {
             "branch_id": branch_id,
             "agent_role": role_name,
+            "team_id": team_id,
+            "process_role": self._resolve_branch_process_role(branch),
             "capability_id": str(branch.get("capability_id") or "").strip(),
             "capability_type": str(branch.get("capability_type") or "").strip(),
             "skill_name": str(branch.get("skill_name") or "").strip(),
             "skill_dir": str(branch.get("skill_dir") or "").strip(),
             "requires_skill_read": bool(branch.get("requires_skill_read", False)),
-            "ok": bool(ok and out_text),
-            "output": out_text,
-            "error": error_text,
+            "runtime_profile": dict(branch.get("runtime_profile") or {}) if isinstance(branch.get("runtime_profile"), dict) else {},
             "duration_seconds": round(duration, 2),
             "selected_task_ids": self.sanitize_id_list(branch.get("selected_task_ids"), limit=10),
             "complete_task_ids": self.sanitize_id_list(branch.get("complete_task_ids"), limit=10),
@@ -672,33 +728,154 @@ class HeartbeatOrchestrator:
             "touch_long_task_ids": self.sanitize_id_list(branch.get("touch_long_task_ids"), limit=10),
         }
 
-    def summarize_branch_results(self, plan: dict, branch_results: list[dict]) -> str:
+    def run_branch(self, branch: dict, workspace: str, branch_timeout: int, model: str) -> dict:
+        started = time.time()
+        role_name = self._resolve_branch_agent_role(branch)
+        process_role = self._resolve_branch_process_role(branch)
+        branch_id = str(branch.get("branch_id") or "").strip() or "branch"
+        team_id = str(branch.get("team_id") or "").strip()
+        cfg = self._manager._config_provider() if callable(getattr(self._manager, "_config_provider", None)) else {}
+        routing = self._runtime_router.route_branch(workspace, branch, model, cfg if isinstance(cfg, dict) else {})
+        effective_model = str((routing.runtime_request or {}).get("model") or model).strip() or model
+        branch["runtime_profile"] = dict(routing.runtime_profile)
+        if team_id:
+            definition = load_team_definition(workspace, team_id)
+            if definition is None:
+                duration = time.time() - started
+                available_team_ids = [item.team_id for item in load_team_catalog(workspace) if str(item.team_id).strip()]
+                available_text = ", ".join(available_team_ids[:8]) if available_team_ids else "(none)"
+                payload = self._branch_result_base(branch, branch_id, role_name, team_id, duration)
+                payload.update({"ok": False, "output": "", "error": f"unregistered team_id: {team_id}. registered teams: {available_text}"})
+                return payload
+            with self._manager.runtime_request_scope(routing.runtime_request):
+                result = self._team_executor.execute_team(team_id, str(branch.get("prompt") or "").strip(), workspace, branch_timeout, effective_model)
+            duration = time.time() - started
+            payload = self._branch_result_base(branch, branch_id, role_name, team_id, duration)
+            payload.update(
+                {
+                    "ok": bool(result.get("ok")),
+                    "output": str(result.get("output") or "").strip(),
+                    "tell_user_markdown": self._extract_tell_user_markdown(str(result.get("output") or "")),
+                    "error": str(result.get("error") or "").strip(),
+                }
+            )
+            return payload
+        skill_block, skill_error = self._load_branch_skill_block(workspace, branch)
+        if skill_error:
+            duration = time.time() - started
+            payload = self._branch_result_base(branch, branch_id, role_name, team_id, duration)
+            payload.update({"ok": False, "output": "", "error": skill_error})
+            return payload
+
+        role_excerpt = self._manager._load_subagent_role_excerpt(workspace, role_name)
+        prompt_parts = [self._manager._load_heartbeat_workspace_hint(workspace)]
+        if role_excerpt:
+            prompt_parts.append(f"【执行角色】\n{role_excerpt}\n\n")
+        prompt_parts.append(self._build_process_role_block(process_role))
+        if skill_block:
+            prompt_parts.append(skill_block)
+        if role_name == "update-agent":
+            prompt_parts.append(self._build_update_agent_protocol_block())
+        prompt_parts.append(self._build_executor_protocol_block())
+        prompt_parts.append(
+            "【运行时路由】\n"
+            f"- runtime_profile={json.dumps(routing.runtime_profile, ensure_ascii=False)}\n"
+            f"- manager_note={routing.manager_note}\n\n"
+        )
+        prompt_parts.append(
+            "【heartbeat 回执约定】完成任务后，若本分支里有值得发给用户同步的内容，请在输出末尾追加一个 Markdown 区块：\n"
+            f"{HEARTBEAT_TELL_USER_MARKDOWN_START}\n"
+            "## 本分支可同步\n"
+            "- 用 1-4 行清楚写出对用户真正有价值的结果 / 风险 / 下一步。\n"
+            f"{HEARTBEAT_TELL_USER_MARKDOWN_END}\n"
+            "汇总时会自动加上「分支 id + 角色」标签，你只需写清本分支的可同步要点即可；不要把完整长报告原样塞进去。\n\n"
+        )
+        prompt_parts.append(str(branch.get("prompt") or "").strip())
+        prompt = "".join(prompt_parts).strip()
+        output = ""
+        ok = False
+        error_text = ""
+        try:
+            with self._manager.runtime_request_scope(routing.runtime_request):
+                output, ok = self._manager._run_model_fn(prompt, workspace, branch_timeout, effective_model)
+        except Exception as exc:
+            error_text = str(exc)
+            ok = False
+            output = ""
+        duration = time.time() - started
+        out_text = str(output or "").strip()
+        payload = self._branch_result_base(branch, branch_id, role_name, team_id, duration)
+        payload.update(
+            {
+                "ok": bool(ok and out_text),
+                "output": out_text,
+                "tell_user_markdown": self._extract_tell_user_markdown(out_text),
+                "error": error_text,
+            }
+        )
+        return payload
+
+    def render_branch_results_for_user(self, plan: dict, branch_results: list[dict]) -> str:
         if not branch_results:
             return ""
         parallel_count = len([item for item in branch_results if str(item.get("run_mode") or "") == "parallel"])
         serial_count = len([item for item in branch_results if str(item.get("run_mode") or "") != "parallel"])
-        parallel_used = parallel_count >= 2
         success = [item for item in branch_results if bool(item.get("ok"))]
         failed = [item for item in branch_results if not bool(item.get("ok"))]
         lines = [
-            f"并行执行：{'是' if parallel_used else '否'}（并行分支 {parallel_count}，串行分支 {serial_count}）。",
-            f"本轮执行分支：{len(branch_results)}，成功 {len(success)}，失败 {len(failed)}。",
+            "## 本轮心跳",
+            f"- 模式：{str(plan.get('chosen_mode') or 'status').strip() or 'status'}",
+            f"- 并行：并行 {parallel_count} 路，串行 {serial_count} 路",
+            f"- 结果：成功 {len(success)}，失败 {len(failed)}",
         ]
-        for item in branch_results[:HEARTBEAT_MAX_PARALLEL_DEFAULT]:
-            branch_id = str(item.get("branch_id") or "branch")
-            if bool(item.get("ok")):
-                brief = self.human_preview_text(str(item.get("output") or ""), limit=1000)
-                lines.append(f"- {branch_id}：完成。{brief or '已执行。'}")
-            else:
-                err = self.human_preview_text(str(item.get("error") or item.get("output") or ""), limit=1000)
-                lines.append(f"- {branch_id}：未完成。{err or '执行失败或无输出。'}")
+
+        rendered_blocks = []
+        for item in branch_results:
+            block = str(item.get("tell_user_markdown") or "").strip()
+            if block:
+                branch_id = str(item.get("branch_id") or "branch").strip() or "branch"
+                agent_role = str(item.get("agent_role") or "").strip() or "执行分支"
+                # 去掉块内自带的「## 本分支可同步」，避免多分支时重复且无法区分
+                normalized = block
+                if normalized.startswith("## 本分支可同步"):
+                    normalized = normalized[len("## 本分支可同步"):].lstrip("\n\r")
+                elif normalized.startswith("## 值得同步"):
+                    normalized = normalized[len("## 值得同步"):].lstrip("\n\r")
+                # 每块前加「分支标识」+「角色/能力」，方便用户看出是哪路在说什么
+                label = f"【{branch_id}】{agent_role}"
+                rendered_blocks.append(f"### {label}\n{normalized}")
+        if rendered_blocks:
+            lines.extend(["", "## 值得同步"])
+            lines.extend(rendered_blocks[:HEARTBEAT_MAX_PARALLEL_DEFAULT])
+        else:
+            lines.extend(["", "## 执行摘要"])
+            for item in branch_results[:HEARTBEAT_MAX_PARALLEL_DEFAULT]:
+                branch_id = str(item.get("branch_id") or "branch")
+                if bool(item.get("ok")):
+                    brief = self.human_preview_text(str(item.get("output") or ""), limit=180)
+                    lines.append(f"- {branch_id}：{brief or '已执行。'}")
+                else:
+                    err = self.human_preview_text(str(item.get("error") or item.get("output") or ""), limit=180)
+                    lines.append(f"- {branch_id}：未完成。{err or '执行失败或无输出。'}")
+
+        if failed:
+            lines.extend(["", "## 需关注"])
+            for item in failed[:HEARTBEAT_MAX_SERIAL_PER_GROUP_DEFAULT]:
+                branch_id = str(item.get("branch_id") or "branch")
+                err = self.human_preview_text(str(item.get("error") or item.get("output") or ""), limit=180)
+                lines.append(f"- {branch_id}：{err or '执行失败或无输出。'}")
 
         deferred = self.sanitize_id_list(plan.get("deferred_task_ids"), limit=10)
         if deferred:
             defer_reason = str(plan.get("defer_reason") or "").strip()
-            defer_text = f"（原因：{defer_reason[:80]}）" if defer_reason else ""
-            lines.append(f"- 已延后到下轮的任务数：{len(deferred)}{defer_text}")
+            lines.extend(["", "## 延后"])
+            lines.append(f"- 延后任务数：{len(deferred)}")
+            if defer_reason:
+                lines.append(f"- 原因：{defer_reason}")
         return "\n".join(lines).strip()
+
+    def summarize_branch_results(self, plan: dict, branch_results: list[dict]) -> str:
+        return self.render_branch_results_for_user(plan, branch_results)
 
     def execute_plan(
         self,
@@ -794,6 +971,7 @@ class HeartbeatOrchestrator:
                     max_parallel=max_parallel,
                 )
                 entry = consolidated["primary_entry"]
+                self._manager._promote_entry_into_self_mind_cognition(workspace, entry, source="heartbeat")
                 entries.append(entry)
                 entries.extend(consolidated["companion_entries"])
                 lt = entry.get("long_term_candidate") if isinstance(entry.get("long_term_candidate"), dict) else {}
@@ -838,13 +1016,22 @@ class HeartbeatOrchestrator:
             template = template.rstrip() + "\n\n## 任务工作区\n\n{task_workspace_text}\n"
         if "{skills_text}" not in template:
             template = template.rstrip() + "\n\n## 可复用 Skills\n\n{skills_text}\n"
+        if "{subagents_text}" not in template:
+            template = template.rstrip() + "\n\n## 可复用 Sub-Agents\n\n{subagents_text}\n"
+        if "{teams_text}" not in template:
+            template = template.rstrip() + "\n\n## 可复用 Agent Teams\n\n{teams_text}\n"
+        if "{public_library_text}" not in template:
+            template = template.rstrip() + "\n\n## 公用 Agent/Team 参考库\n\n{public_library_text}\n"
+        if "{maintenance_entry_text}" not in template:
+            template = template.rstrip() + "\n\n## 统一维护入口\n\n{maintenance_entry_text}\n"
         if "{context_text}" not in template and "{agent_prompt}" not in template:
             template = template.rstrip() + "\n\n## 额外上下文\n\n{context_text}\n"
         json_schema = (
             '{"chosen_mode":"short_task|long_task|explore|status","execution_mode":"single|parallel|defer",'
-            '"reason":"","user_message":"","tell_user":"","tell_user_candidate":"","tell_user_reason":"","tell_user_type":"result_share|risk_share|thought_share|light_chat","tell_user_priority":0,"execute_prompt":"","selected_task_ids":[],"deferred_task_ids":[],'
+            '"reason":"","user_message":"","tell_user":"","tell_user_candidate":"","tell_user_reason":"","tell_user_type":"result_share|risk_share|thought_share|light_chat|growth_share","tell_user_priority":0,"execute_prompt":"","selected_task_ids":[],"deferred_task_ids":[],'
             '"defer_reason":"","summary_prompt":"","task_groups":[{"group_id":"","branches":[{"branch_id":"",'
-            '"agent_role":"","execution_kind":"task","capability_id":"","capability_type":"","skill_name":"","skill_dir":"","requires_skill_read":false,"prompt":"","selected_task_ids":[],"complete_task_ids":[],'
+            '"agent_role":"","team_id":"","process_role":"executor|test|acceptance|manager","execution_kind":"task","capability_id":"","capability_type":"","skill_name":"","skill_dir":"","requires_skill_read":false,'
+            '"runtime_profile":{"cli":"cursor|codex","model":"auto|gpt-5|gpt-5.2","reasoning_effort":"low|medium|high","why":""},"prompt":"","selected_task_ids":[],"complete_task_ids":[], '
             '"defer_task_ids":[],"touch_long_task_ids":[],"depends_on":[],"can_run_parallel":true,"expected_output":""}]}],'
             '"updates":{"complete_task_ids":[],"defer_task_ids":[],"touch_long_task_ids":[]}}'
         )
@@ -852,30 +1039,35 @@ class HeartbeatOrchestrator:
         fixed_metabolism_text = "开启：每轮固定占用一路并行支路" if context.fixed_metabolism_branch else "关闭"
         background_growth_text = "开启：显式任务稀少或已收口时，可追加一条受控自我提升小步" if context.encourage_background_growth else "关闭"
         tasks_context = (context.tasks_md_text or "").strip() or "(空)"
-        replacements = {
-            "json_schema": json_schema,
-            "now_text": context.now_text,
-            "soul_text": context.soul_text or "(空)",
-            "role_text": context.role_text or "(空)",
-            "max_parallel": str(context.max_parallel),
-            "max_serial_per_group": str(context.max_serial_per_group),
-            "context_text": context.context_text,
-            "agent_prompt": context.context_text,
-            "autonomous_mode_text": autonomous_mode_text,
-            "fixed_metabolism_text": fixed_metabolism_text,
-            "background_growth_text": background_growth_text,
-            "tasks_context": tasks_context,
-            "short_tasks_json": tasks_context,
-            "long_tasks_json": tasks_context,
-            "task_workspace_text": context.task_workspace_text or "(空)",
-            "recent_text": context.recent_text or "(空)",
-            "local_memory_text": context.local_memory_text or "(空)",
-            "skills_text": context.skills_text or "(空)",
-        }
-        rendered = template
-        for key, value in replacements.items():
-            rendered = rendered.replace(f"{{{key}}}", value)
-        return rendered
+        maintenance_entry_text = (
+            "若本轮目标是修改 role/prompt/code/config、收敛提示词漂移、准备升级或重启，优先把 branch 设为 `agent_role=update-agent`，"
+            "并尽量使用 `execution_kind=maintenance` 或 `capability_type=agent_maintenance`。\n"
+            "经理型 planner 负责拆出 `process_role`，例如 executor / test / acceptance；update-agent 负责先找单一真源、收敛重复规则、生成 patch plan、说明验证与风险；若需要身体目录改动或重启，走统一 upgrade_request 入口。"
+        )
+        return self._prompt_assembly_service.assemble_planner_prompt(
+            PlannerPromptContext(
+                base_prompt_text=template,
+                json_schema=json_schema,
+                now_text=context.now_text,
+                soul_text=context.soul_text or "(空)",
+                role_text=context.role_text or "(空)",
+                max_parallel=str(context.max_parallel),
+                max_serial_per_group=str(context.max_serial_per_group),
+                autonomous_mode_text=autonomous_mode_text,
+                fixed_metabolism_text=fixed_metabolism_text,
+                background_growth_text=background_growth_text,
+                tasks_context=tasks_context,
+                recent_memory_text=context.recent_text or "(空)",
+                local_memory_text=context.local_memory_text or "(空)",
+                skills_text=context.skills_text or "(空)",
+                task_workspace_context=context.task_workspace_text or "(空)",
+                subagents_text=context.subagents_text or "(空)",
+                teams_text=context.teams_text or "(空)",
+                public_library_text=context.public_library_text or "(空)",
+                maintenance_entry_text=maintenance_entry_text,
+                runtime_context_text=context.context_text,
+            )
+        )
 
     def default_plan(self, workspace: str) -> dict:
         return self.build_status_only_plan(
@@ -1029,3 +1221,4 @@ class HeartbeatOrchestrator:
                         mirror_path.unlink()
                 except Exception:
                     pass
+

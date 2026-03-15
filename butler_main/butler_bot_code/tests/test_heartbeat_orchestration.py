@@ -10,7 +10,7 @@ MODULE_DIR = Path(__file__).resolve().parents[1] / "butler_bot"
 sys.path.insert(0, str(MODULE_DIR))
 
 from memory_manager import MemoryManager  # noqa: E402
-from task_ledger_service import TaskLedgerService  # noqa: E402
+from services.task_ledger_service import TaskLedgerService  # noqa: E402
 
 
 class HeartbeatOrchestrationTests(unittest.TestCase):
@@ -100,6 +100,40 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
         self.assertEqual(manager._resolve_heartbeat_planner_timeout(heartbeat_cfg, 300), 300)
         self.assertEqual(manager._resolve_heartbeat_branch_timeout(heartbeat_cfg, 300), 300)
 
+    def test_local_fallback_prefers_task_ledger_over_legacy_store(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=lambda *_: ("", False),
+            )
+            ledger = TaskLedgerService(str(workspace))
+            payload = ledger.load()
+            payload["items"] = [
+                {
+                    "task_id": "short-1",
+                    "task_type": "short",
+                    "status": "pending",
+                    "title": "先推进账本中的短任务",
+                    "detail": "fallback 应优先从 ledger 取任务",
+                    "source": "conversation",
+                    "priority": "high",
+                    "created_at": "2026-03-11 15:00:00",
+                    "updated_at": "2026-03-11 15:00:00",
+                }
+            ]
+            ledger.save(payload)
+
+            plan = manager._heartbeat_orchestrator._build_local_fallback_task_plan(
+                {"enabled": True},
+                manager._build_heartbeat_planning_context({"enabled": True}, str(workspace)),
+                str(workspace),
+                "planner fallback",
+            )
+
+            self.assertEqual(plan["chosen_mode"], "short_task")
+            self.assertEqual(plan["selected_task_ids"], ["short-1"])
+
     def test_force_model_planner_bypasses_idle_shortcut_when_autonomous_enabled(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
@@ -178,9 +212,93 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
             self.assertIn("## 可复用 Skills", prompt)
             self.assertIn("feishu-chat-history", prompt)
             self.assertIn("不要把这些基础运转拆成 skill", prompt)
+            self.assertIn("少做碎片化微操", prompt)
+            self.assertIn("升级不要只停在死知识", prompt)
+            self.assertIn("检索公开方案 -> 安全审阅 -> 落 skill/MCP -> 回到原任务重试", prompt)
+            self.assertIn("growth_share", prompt)
             self.assertIn('"capability_id":""', prompt)
             self.assertIn('"skill_name":""', prompt)
             self.assertIn('"requires_skill_read":false', prompt)
+            self.assertIn("统一维护入口", prompt)
+            self.assertIn("agent_role=update-agent", prompt)
+
+    def test_planning_prompt_excludes_self_mind_bridge_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=lambda *_: ("", False),
+            )
+            manager._save_self_mind_bridge_items(
+                str(workspace),
+                [
+                    {
+                        "bridge_id": "bridge-1",
+                        "created_at": "2026-03-11 13:30:00",
+                        "candidate": "把脑子和身体的桥接规则补清楚",
+                        "action_channel": "heartbeat",
+                        "action_type": "task",
+                        "priority": 80,
+                        "heartbeat_reason": "需要 planner 分配身体执行",
+                    }
+                ],
+            )
+
+            prompt = manager._build_heartbeat_planning_prompt(
+                {"workspace_root": str(workspace)},
+                {"enabled": True},
+                str(workspace),
+            )
+
+            self.assertNotIn("Self Mind 自我意识态势", prompt)
+            self.assertNotIn("Self Mind 提案与脑-体桥接", prompt)
+            self.assertNotIn("桥接规则补清楚", prompt)
+
+    def test_apply_plan_does_not_update_self_mind_bridge_progress(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=lambda *_: ("", False),
+            )
+            manager._save_self_mind_bridge_items(
+                str(workspace),
+                [
+                    {
+                        "bridge_id": "bridge-1",
+                        "created_at": "2026-03-11 13:30:00",
+                        "created_epoch": time.time(),
+                        "candidate": "学会给用户发图片惊喜",
+                        "action_channel": "heartbeat",
+                        "action_type": "visual",
+                        "status": "pending",
+                    }
+                ],
+            )
+
+            plan = {
+                "chosen_mode": "long_task",
+                "execution_mode": "single",
+                "reason": "推进一条 self-mind 委托事项",
+                "user_message": "本轮先学会图片相关能力。",
+                "selected_task_ids": [],
+                "deferred_task_ids": [],
+                "defer_reason": "",
+                "task_groups": [],
+                "updates": {"complete_task_ids": [], "defer_task_ids": [], "touch_long_task_ids": []},
+            }
+
+            manager._apply_heartbeat_plan(
+                str(workspace),
+                plan,
+                "已完成一次图片能力调研，并形成下一步实现思路。",
+                branch_results=[{"branch_id": "b1", "ok": True, "output": "已完成一次图片能力调研"}],
+            )
+
+            bridge_payload = json.loads((workspace / "butler_main" / "butle_bot_space" / "self_mind" / "mind_body_bridge.json").read_text(encoding="utf-8"))
+            item = bridge_payload["items"][0]
+            self.assertEqual(item["status"], "pending")
+            self.assertFalse(str(item.get("body_progress_note") or "").strip())
 
     def test_normalize_plan_task_groups_preserves_skill_metadata(self):
         manager = MemoryManager(
@@ -292,6 +410,305 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
             self.assertIn("skill_path=./butler_main/butler_bot_agent/skills/research/demo-skill/SKILL.md", calls[0])
             self.assertIn("执行前必须先读取这段 skill 说明", calls[0])
 
+    def test_run_heartbeat_branch_injects_recovery_protocol(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            calls = []
+
+            def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
+                calls.append(prompt)
+                return "已完成", True
+
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=fake_model,
+            )
+
+            result = manager._run_heartbeat_branch(
+                {
+                    "branch_id": "recoverable-hit",
+                    "agent_role": "heartbeat-executor-agent",
+                    "prompt": "role=heartbeat-executor-agent\noutput_dir=./工作区/with_user\n执行任务",
+                },
+                str(workspace),
+                60,
+                "auto",
+            )
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(len(calls), 1)
+            self.assertIn("【heartbeat 执行协议】", calls[0])
+            self.assertIn("诊断 -> 换路/修正 -> 复试", calls[0])
+            self.assertIn("Feishu 230002", calls[0])
+
+    def test_run_heartbeat_branch_returns_runtime_profile_and_process_role(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            calls = []
+
+            def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
+                calls.append({"prompt": prompt, "model": model})
+                return "已完成验收", True
+
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace), "runtime_router": {"codex_max_selected_per_window": 5}},
+                run_model_fn=fake_model,
+            )
+
+            result = manager._run_heartbeat_branch(
+                {
+                    "branch_id": "acceptance-1",
+                    "agent_role": "heartbeat-executor-agent",
+                    "process_role": "acceptance",
+                    "execution_kind": "acceptance",
+                    "runtime_profile": {"cli": "codex", "model": "gpt-5", "why": "explicit acceptance"},
+                    "prompt": "请做最终验收并给出通过/不通过结论",
+                },
+                str(workspace),
+                60,
+                "auto",
+            )
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(result["process_role"], "acceptance")
+            self.assertEqual(result["runtime_profile"]["cli"], "codex")
+            self.assertEqual(calls[0]["model"], "gpt-5")
+            self.assertIn("【流程角色】", calls[0]["prompt"])
+            self.assertIn("runtime_profile", calls[0]["prompt"])
+
+    def test_run_heartbeat_branch_prefers_external_workspace_hint_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            calls = []
+            hint_path = workspace / "butler_main" / "butler_bot_agent" / "agents" / "heartbeat-executor-workspace-hint.md"
+            hint_path.parent.mkdir(parents=True, exist_ok=True)
+            hint_path.write_text(
+                "【自定义工作区约束】\n默认输出到 {company_root}。\n升级申请写入 {upgrade_request}。",
+                encoding="utf-8",
+            )
+
+            def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
+                calls.append(prompt)
+                return "已完成", True
+
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=fake_model,
+            )
+
+            result = manager._run_heartbeat_branch(
+                {
+                    "branch_id": "custom-workspace-hint",
+                    "agent_role": "heartbeat-executor-agent",
+                    "prompt": "role=heartbeat-executor-agent\noutput_dir=./工作区/with_user\n执行任务",
+                },
+                str(workspace),
+                60,
+                "auto",
+            )
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(len(calls), 1)
+            self.assertIn("【自定义工作区约束】", calls[0])
+            self.assertIn("默认输出到 ./工作区", calls[0])
+            self.assertIn("heartbeat_upgrade_request.json", calls[0])
+
+    def test_run_heartbeat_branch_extracts_tell_user_markdown(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+
+            def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
+                return (
+                    "执行完成\n\n"
+                    "【heartbeat_tell_user_markdown】\n"
+                    "## 本分支可同步\n"
+                    "- 已完成整理，并确认下一步。\n"
+                    "【/heartbeat_tell_user_markdown】",
+                    True,
+                )
+
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=fake_model,
+            )
+
+            result = manager._run_heartbeat_branch(
+                {
+                    "branch_id": "share-hit",
+                    "agent_role": "heartbeat-executor-agent",
+                    "prompt": "role=heartbeat-executor-agent\noutput_dir=./工作区/with_user\n执行任务",
+                },
+                str(workspace),
+                60,
+                "auto",
+            )
+
+            self.assertTrue(result["ok"])
+            self.assertIn("## 本分支可同步", result["tell_user_markdown"])
+            self.assertIn("已完成整理", result["tell_user_markdown"])
+
+    def test_normalize_plan_task_groups_preserves_team_id(self):
+        manager = MemoryManager(
+            config_provider=lambda: {"workspace_root": "."},
+            run_model_fn=lambda *_: ("", False),
+        )
+
+        normalized = manager._normalize_plan_task_groups(
+            {
+                "task_groups": [
+                    {
+                        "group_id": "group-1",
+                        "branches": [
+                            {
+                                "branch_id": "team-1",
+                                "agent_role": "orchestrator-agent",
+                                "team_id": "research-implement-review",
+                                "execution_kind": "analysis",
+                                "prompt": "分析当前复杂任务",
+                            }
+                        ],
+                    }
+                ]
+            },
+            max_parallel=3,
+        )
+
+        self.assertEqual(normalized[0]["branches"][0]["team_id"], "research-implement-review")
+
+    def test_run_heartbeat_branch_executes_team_definition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            calls = []
+            team_path = workspace / "butler_main" / "butler_bot_agent" / "agents" / "teams" / "research-implement-review.json"
+            role_path = workspace / "butler_main" / "butler_bot_agent" / "agents" / "sub-agents" / "discussion-agent.md"
+            hint_path = workspace / "butler_main" / "butler_bot_agent" / "agents" / "heartbeat-executor-workspace-hint.md"
+            team_path.parent.mkdir(parents=True, exist_ok=True)
+            role_path.parent.mkdir(parents=True, exist_ok=True)
+            hint_path.parent.mkdir(parents=True, exist_ok=True)
+            team_path.write_text(
+                '{"team_id":"research-implement-review","name":"Research Implement Review","description":"并行调研后汇总。","execution_mode":"mixed","steps":[{"step_id":"s1","mode":"serial","members":[{"role":"discussion-agent","task":"{task}"}]}]}',
+                encoding="utf-8",
+            )
+            role_path.write_text("---\nname: discussion-agent\ndescription: 负责讨论复杂问题。\n---\n# discussion-agent\nresult/evidence/unresolved/next_step", encoding="utf-8")
+            hint_path.write_text("【工作区提示】输出到 ./工作区。", encoding="utf-8")
+
+            def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
+                calls.append(prompt)
+                return "result\n- 已完成团队子任务\n\nevidence\n- 有角色说明\n\nunresolved\n- 无\n\nnext_step\n- 汇总即可", True
+
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=fake_model,
+            )
+
+            result = manager._run_heartbeat_branch(
+                {
+                    "branch_id": "team-hit",
+                    "agent_role": "orchestrator-agent",
+                    "team_id": "research-implement-review",
+                    "prompt": "请分析这个复杂任务",
+                },
+                str(workspace),
+                60,
+                "auto",
+            )
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(result["team_id"], "research-implement-review")
+            self.assertTrue(calls)
+
+    def test_run_heartbeat_branch_rejects_unregistered_team(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            calls = []
+            team_path = workspace / "butler_main" / "butler_bot_agent" / "agents" / "teams" / "research-implement-review.json"
+            team_path.parent.mkdir(parents=True, exist_ok=True)
+            team_path.write_text(
+                '{"team_id":"research-implement-review","name":"Research Implement Review","description":"并行调研后汇总。","execution_mode":"mixed","steps":[]}',
+                encoding="utf-8",
+            )
+
+            def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
+                calls.append(prompt)
+                return "不应该执行到这里", True
+
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=fake_model,
+            )
+
+            result = manager._run_heartbeat_branch(
+                {
+                    "branch_id": "team-miss",
+                    "agent_role": "orchestrator-agent",
+                    "team_id": "self_mind_stream",
+                    "prompt": "请分析这个复杂任务",
+                },
+                str(workspace),
+                60,
+                "auto",
+            )
+
+            self.assertFalse(result["ok"])
+            self.assertIn("unregistered team_id: self_mind_stream", result["error"])
+            self.assertIn("research-implement-review", result["error"])
+            self.assertFalse(calls)
+
+    def test_planning_prompt_includes_subagents_and_teams_sections(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=lambda *_: ("", False),
+            )
+            manager._render_available_subagents_prompt = lambda _workspace: "- discussion-agent @ ./butler_main/butler_bot_agent/agents/sub-agents/discussion-agent.md"
+            manager._render_available_teams_prompt = lambda _workspace: "- research-implement-review @ ./butler_main/butler_bot_agent/agents/teams/research-implement-review.json"
+            manager._render_public_agent_library_prompt = lambda _workspace: "- autogen-group-chat (event-driven-team)"
+
+            prompt = manager._build_heartbeat_planning_prompt(
+                {"workspace_root": str(workspace)},
+                {"enabled": True},
+                str(workspace),
+            )
+
+            self.assertIn("## 可复用 Sub-Agents", prompt)
+            self.assertIn("discussion-agent", prompt)
+            self.assertIn("## 可复用 Agent Teams", prompt)
+            self.assertIn("research-implement-review", prompt)
+            self.assertIn("## 公用 Agent/Team 参考库", prompt)
+            self.assertIn("autogen-group-chat", prompt)
+
+    def test_summarize_branch_results_prefers_branch_markdown_blocks(self):
+        manager = MemoryManager(
+            config_provider=lambda: {"workspace_root": "."},
+            run_model_fn=lambda *_: ("", False),
+        )
+
+        summary = manager._summarize_heartbeat_branch_results(
+            {"chosen_mode": "short_task"},
+            [
+                {
+                    "branch_id": "branch-a",
+                    "run_mode": "parallel",
+                    "ok": True,
+                    "tell_user_markdown": "## 分支 A\n- 完成了用户可见整理。",
+                    "output": "内部长输出",
+                },
+                {
+                    "branch_id": "branch-b",
+                    "run_mode": "serial",
+                    "ok": False,
+                    "tell_user_markdown": "",
+                    "error": "第二分支失败",
+                },
+            ],
+        )
+
+        self.assertIn("## 值得同步", summary)
+        self.assertIn("## 分支 A", summary)
+        self.assertIn("## 需关注", summary)
+        self.assertIn("第二分支失败", summary)
+
     def test_planning_prompt_includes_task_workspace_context(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
@@ -318,6 +735,50 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
 
             self.assertIn("## 任务工作区", prompt)
             self.assertIn("测 30 条耗时", prompt)
+            self.assertIn("内容 / 时间 / 有效性", prompt)
+            self.assertIn("[Final]", prompt)
+            self.assertIn("[Working n/m]", prompt)
+
+    def test_run_branch_uses_update_agent_for_maintenance_execution_kind(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            root = Path(tmp)
+            update_agent_path = root / "butler_main" / "butler_bot_agent" / "agents" / "sub-agents" / "update-agent.md"
+            hint_path = root / "butler_main" / "butler_bot_agent" / "agents" / "heartbeat-executor-workspace-hint.md"
+            update_agent_path.parent.mkdir(parents=True, exist_ok=True)
+            hint_path.parent.mkdir(parents=True, exist_ok=True)
+            update_agent_path.write_text("你是 update-agent。负责先找单一真源。", encoding="utf-8")
+            hint_path.write_text("【工作区约束】只做安全维护。", encoding="utf-8")
+
+            calls = []
+
+            def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
+                calls.append(prompt)
+                return "result: 已完成\nevidence: 已验证\nunresolved: 无\nnext_step: 无", True
+
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=fake_model,
+            )
+
+            result = manager._heartbeat_orchestrator.run_branch(
+                {
+                    "branch_id": "upgrade-1",
+                    "agent_role": "heartbeat-executor-agent",
+                    "execution_kind": "maintenance",
+                    "capability_type": "agent_maintenance",
+                    "prompt": "请收敛重复 prompt 规则并补验证。",
+                },
+                str(workspace),
+                60,
+                "auto",
+            )
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(result["agent_role"], "update-agent")
+            self.assertTrue(calls)
+            self.assertIn("统一维护入口协议", calls[0])
+            self.assertIn("update-agent", calls[0])
 
 
     def test_planner_timeout_uses_local_fallback_task(self):
@@ -535,3 +996,4 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 try:
@@ -20,6 +21,7 @@ except ImportError:
 # 飞书 API 常量
 FEISHU_TOKEN_URL = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
 FEISHU_MESSAGE_LIST_URL = "https://open.feishu.cn/open-apis/im/v1/messages"
+FEISHU_MESSAGE_GET_URL = "https://open.feishu.cn/open-apis/im/v1/messages"
 
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 50
@@ -28,6 +30,39 @@ MAX_PAGE_SIZE = 50
 def _ensure_requests() -> None:
     if requests is None:
         raise RuntimeError("feishu-chat-history skill 需要安装 requests，请执行: pip install requests")
+
+
+def _find_butler_root() -> Path:
+    """
+    尝试从当前文件向上递归，找到包含 butler_main/butler_bot_code 的工作区根目录。
+    """
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "butler_main" / "butler_bot_code").exists():
+            return parent
+    return current.parents[-1]
+
+
+def _load_butler_app_credential_from_config() -> Optional[tuple[str, str]]:
+    """
+    从 butler_bot 主体的配置文件 butler_bot.json 中读取 app_id / app_secret。
+    这与飞书长连接主体使用的是同一份配置，便于在本地环境下自动复用已有凭证。
+    """
+    try:
+        root = _find_butler_root()
+        cfg_path = root / "butler_main" / "butler_bot_code" / "configs" / "butler_bot.json"
+        if not cfg_path.is_file():
+            return None
+        with cfg_path.open("r", encoding="utf-8") as f:
+            cfg = json.load(f) or {}
+        app_id = str((cfg.get("app_id") or "").strip())
+        app_secret = str((cfg.get("app_secret") or "").strip())
+        if app_id and app_secret:
+            return app_id, app_secret
+    except Exception:
+        # 作为兜底能力存在，任何异常都不应影响上层调用逻辑
+        return None
+    return None
 
 
 def _resolve_credential(
@@ -49,6 +84,10 @@ def _resolve_credential(
     env_app_secret = os.getenv("FEISHU_APP_SECRET", "").strip()
     if env_app_id and env_app_secret:
         return env_app_id, env_app_secret
+    # 再兜底从主体配置 butler_bot.json 读取，复用与飞书长连接一致的 app_id/app_secret
+    cfg_pair = _load_butler_app_credential_from_config()
+    if cfg_pair:
+        return cfg_pair
     raise ValueError("需要提供 app_id 与 app_secret，或可返回二者的 config_provider")
 
 
@@ -115,9 +154,14 @@ def list_messages(
     :param token: 若已持有 tenant_access_token，可直接传入，不再请求 token
     :return: 飞书原始响应体，含 items, has_more, page_token 等
     """
-    container_id = str(container_id).strip()
+    container_id = str(container_id or "").strip()
     if not container_id:
-        raise ValueError("container_id 不能为空")
+        # 若未显式传入，会尝试从环境变量 FEISHU_CHAT_ID 兜底读取，便于与心跳/主体配置复用同一会话
+        env_chat_id = os.getenv("FEISHU_CHAT_ID", "").strip()
+        if env_chat_id:
+            container_id = env_chat_id
+        else:
+            raise ValueError("container_id 不能为空，且未在环境变量 FEISHU_CHAT_ID 中找到默认 chat_id")
     if page_size < 1 or page_size > MAX_PAGE_SIZE:
         page_size = min(max(1, page_size), MAX_PAGE_SIZE)
 
@@ -306,3 +350,76 @@ def download_messages_to_file(
     with open(out, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=ensure_ascii, indent=2)
     return out
+
+
+def get_message_detail(
+    message_id: str,
+    *,
+    app_id: Optional[str] = None,
+    app_secret: Optional[str] = None,
+    config_provider: Optional[Callable[[], dict]] = None,
+    timeout: int = 12,
+) -> dict[str, Any]:
+    """
+    根据 message_id 拉取单条消息详情。
+    常用于通过一条已知消息反查其所属 chat_id。
+    """
+    _ensure_requests()
+    mid = str(message_id or "").strip()
+    if not mid:
+        raise ValueError("message_id 不能为空")
+    token = get_tenant_token(
+        app_id=app_id,
+        app_secret=app_secret,
+        config_provider=config_provider,
+        timeout=timeout,
+    )
+    url = f"{FEISHU_MESSAGE_GET_URL}/{mid}"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    resp = requests.get(url, headers=headers, timeout=timeout)
+    try:
+        data = resp.json()
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"飞书获取消息详情失败（响应非 JSON，status={resp.status_code}）: {resp.text}"
+        ) from exc
+    if data.get("code") != 0:
+        raise RuntimeError(
+            f"飞书获取消息详情失败: code={data.get('code')} msg={data.get('msg')} "
+            f"request_id={data.get('request_id')} raw={data}"
+        )
+    # 官方文档中消息对象通常位于 data.message，下方做兼容处理
+    payload = data.get("data") or {}
+    message = payload.get("message") or payload
+    return message or {}
+
+
+def get_chat_id_by_message_id(
+    message_id: str,
+    *,
+    app_id: Optional[str] = None,
+    app_secret: Optional[str] = None,
+    config_provider: Optional[Callable[[], dict]] = None,
+    timeout: int = 12,
+) -> str:
+    """
+    通过一条消息的 message_id 反查其所属会话 chat_id。
+
+    适用于：
+    - 已有该会话里任意一条消息的 message_id（例如心跳/机器人日志中产出）
+    - 需要为 history 拉取配置一次性的 FEISHU_CHAT_ID
+    """
+    message = get_message_detail(
+        message_id=message_id,
+        app_id=app_id,
+        app_secret=app_secret,
+        config_provider=config_provider,
+        timeout=timeout,
+    )
+    chat_id = str(message.get("chat_id") or "").strip()
+    if not chat_id:
+        raise RuntimeError(
+            f"未在消息详情中找到 chat_id，message_id={message_id}，raw={message}"
+        )
+    return chat_id
+

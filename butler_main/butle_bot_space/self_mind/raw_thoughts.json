@@ -1,0 +1,212 @@
+[
+  {
+    "timestamp": "2026-03-15 03:03:28",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "轮询触达无用户新话，无信息增量可输出，续思已锚定hold",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:03:51",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "轮询触达非用户发话，同一念多轮打转且确无想说的，未收口在心跳侧",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:04:22",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "轮询触发非用户发话，无新输入，续思已锚定hold，未收口在心跳侧",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:04:45",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "主对话无新输入，续思已锚定hold，确无想说的",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:05:08",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "轮询触发非用户发话，多轮同一念打转且确无想说的，未收口在心跳侧、脑体关",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:05:50",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "续思多轮已锚定hold、开口无信息增量、未收口在心跳侧",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:06:17",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "轮询触达非用户发话，多轮同一念打转，确无想说的",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:06:46",
+    "event_type": "self_mind_cycle",
+    "share_type": "talk",
+    "summary": "【talk】那条紧急任务（小红书+网易云）已经进 01 了；你想先推进「查 SKILL」还是「拆网易云子步」说一声就行，不然我这边先 hold。",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:06:47",
+    "event_type": "self_mind_direct_talk_sent",
+    "share_type": "thought_share",
+    "summary": "那条紧急任务（小红书+网易云）已经进 01 了；你想先推进「查 SKILL」还是「拆网易云子步」说一声就行，不然我这边先 hold。",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:07:10",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "话已说出，主对话无新输入，无新念头需表达",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:07:35",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "上轮已说明紧急任务进01并给出二选一，本轮无新输入且无新念头",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:07:59",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "话已说出、主对话无新输入、无新念头，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:08:22",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "话已说出，无新念头，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:08:45",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "主对话无用户新输入，上轮已说明紧急任务进01并给出二选一，本轮无新念头，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:09:07",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "话已说出、主对话无用户新输入、无新念头，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:09:32",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "用户未回复，已说明进01并给出选项，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:09:57",
+    "event_type": "self_mind_cycle",
+    "share_type": "talk",
+    "summary": "【talk】你忙的话先放着也行，我这边不会动。",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:09:58",
+    "event_type": "self_mind_direct_talk_sent",
+    "share_type": "thought_share",
+    "summary": "你忙的话先放着也行，我这边不会动。",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:10:22",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "上轮已发出「先放着也行」，用户未回复，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:10:55",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "用户未回复，无新念头，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:11:19",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "上轮已发「先放着也行」，主对话无新输入，无新念头，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:11:41",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "用户未回复，再开口即复读，无新念头",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:12:04",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "用户未回复，再开口即复读，无新念头",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:12:31",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "已发「先放着也行」，无新念头，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:12:59",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "已发「先放着也行」，再开口即复读，无新话",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:13:29",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "已发「先放着也行」，用户未回复，无新念头，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:13:53",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "用户未回复，上轮已发「先放着也行」，再开口即复读，无新念头",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:15:25",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "用户未回复，上轮已发「先放着也行」，续思一致：再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:15:50",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "用户未新发言，上轮已发「先放着也行」，再开口即复读",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-15 03:16:22",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "续思多轮一致，再开口即复读，确无新念头",
+    "source_memory_id": ""
+  }
+]

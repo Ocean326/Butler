@@ -1,0 +1,112 @@
+[
+  {
+    "review_id": "30cd0d8e-268f-4be6-9d30-376d17466cc1",
+    "start_timestamp": "2026-03-15 03:03:28",
+    "end_timestamp": "2026-03-15 03:04:45",
+    "summary": "轮询触达无用户新话，无信息增量可输出，续思已锚定hold；轮询触达非用户发话，同一念多轮打转且确无想说的，未收口在心跳侧；轮询触发非用户发话，无新输入，续思已锚定hold，未收口在心跳侧",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-15 03:16:22"
+  },
+  {
+    "review_id": "5b705383-f7b3-4831-8f44-b9dc63d7452a",
+    "start_timestamp": "2026-03-15 03:05:08",
+    "end_timestamp": "2026-03-15 03:06:46",
+    "summary": "轮询触发非用户发话，多轮同一念打转且确无想说的，未收口在心跳侧、脑体关；续思多轮已锚定hold、开口无信息增量、未收口在心跳侧；轮询触达非用户发话，多轮同一念打转，确无想说的",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-15 03:16:22"
+  },
+  {
+    "review_id": "053dab77-7a6b-4cbc-932f-f03973f9e3bb",
+    "start_timestamp": "2026-03-15 03:06:47",
+    "end_timestamp": "2026-03-15 03:07:59",
+    "summary": "那条紧急任务（小红书+网易云）已经进 01 了；你想先推进「查 SKILL」还是「拆网易云子步」说一声就行，不然我这边先 hold。；话已说出，主对话无新输入，无新念头需表达；上轮已说明紧急任务进01并给出二选一，本轮无新输入且无新念头",
+    "event_types": [
+      "self_mind_direct_talk_sent",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-15 03:16:22"
+  },
+  {
+    "review_id": "a13e6980-e5db-4064-90e9-ec779090f830",
+    "start_timestamp": "2026-03-15 03:08:22",
+    "end_timestamp": "2026-03-15 03:09:32",
+    "summary": "话已说出，无新念头，再开口即复读；主对话无用户新输入，上轮已说明紧急任务进01并给出二选一，本轮无新念头，再开口即复读；话已说出、主对话无用户新输入、无新念头，再开口即复读",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-15 03:16:22"
+  },
+  {
+    "review_id": "429ed2d1-fd80-4415-9051-b6e3c79e61ff",
+    "start_timestamp": "2026-03-15 03:09:57",
+    "end_timestamp": "2026-03-15 03:10:55",
+    "summary": "【talk】你忙的话先放着也行，我这边不会动。；你忙的话先放着也行，我这边不会动。；上轮已发出「先放着也行」，用户未回复，再开口即复读",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_direct_talk_sent",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-15 03:16:22"
+  },
+  {
+    "review_id": "256555ed-44b6-4ccc-b55f-ae4f375f5939",
+    "start_timestamp": "2026-03-15 03:11:19",
+    "end_timestamp": "2026-03-15 03:12:31",
+    "summary": "上轮已发「先放着也行」，主对话无新输入，无新念头，再开口即复读；用户未回复，再开口即复读，无新念头；用户未回复，再开口即复读，无新念头",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-15 03:16:22"
+  },
+  {
+    "review_id": "e2aca4df-0b29-4b34-b14f-648a41b351d3",
+    "start_timestamp": "2026-03-15 03:12:59",
+    "end_timestamp": "2026-03-15 03:15:25",
+    "summary": "已发「先放着也行」，再开口即复读，无新话；已发「先放着也行」，用户未回复，无新念头，再开口即复读；用户未回复，上轮已发「先放着也行」，再开口即复读，无新念头",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-15 03:16:22"
+  },
+  {
+    "review_id": "8408e8fb-c754-441d-8f60-bc54a5d288df",
+    "start_timestamp": "2026-03-15 03:15:50",
+    "end_timestamp": "2026-03-15 03:16:22",
+    "summary": "用户未新发言，上轮已发「先放着也行」，再开口即复读；续思多轮一致，再开口即复读，确无新念头",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 2,
+    "updated_at": "2026-03-15 03:16:22"
+  }
+]

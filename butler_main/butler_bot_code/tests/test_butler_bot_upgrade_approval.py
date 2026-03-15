@@ -20,6 +20,7 @@ class ButlerBotUpgradeApprovalTests(unittest.TestCase):
 
     def test_run_agent_approval_restart_sets_post_reply_action(self):
         request = {"request_id": "req-1", "action": "restart", "reason": "需要重启"}
+        expected_workspace = str(Path(__file__).resolve().parents[3])
         with mock.patch.object(BUTLER_BOT.MEMORY, "inspect_pending_upgrade_request_prompt", return_value={"decision": "approve-restart", "request": request, "reply": "已收到批准。"}), \
              mock.patch.object(BUTLER_BOT.MEMORY, "on_reply_sent_async") as on_reply_sent, \
              mock.patch.object(BUTLER_BOT.MEMORY, "execute_approved_upgrade_request") as execute_request:
@@ -28,7 +29,7 @@ class ButlerBotUpgradeApprovalTests(unittest.TestCase):
 
         self.assertEqual(reply, "已收到批准。")
         on_reply_sent.assert_called_once()
-        execute_request.assert_called_once_with(".", request)
+        execute_request.assert_called_once_with(expected_workspace, request)
 
 
 if __name__ == "__main__":

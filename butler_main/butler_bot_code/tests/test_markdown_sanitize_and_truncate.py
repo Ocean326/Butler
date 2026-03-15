@@ -6,7 +6,7 @@ from pathlib import Path
 MODULE_DIR = Path(__file__).resolve().parents[1] / "butler_bot"
 sys.path.insert(0, str(MODULE_DIR))
 
-import markdown_safety  # noqa: E402
+from utils import markdown_safety  # noqa: E402
 
 
 class MarkdownSafetyTests(unittest.TestCase):
@@ -42,3 +42,4 @@ class MarkdownSafetyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

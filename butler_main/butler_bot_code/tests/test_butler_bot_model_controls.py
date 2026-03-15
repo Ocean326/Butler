@@ -1,5 +1,4 @@
 import importlib.util
-import io
 from unittest import mock
 from pathlib import Path
 import sys
@@ -42,61 +41,101 @@ class ButlerBotModelControlTests(unittest.TestCase):
         self.assertEqual(control["model"], "gpt-5")
         self.assertEqual(control["prompt"], "帮我总结今天的进展")
 
+    def test_parse_runtime_control_cli_runtime_json(self):
+        control = BUTLER_BOT._parse_runtime_control(
+            "【cli_runtime_json】\n"
+            '{"cli":"codex","model":"gpt-5","speed":"medium"}\n'
+            "【/cli_runtime_json】\n"
+            "帮我写一份 Butler CLI 切换方案",
+            {"agent_model": "auto"},
+        )
+        self.assertEqual(control["kind"], "run")
+        self.assertEqual(control["cli"], "codex")
+        self.assertEqual(control["model"], "gpt-5")
+        self.assertEqual(control["runtime"]["speed"], "medium")
+        self.assertEqual(control["prompt"], "帮我写一份 Butler CLI 切换方案")
+
     def test_format_current_model_reply_includes_aliases(self):
         reply = BUTLER_BOT._format_current_model_reply({"agent_model": "auto", "model_aliases": {"fast": "gpt-5"}})
         self.assertIn("当前默认模型：auto", reply)
         self.assertIn("fast -> gpt-5", reply)
 
+    def test_cursor_runtime_forces_auto_model(self):
+        cfg = {
+            "agent_model": "gpt-5.2",
+            "cli_runtime": {
+                "active": "cursor",
+                "defaults": {"model": "gpt-5.2"},
+                "providers": {
+                    "cursor": {"enabled": True},
+                    "codex": {"enabled": False},
+                },
+            },
+        }
+        resolved = BUTLER_BOT.cli_runtime_service.resolve_runtime_request(cfg, {"cli": "cursor"}, model_override="gpt-5.2")
+        self.assertEqual(resolved["cli"], "cursor")
+        self.assertEqual(resolved["model"], "auto")
+
+    def test_format_current_model_reply_normalizes_cursor_default(self):
+        reply = BUTLER_BOT._format_current_model_reply(
+            {
+                "agent_model": "gpt-5.2",
+                "cli_runtime": {
+                    "active": "cursor",
+                    "defaults": {"model": "gpt-5.2"},
+                    "providers": {
+                        "cursor": {"enabled": True},
+                        "codex": {"enabled": False},
+                    },
+                },
+            }
+        )
+        self.assertIn("当前默认模型：auto", reply)
+
     def test_list_available_models_parses_dash_format(self):
         fake_completed = type("Result", (), {"stdout": "Available models\n\nauto - Auto  (current, default)\ngpt-5 - GPT-5\nsonnet-4 - Sonnet 4\n", "stderr": "", "returncode": 0})
-        with mock.patch.object(BUTLER_BOT.os.path, "isfile", return_value=True), mock.patch.object(BUTLER_BOT.subprocess, "run", return_value=fake_completed):
+        with mock.patch.object(BUTLER_BOT.cli_runtime_service, "resolve_cursor_cli_cmd_path", return_value="C:/cursor-agent.cmd"), mock.patch.object(BUTLER_BOT.cli_runtime_service.os.path, "isfile", return_value=True), mock.patch.object(BUTLER_BOT.cli_runtime_service.subprocess, "run", return_value=fake_completed):
             models, error = BUTLER_BOT._list_available_models("c:/workspace", 30)
         self.assertIsNone(error)
         self.assertEqual(models, ["auto", "gpt-5", "sonnet-4"])
 
     def test_run_agent_via_cli_tolerates_non_utf8_stdout_json(self):
-        payload = io.BytesIO()
-        payload.write('{"result":"'.encode("ascii"))
-        payload.write("启动失败，请查看日志".encode("gbk"))
-        payload.write('"}'.encode("ascii"))
-        fake_completed = type("Result", (), {"stdout": payload.getvalue(), "stderr": b"", "returncode": 0})
-
-        with mock.patch.object(BUTLER_BOT.os.path, "isfile", return_value=True), mock.patch.object(BUTLER_BOT.subprocess, "run", return_value=fake_completed):
+        with mock.patch.object(BUTLER_BOT.cli_runtime_service, "run_prompt", return_value=("启动失败，请查看日志", True)):
             out, ok = BUTLER_BOT._run_agent_via_cli("test", "c:/workspace", 30, "auto")
 
         self.assertTrue(ok)
         self.assertEqual(out, "启动失败，请查看日志")
 
     def test_run_agent_streaming_tolerates_non_utf8_stream_json(self):
-        assistant_line = (
-            '{"type":"assistant","message":{"content":[{"type":"text","text":"'.encode("ascii")
-            + "你好，继续处理".encode("gbk")
-            + '"}]}}\n'.encode("ascii")
-        )
-        result_line = (
-            '{"type":"result","subtype":"success","result":"'.encode("ascii")
-            + "你好，继续处理".encode("gbk")
-            + '"}\n'.encode("ascii")
-        )
-
-        class _FakeProc:
-            def __init__(self):
-                self.stdin = io.BytesIO()
-                self.stdout = [assistant_line, result_line]
-                self.stderr = io.BytesIO(b"")
-                self.returncode = 0
-
-            def wait(self, timeout=None):
-                return 0
-
-            def kill(self):
-                self.returncode = -9
-
-        with mock.patch.object(BUTLER_BOT.os.path, "isfile", return_value=True), mock.patch.object(BUTLER_BOT.subprocess, "Popen", return_value=_FakeProc()):
+        with mock.patch.object(BUTLER_BOT.cli_runtime_service, "run_prompt", return_value=("你好，继续处理", True)):
             out, ok = BUTLER_BOT._run_agent_streaming("test", "c:/workspace", 30, "auto")
 
         self.assertTrue(ok)
         self.assertEqual(out, "你好，继续处理")
+
+    def test_run_codex_uses_provider_https_proxy(self):
+        provider = {
+            "path": "codex",
+            "https_proxy": "http://127.0.0.1:10808",
+        }
+        completed = type("Result", (), {"stdout": '{"output_text":"ok"}\n', "stderr": "", "returncode": 0})
+        with mock.patch.object(BUTLER_BOT.cli_runtime_service, "_provider_config", return_value=provider), mock.patch.object(BUTLER_BOT.cli_runtime_service, "_resolve_command_path", return_value="C:/codex.cmd"), mock.patch.object(BUTLER_BOT.cli_runtime_service.subprocess, "run", return_value=completed) as mocked_run:
+            out, ok = BUTLER_BOT.cli_runtime_service._run_codex("hello", "c:/workspace", 30, {}, {"model": "gpt-5"}, on_segment=None)
+        self.assertTrue(ok)
+        self.assertEqual(out, "ok")
+        self.assertEqual(mocked_run.call_args.kwargs["env"]["HTTPS_PROXY"], "http://127.0.0.1:10808")
+
+    def test_run_codex_sends_prompt_via_stdin(self):
+        provider = {
+            "path": "codex",
+        }
+        completed = type("Result", (), {"stdout": '{"output_text":"ok"}\n', "stderr": "", "returncode": 0})
+        with mock.patch.object(BUTLER_BOT.cli_runtime_service, "_provider_config", return_value=provider), mock.patch.object(BUTLER_BOT.cli_runtime_service, "_resolve_command_path", return_value="C:/codex.cmd"), mock.patch.object(BUTLER_BOT.cli_runtime_service.subprocess, "run", return_value=completed) as mocked_run:
+            out, ok = BUTLER_BOT.cli_runtime_service._run_codex("very long prompt", "c:/workspace", 30, {}, {"model": "gpt-5.2"}, on_segment=None)
+        self.assertTrue(ok)
+        self.assertEqual(out, "ok")
+        self.assertEqual(mocked_run.call_args.args[0][-1], "-")
+        self.assertEqual(mocked_run.call_args.kwargs["input"], "very long prompt")
 
 
 if __name__ == "__main__":
