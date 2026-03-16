@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from typing import Callable
 
-from memory_manager import build_cursor_cli_env, resolve_cursor_cli_cmd_path
+from runtime.cursor_runtime_support import build_cursor_cli_env, resolve_cursor_cli_cmd_path
 
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
@@ -184,9 +184,24 @@ def run_prompt(
     on_segment: Callable[[str], None] | None = None,
 ) -> tuple[str, bool]:
     resolved = resolve_runtime_request(cfg, runtime_request)
-    if str(resolved.get("cli") or "cursor").strip() == "codex":
-        return _run_codex(prompt, workspace, timeout, cfg, resolved, on_segment=on_segment)
-    return _run_cursor(prompt, workspace, timeout, cfg, resolved, stream=stream, on_segment=on_segment)
+    preferred_cli = str(resolved.get("cli") or "cursor").strip().lower()
+    runner = _run_codex if preferred_cli == "codex" else _run_cursor
+    output, ok = runner(prompt, workspace, timeout, cfg, resolved, stream=stream, on_segment=on_segment) if runner is _run_cursor else runner(prompt, workspace, timeout, cfg, resolved, on_segment=on_segment)
+    if ok or not _should_fallback_runtime(preferred_cli, output, cfg):
+        return output, ok
+    fallback_cli = _fallback_cli_name(preferred_cli, cfg)
+    if not fallback_cli:
+        return output, ok
+    fallback_request = dict(resolved)
+    fallback_request["cli"] = fallback_cli
+    fallback_request["model"] = normalize_model_name(fallback_request.get("model"), fallback_cli)
+    fallback_request["fallback_from"] = preferred_cli
+    fallback_request["fallback_reason"] = "provider-unavailable"
+    fallback_runner = _run_codex if fallback_cli == "codex" else _run_cursor
+    fallback_output, fallback_ok = fallback_runner(prompt, workspace, timeout, cfg, fallback_request, stream=stream, on_segment=on_segment) if fallback_runner is _run_cursor else fallback_runner(prompt, workspace, timeout, cfg, fallback_request, on_segment=on_segment)
+    if fallback_ok:
+        return fallback_output, True
+    return output, ok
 
 
 def _provider_config(cfg: dict | None, cli_name: str) -> dict:
@@ -389,6 +404,33 @@ def _extract_cursor_output(stdout_text: str, stderr_text: str) -> str:
         except Exception:
             pass
     return text or str(stderr_text or "").strip()
+
+
+def _should_fallback_runtime(cli_name: str, output: str, cfg: dict | None) -> bool:
+    if not output:
+        return True
+    return _is_unavailable_payload(output) and bool(_fallback_cli_name(cli_name, cfg))
+
+
+def _fallback_cli_name(cli_name: str, cfg: dict | None) -> str:
+    current = _canonical_cli_name(cli_name)
+    candidate = "codex" if current == "cursor" else "cursor"
+    if cli_provider_available(candidate, cfg):
+        return candidate
+    return ""
+
+
+def _is_unavailable_payload(output: str) -> bool:
+    normalized = strip_ansi(output).strip().lower()
+    if not normalized:
+        return True
+    return normalized in {
+        "s: [unavailable]",
+        "[unavailable]",
+        "unavailable",
+        "status: unavailable",
+        "s:[unavailable]",
+    }
 
 
 def _extract_codex_output(stdout_text: str, stderr_text: str) -> str:

@@ -30,14 +30,27 @@ class RuntimeModuleLayoutTests(unittest.TestCase):
 
     def test_grouped_subpackages_are_importable(self) -> None:
         modules = (
-            "services.task_ledger_service",
-            "services.prompt_assembly_service",
-            "runtime.cli_runtime",
-            "runtime.runtime_router",
+                "services.task_ledger_service",
+                "services.prompt_assembly_service",
+                "services.self_mind_runtime_service",
+                "services.self_mind_cycle_service",
+                "services.self_mind_state_service",
+                "services.self_mind_prompt_service",
+                "services.upgrade_governance_service",
+                "services.message_delivery_service",
+                "services.delivery_flow_service",
+                "services.approval_request_service",
+                "runtime.cli_runtime",
+                "runtime.cursor_runtime_support",
+                "runtime.runtime_router",
             "registry.skill_registry",
             "registry.agent_capability_registry",
-            "execution.agent_team_executor",
-            "utils.markdown_safety",
+                "execution.agent_team_executor",
+                "utils.markdown_safety",
+                "utils.atomic_files",
+                "standards.architecture_manifest",
+                "standards.code_health_manifest",
+                "standards.protocol_registry",
         )
         for module_name in modules:
             with self.subTest(module=module_name):

@@ -13,7 +13,7 @@
 
 param(
     [string[]] $SkipTask = @(),
-    [string]   $WorkspaceRoot = "c:\Users\Lenovo\Desktop\研究生\Bulter",
+    [string]   $WorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\\..\\..\\..")).Path,
     [string]   $AgentCmd = "$env:LOCALAPPDATA\cursor-agent\versions\dist-package\cursor-agent.cmd",
     [int]      $TaskTimeoutSeconds = 600,
     [string]   $FeishuWebhookUrl = "",

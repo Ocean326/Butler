@@ -23,10 +23,11 @@ from pathlib import Path
 from typing import Callable
 
 from registry.agent_capability_registry import render_agent_capability_catalog_for_prompt
-from butler_paths import BUTLER_MAIN_AGENT_ROLE_FILE_REL, BUTLER_SOUL_FILE_REL, COMPANY_HOME_REL, CURRENT_USER_PROFILE_FILE_REL, CURRENT_USER_PROFILE_TEMPLATE_FILE_REL, FEISHU_AGENT_ROLE_FILE_REL, SELF_MIND_DIR_REL, UPDATE_AGENT_ROLE_FILE_REL, prompt_path_text, resolve_butler_root
+from butler_paths import BUTLER_SOUL_FILE_REL, COMPANY_HOME_REL, CURRENT_USER_PROFILE_FILE_REL, CURRENT_USER_PROFILE_TEMPLATE_FILE_REL, FEISHU_AGENT_ROLE_FILE_REL, SELF_MIND_DIR_REL, UPDATE_AGENT_ROLE_FILE_REL, prompt_path_text, resolve_butler_root
 from utils.markdown_safety import safe_truncate_markdown, sanitize_markdown_structure
 from services.prompt_assembly_service import DialoguePromptContext, PromptAssemblyService
 from runtime.runtime_logging import install_print_hook, set_runtime_log_config
+from standards.protocol_registry import get_protocol_registry
 
 # 确保日志 / 控制台输出 UTF-8
 if hasattr(sys.stdout, "reconfigure"):
@@ -59,9 +60,9 @@ _message_dedup = {}
 _message_dedup_lock = threading.Lock()
 _reply_dedup = {}
 _reply_dedup_lock = threading.Lock()
+_PROTOCOL_REGISTRY = get_protocol_registry()
 _MESSAGE_DEDUP_TTL = 15 * 60
 AGENT_ROLE_FILE = prompt_path_text(FEISHU_AGENT_ROLE_FILE_REL)
-BUTLER_MAIN_AGENT_FILE = prompt_path_text(BUTLER_MAIN_AGENT_ROLE_FILE_REL)
 BUTLER_SOUL_FILE = prompt_path_text(BUTLER_SOUL_FILE_REL)
 CURRENT_USER_PROFILE_FILE = prompt_path_text(CURRENT_USER_PROFILE_FILE_REL)
 CURRENT_USER_PROFILE_TEMPLATE_FILE = prompt_path_text(CURRENT_USER_PROFILE_TEMPLATE_FILE_REL)
@@ -93,9 +94,21 @@ _ALWAYS_ON_SOUL_GUIDANCE = (
 
 _MODE_GUIDANCE = {
     "companion": "这是偏闲聊/关系/感受场景。优先保留价值观、感情和人设，再自然推进事情，不要因为读了 recent 或技能说明就回成客服。",
+    "content_share": "这是用户在分享链接、截图、转发内容或一段素材。先直接回应内容本身，给即时判断、理解、提炼或建议；不要先播报你准备怎么处理，也不要把本机命令交给用户代跑。",
     "execution": "这是偏执行/推进场景。先给有用结论和下一步，再给证据；保持有人味，但不要拖成情绪化长铺垫。",
     "maintenance": "这是 agent 维护场景。优先找单一真源、收敛重复规则、说明改动面与验证；不要在角色文档后机械追加相似条款。",
 }
+
+_CONTENT_SHARE_LINK_PATTERNS = (
+    "http://",
+    "https://",
+    "xhslink.com",
+    "xiaohongshu.com",
+    "小红书",
+    "b23.tv",
+    "bilibili.com",
+    "mp.weixin.qq.com",
+)
 
 _PROMPT_ASSEMBLY_SERVICE = PromptAssemblyService()
 
@@ -116,17 +129,19 @@ def build_feishu_agent_prompt(
     source_prompt = _resolve_source_user_prompt(user_prompt, raw_user_prompt)
     prompt_mode = _classify_prompt_mode(source_prompt)
     inject_soul = _should_inject_butler_soul(source_prompt, prompt_mode)
-    main_excerpt = _load_butler_main_agent_excerpt(max_chars=1500 if prompt_mode == "maintenance" else 1200)
     soul_excerpt = ""
     if inject_soul:
         soul_excerpt = _load_butler_soul_excerpt(max_chars=1800 if prompt_mode == "companion" else 1400)
 
-    profile_excerpt = _load_current_user_profile_excerpt(max_chars=1100)
+    profile_excerpt = _load_current_user_profile_excerpt(max_chars=900)
     self_mind_cognition_excerpt = ""
     self_mind_excerpt = ""
-    if prompt_mode in {"companion", "maintenance"} or inject_soul:
-        self_mind_cognition_excerpt = _load_self_mind_cognition_excerpt(max_chars=900)
-        self_mind_excerpt = _load_self_mind_context_excerpt(max_chars=1200)
+    include_self_mind_context = prompt_mode in {"companion", "maintenance"} or any(
+        keyword in source_prompt for keyword in ("self_mind", "self-mind", "小我", "内心")
+    )
+    if include_self_mind_context:
+        self_mind_cognition_excerpt = _load_self_mind_cognition_excerpt(max_chars=700)
+        self_mind_excerpt = _load_self_mind_context_excerpt(max_chars=900)
 
     workspace_root = get_config().get("workspace_root") or Path(__file__).resolve().parents[2]
     local_memory_text = _PROMPT_ASSEMBLY_SERVICE.render_local_memory_hits(
@@ -134,16 +149,14 @@ def build_feishu_agent_prompt(
         source_prompt,
         limit=4,
         include_details=prompt_mode == "maintenance",
-        max_chars=1600,
-        memory_types=("personal", "task"),
+        max_chars=1200 if prompt_mode == "maintenance" else 700,
+        memory_types=("personal",) if prompt_mode in {"companion", "content_share"} else ("personal", "task"),
     )
     dialogue_prompt = _PROMPT_ASSEMBLY_SERVICE.assemble_dialogue_prompt(
         DialoguePromptContext(
-            source_user_prompt=source_prompt,
-            runtime_user_prompt=user_prompt,
             prompt_mode=prompt_mode,
             butler_soul_text=soul_excerpt if inject_soul else "",
-            butler_main_agent_text=main_excerpt,
+            butler_main_agent_text="",
             current_user_profile_text=(
                 f"优先读取 @{CURRENT_USER_PROFILE_FILE}；若不存在则参考 @{CURRENT_USER_PROFILE_TEMPLATE_FILE}\n{profile_excerpt}"
                 if profile_excerpt else ""
@@ -165,11 +178,10 @@ def build_feishu_agent_prompt(
         "你正在以 feishu-workstation-agent 的身份回复飞书用户。",
         f"【角色设置】@{AGENT_ROLE_FILE}",
         f"【当前场景】\nmode={prompt_mode}\n{_MODE_GUIDANCE.get(prompt_mode, _MODE_GUIDANCE['execution'])}",
-        f"【主意识真源】@{BUTLER_MAIN_AGENT_FILE}",
-        f"【灵魂基线】{_ALWAYS_ON_SOUL_GUIDANCE}",
+        f"【基础行为】{_ALWAYS_ON_SOUL_GUIDANCE}",
         dialogue_prompt,
     ]
-    if request_intake_prompt:
+    if _should_include_request_intake_block(prompt_mode, source_prompt) and request_intake_prompt:
         blocks.append(request_intake_prompt.strip())
     if inject_soul:
         blocks.append(f"【灵魂真源】@{BUTLER_SOUL_FILE}")
@@ -181,17 +193,30 @@ def build_feishu_agent_prompt(
         )
         if update_excerpt:
             blocks.append(f"【update-agent 摘录】\n{update_excerpt}")
+        maintenance_protocol = _PROTOCOL_REGISTRY.render_prompt_block("self_update", heading="自我更新协作协议").strip()
+        if maintenance_protocol:
+            blocks.append(maintenance_protocol)
+
+    if prompt_mode in {"execution", "maintenance"}:
+        task_protocol = _PROTOCOL_REGISTRY.render_prompt_block("task_collaboration", heading="任务协作协议").strip()
+        if task_protocol:
+            blocks.append(task_protocol)
+
+    if _should_include_self_mind_protocol(prompt_mode, source_prompt, inject_soul):
+        self_mind_protocol = _PROTOCOL_REGISTRY.render_prompt_block("self_mind_collaboration", heading="自我认识协作协议").strip()
+        if self_mind_protocol:
+            blocks.append(self_mind_protocol)
 
     if feishu_doc_search_result:
         blocks.append(feishu_doc_search_result.strip())
-    if skills_prompt:
+    if skills_prompt and _should_include_skills_catalog(source_prompt, prompt_mode):
         blocks.append(
             "【可复用 Skills】对飞书检索、资料抓取、巡检、外部系统操作等非核心能力，优先复用已登记 skills；"
             "身体运行、灵魂、记忆、心跳属于核心 DNA，不要建议拆成 skill。\n"
             "如果用户提到‘调用 skill / 技能’，你的动作不是空口说会用，而是先在 skills 列表里匹配目录、读取对应 SKILL.md，然后在回复里明确写出‘本次使用了 xx skill（路径：...）’；若没匹配到，也要明确说没找到。\n"
             f"{skills_prompt.strip()}"
         )
-    if agent_capabilities_prompt:
+    if agent_capabilities_prompt and _should_include_agent_capabilities(source_prompt, prompt_mode):
         blocks.append(
             "【可复用 Sub-Agents 与 Agent Teams】对复杂任务优先复用本地登记的 sub-agent 或 agent team，"
             "单角色专长任务优先 sub-agent，多阶段或可并行任务优先 team；公用库只作为已审阅参考来源，不直接远程托管调用。\n"
@@ -207,8 +232,10 @@ def build_feishu_agent_prompt(
 
     blocks.append(
         "【回复要求】使用 Markdown 格式回复：**粗体** 用于强调，`行内代码` 用于命令或路径。"
-        "若内容较长，可以拆成多个以 `##` 开头的小节，先给关键结论，再按小节逐步展开。"
-        "闲聊时优先保留情感与人设，执行时优先保留推进力，维护时优先保留真源、验证和风险说明。"
+        "若内容较长，可以拆成多个以 `##` 开头的小节，先给结论，再展开。"
+        "不要汇报自己的读文件、看配置、准备调用什么；直接回答用户真正关心的内容。"
+        "只有在你已经实际执行了某个工具、skill、sub-agent 或 team 时，才可以提它；否则不要假装自己已经跑过。"
+        "除非用户明确要命令或步骤，否则不要把本机 PowerShell/终端操作转嫁给用户。"
     )
     blocks.append(
         f"【decide】若需发送产出文件给用户，在回复末尾追加：\n【decide】\n"
@@ -237,9 +264,53 @@ def _classify_prompt_mode(user_prompt: str) -> str:
     lowered = text.lower()
     if any(keyword in lowered for keyword in (item.lower() for item in _MAINTENANCE_TRIGGER_KEYWORDS)):
         return "maintenance"
+    if _is_content_share_prompt(text):
+        return "content_share"
     if any(keyword in text for keyword in _COMPANION_TRIGGER_KEYWORDS):
         return "companion"
     return "execution"
+
+
+def _is_content_share_prompt(user_prompt: str) -> bool:
+    text = str(user_prompt or "").strip()
+    if not text:
+        return False
+    lowered = text.lower()
+    if any(pattern in lowered for pattern in _CONTENT_SHARE_LINK_PATTERNS):
+        return True
+    if "复制后打开" in text or "查看笔记" in text or "转发" in text:
+        return True
+    if len(text) <= 220 and text.count("\n") >= 1 and ("http" in lowered or "链接" in text or "截图" in text):
+        return True
+    return False
+
+
+def _should_include_request_intake_block(prompt_mode: str, source_prompt: str) -> bool:
+    if prompt_mode in {"maintenance"}:
+        return True
+    text = str(source_prompt or "").strip()
+    return len(text) >= 180
+
+
+def _should_include_self_mind_protocol(prompt_mode: str, source_prompt: str, inject_soul: bool) -> bool:
+    if prompt_mode in {"companion", "maintenance"}:
+        return True
+    text = str(source_prompt or "")
+    return inject_soul and any(keyword in text for keyword in ("self_mind", "self-mind", "小我", "内心"))
+
+
+def _should_include_skills_catalog(source_prompt: str, prompt_mode: str) -> bool:
+    if prompt_mode == "maintenance":
+        return False
+    text = str(source_prompt or "").lower()
+    return any(keyword in text for keyword in ("skill", "技能", "mcp", "调用", "抓取", "ocr", "检索"))
+
+
+def _should_include_agent_capabilities(source_prompt: str, prompt_mode: str) -> bool:
+    if prompt_mode not in {"execution", "maintenance"}:
+        return False
+    text = str(source_prompt or "").lower()
+    return any(keyword in text for keyword in ("sub-agent", "subagent", "agent team", "team", "并行", "分工", "协作"))
 
 
 def _should_inject_butler_soul(user_prompt: str, prompt_mode: str = "execution") -> bool:
@@ -269,12 +340,6 @@ def _load_markdown_excerpt(rel_path: Path, max_chars: int) -> str:
 
 def _load_butler_soul_excerpt(max_chars: int = 2200) -> str:
     return _load_markdown_excerpt(BUTLER_SOUL_FILE_REL, max_chars=max_chars)
-
-
-def _load_butler_main_agent_excerpt(max_chars: int = 1800) -> str:
-    return _load_markdown_excerpt(BUTLER_MAIN_AGENT_ROLE_FILE_REL, max_chars=max_chars)
-
-
 def _load_current_user_profile_excerpt(max_chars: int = 1400) -> str:
     try:
         workspace_root = get_config().get("workspace_root") or Path(__file__).resolve().parents[2]
@@ -982,6 +1047,7 @@ def handle_message_async(
     on_reply_sent: Callable[[str, str], None] | None = None,
     send_output_files: bool = True,
     dedup_id: str | None = None,
+    immediate_receipt_text: str | None = None,
 ) -> None:
     claim_id = (dedup_id or message_id or "").strip()
     if claim_id and not _claim_message(claim_id):
@@ -992,6 +1058,10 @@ def handle_message_async(
     hint_sent = {"value": False}
     request_finished = {"value": False}
     latest_stream_text = {"value": ""}
+
+    receipt_text = str(immediate_receipt_text or "").strip()
+    if receipt_text:
+        _send_deduped_reply(message_id, receipt_text, use_interactive=False, channel="receipt")
 
     def _segment_key(text: str) -> str:
         # 归一化空白，避免仅因换行/空格差异导致重复发送。
@@ -1090,6 +1160,12 @@ def _extract_message(data) -> tuple[str, str, list[str]]:
     try:
         content = json.loads(content_str) if isinstance(content_str, str) else content_str
         text = (content.get("text") or "").strip()
+        rich_text = _extract_feishu_rich_text(content)
+        quote_text = _extract_feishu_quote_text(content)
+        if quote_text and quote_text not in text:
+            text = (f"【引用内容】\n{quote_text}\n\n{text}" if text else f"【引用内容】\n{quote_text}").strip()
+        if rich_text and rich_text not in text:
+            text = (f"{text}\n\n{rich_text}" if text else rich_text).strip()
         if content.get("image_key"):
             image_keys.append(content["image_key"])
         for row in content.get("content") or []:
@@ -1099,6 +1175,189 @@ def _extract_message(data) -> tuple[str, str, list[str]]:
     except Exception:
         pass
     return message_id, text, image_keys
+
+
+def _extract_feishu_rich_text(content) -> str:
+    lines: list[str] = []
+
+    def _walk(node) -> None:
+        if isinstance(node, list):
+            for item in node:
+                _walk(item)
+            return
+        if not isinstance(node, dict):
+            return
+        tag = str(node.get("tag") or "").strip().lower()
+        text = str(node.get("text") or "").strip()
+        if tag in {"text", "plain_text"} and text:
+            lines.append(text)
+        elif tag == "a" and text:
+            href = str(node.get("href") or "").strip()
+            lines.append(f"{text} ({href})" if href else text)
+        elif tag == "at" and text:
+            lines.append(f"@{text.lstrip('@')}")
+        for key in ("content", "children", "elements"):
+            child = node.get(key)
+            if isinstance(child, (list, dict)):
+                _walk(child)
+
+    _walk(content.get("content") if isinstance(content, dict) else None)
+    rendered = "\n".join(part.strip() for part in lines if part.strip()).strip()
+    return rendered[:2000]
+
+
+def _extract_feishu_quote_text(content) -> str:
+    candidates: list[str] = []
+
+    def _walk(node, *, depth: int = 0, under_quote: bool = False) -> None:
+        if depth > 6:
+            return
+        if isinstance(node, list):
+            for item in node:
+                _walk(item, depth=depth + 1, under_quote=under_quote)
+            return
+        if not isinstance(node, dict):
+            return
+        keys = {str(key).lower() for key in node.keys()}
+        tag = str(node.get("tag") or "").strip().lower()
+        current_under_quote = under_quote or tag in {"quote", "blockquote"} or any(
+            key in keys for key in {"quote", "quoted", "reply", "reference", "parent_message", "root_message"}
+        )
+        text = str(node.get("text") or "").strip()
+        if current_under_quote and text:
+            candidates.append(text)
+        for value in node.values():
+            if isinstance(value, (list, dict)):
+                _walk(value, depth=depth + 1, under_quote=current_under_quote)
+
+    _walk(content if isinstance(content, dict) else {})
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in candidates:
+        normalized = re.sub(r"\s+", " ", item).strip()
+        if not normalized:
+            continue
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(normalized)
+    return "\n".join(deduped[:6])[:1600]
+
+
+def _run_feishu_loop(
+    *,
+    bot_name: str,
+    run_agent_fn: Callable[..., str],
+    supports_images: bool,
+    supports_stream_segment: bool,
+    send_output_files: bool,
+    on_bot_started: Callable[[], None] | None,
+    on_reply_sent: Callable[[str, str], None] | None,
+    immediate_receipt_text: str | None = None,
+) -> int:
+    if not CONFIG.get("app_id") or not CONFIG.get("app_secret"):
+        print("配置缺少 app_id 或 app_secret", file=sys.stderr)
+        return 1
+
+    if on_bot_started:
+        try:
+            on_bot_started()
+        except Exception as e:
+            print(f"on_bot_started 执行异常: {e}", file=sys.stderr)
+
+    def _on_message(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
+        try:
+            message_id, text, image_keys = _extract_message(data)
+            if not message_id:
+                return
+            if not text and not image_keys:
+                return
+            p = text or "（用户发送了图片，请分析并回复）"
+            print(f"[收到] message_id={message_id[:20]}..., text={p[:50] if p else '(图片)'}..., images={len(image_keys)}", flush=True)
+            handle_message_async(
+                message_id, p, image_keys, run_agent_fn,
+                supports_images=supports_images,
+                supports_stream_segment=supports_stream_segment,
+                send_output_files=send_output_files,
+                on_reply_sent=on_reply_sent,
+                immediate_receipt_text=immediate_receipt_text,
+            )
+        except Exception as e:
+            print(f"处理消息异常: {e}", file=sys.stderr)
+            try:
+                mid, _, _ = _extract_message(data)
+                if mid:
+                    reply_message(mid, f"处理异常: {e}", use_interactive=False)
+            except Exception:
+                pass
+
+    def _on_card_action(data: lark.cardkit.v1.P2CardActionTrigger):
+        payload = _extract_card_action_payload(data)
+        message_id = str(payload.get("open_message_id") or "").strip()
+        cmd = str(payload.get("cmd") or "").strip() or "(unknown)"
+        if not message_id:
+            print(f"[卡片交互] 缺少 open_message_id，忽略 cmd={cmd}", flush=True)
+            return _build_card_action_response("没有找到原消息，已忽略这次点击。", toast_type="warning")
+
+        prompt = _build_card_action_prompt(payload)
+        print(f"[卡片交互] 收到 cmd={cmd} | message_id={message_id[:20]}...", flush=True)
+        handle_message_async(
+            message_id,
+            prompt,
+            None,
+            run_agent_fn,
+            supports_images=False,
+            supports_stream_segment=supports_stream_segment,
+            send_output_files=send_output_files,
+            on_reply_sent=on_reply_sent,
+            dedup_id=str(payload.get("dedup_id") or ""),
+            immediate_receipt_text=immediate_receipt_text,
+        )
+        return _build_card_action_response(f"已收到「{cmd}」，正在处理。")
+
+    handler = (
+        lark.EventDispatcherHandler.builder("", "")
+        .register_p2_im_message_receive_v1(_on_message)
+        .register_p2_card_action_trigger(_on_card_action)
+        .build()
+    )
+    cli = ws.Client(CONFIG["app_id"], CONFIG["app_secret"], event_handler=handler, log_level=lark.LogLevel.INFO)
+    print(f"启动飞书 {bot_name} 机器人（长连接）...", flush=True)
+    cli.start()
+    return 0
+
+
+def run_feishu_bot_with_loaded_config(
+    config: dict,
+    *,
+    bot_name: str,
+    run_agent_fn: Callable[..., str],
+    supports_images: bool = True,
+    supports_stream_segment: bool = True,
+    send_output_files: bool = True,
+    on_bot_started: Callable[[], None] | None = None,
+    on_reply_sent: Callable[[str, str], None] | None = None,
+    immediate_receipt_text: str | None = None,
+) -> int:
+    global CONFIG, _config_path_for_reload
+    normalized = dict(config or {})
+    _config_path_for_reload = os.path.abspath(str(normalized.get("__config_path") or "")) if str(normalized.get("__config_path") or "").strip() else None
+    CONFIG.clear()
+    CONFIG.update(normalized)
+    if not CONFIG.get("workspace_root"):
+        CONFIG["workspace_root"] = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    set_runtime_log_config(CONFIG.get("__config_path"), (CONFIG.get("logging") or {}).get("level") if isinstance(CONFIG.get("logging"), dict) else None)
+    return _run_feishu_loop(
+        bot_name=bot_name,
+        run_agent_fn=run_agent_fn,
+        supports_images=supports_images,
+        supports_stream_segment=supports_stream_segment,
+        send_output_files=send_output_files,
+        on_bot_started=on_bot_started,
+        on_reply_sent=on_reply_sent,
+        immediate_receipt_text=immediate_receipt_text,
+    )
 
 
 def run_feishu_bot(
@@ -1113,6 +1372,7 @@ def run_feishu_bot(
     local_test_fn: Callable[[str, argparse.Namespace], str] | Callable[[str], str] | None = None,
     on_bot_started: Callable[[], None] | None = None,
     on_reply_sent: Callable[[str, str], None] | None = None,
+    immediate_receipt_text: str | None = None,
 ) -> int:
     """
     通用飞书长连接入口。
@@ -1174,72 +1434,13 @@ def run_feishu_bot(
     CONFIG.update(load_config(args.config))
     CONFIG["__config_path"] = _config_path_for_reload
     set_runtime_log_config(CONFIG.get("__config_path"), (CONFIG.get("logging") or {}).get("level") if isinstance(CONFIG.get("logging"), dict) else None)
-    if not CONFIG.get("app_id") or not CONFIG.get("app_secret"):
-        print("配置缺少 app_id 或 app_secret", file=sys.stderr)
-        return 1
-
-    if on_bot_started:
-        try:
-            on_bot_started()
-        except Exception as e:
-            print(f"on_bot_started 执行异常: {e}", file=sys.stderr)
-
-    def _on_message(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
-        try:
-            message_id, text, image_keys = _extract_message(data)
-            if not message_id:
-                return
-            if not text and not image_keys:
-                return
-            p = text or "（用户发送了图片，请分析并回复）"
-            print(f"[收到] message_id={message_id[:20]}..., text={p[:50] if p else '(图片)'}..., images={len(image_keys)}", flush=True)
-            handle_message_async(
-                message_id, p, image_keys, run_agent_fn,
-                supports_images=supports_images,
-                supports_stream_segment=supports_stream_segment,
-                send_output_files=send_output_files,
-                on_reply_sent=on_reply_sent,
-            )
-        except Exception as e:
-            print(f"处理消息异常: {e}", file=sys.stderr)
-            try:
-                mid, _, _ = _extract_message(data)
-                if mid:
-                    reply_message(mid, f"处理异常: {e}", use_interactive=False)
-            except Exception:
-                pass
-
-    def _on_card_action(data: lark.cardkit.v1.P2CardActionTrigger):
-        payload = _extract_card_action_payload(data)
-        message_id = str(payload.get("open_message_id") or "").strip()
-        cmd = str(payload.get("cmd") or "").strip() or "(unknown)"
-        if not message_id:
-            print(f"[卡片交互] 缺少 open_message_id，忽略 cmd={cmd}", flush=True)
-            return _build_card_action_response("没有找到原消息，已忽略这次点击。", toast_type="warning")
-
-        prompt = _build_card_action_prompt(payload)
-        print(f"[卡片交互] 收到 cmd={cmd} | message_id={message_id[:20]}...", flush=True)
-        handle_message_async(
-            message_id,
-            prompt,
-            None,
-            run_agent_fn,
-            supports_images=False,
-            supports_stream_segment=supports_stream_segment,
-            send_output_files=send_output_files,
-            on_reply_sent=on_reply_sent,
-            dedup_id=str(payload.get("dedup_id") or ""),
-        )
-        return _build_card_action_response(f"已收到「{cmd}」，正在处理。")
-
-    handler = (
-        lark.EventDispatcherHandler.builder("", "")
-        .register_p2_im_message_receive_v1(_on_message)
-        .register_p2_card_action_trigger(_on_card_action)
-        .build()
+    return _run_feishu_loop(
+        bot_name=bot_name,
+        run_agent_fn=run_agent_fn,
+        supports_images=supports_images,
+        supports_stream_segment=supports_stream_segment,
+        send_output_files=send_output_files,
+        on_bot_started=on_bot_started,
+        on_reply_sent=on_reply_sent,
+        immediate_receipt_text=immediate_receipt_text,
     )
-    cli = ws.Client(CONFIG["app_id"], CONFIG["app_secret"], event_handler=handler, log_level=lark.LogLevel.INFO)
-    print(f"启动飞书 {bot_name} 机器人（长连接）...", flush=True)
-    cli.start()
-    return 0
-

@@ -15,9 +15,10 @@ from butler_paths import SKILLS_HOME_REL, prompt_path_text, resolve_butler_root
 from services.prompt_assembly_service import PlannerPromptContext, PromptAssemblyService
 from runtime.runtime_router import RuntimeRouter
 from services.task_ledger_service import TaskLedgerService
+from standards.protocol_registry import get_protocol_registry
 
 
-HEARTBEAT_MAX_PARALLEL_DEFAULT = 8
+HEARTBEAT_MAX_PARALLEL_DEFAULT = 4
 HEARTBEAT_MAX_SERIAL_PER_GROUP_DEFAULT = 3
 BEAT_RECENT_POOL = "beat"
 HEARTBEAT_PLANNER_MIN_INTERVAL_SECONDS = 60
@@ -61,6 +62,7 @@ class HeartbeatOrchestrator:
         self._team_executor = AgentTeamExecutor(manager._run_model_fn)
         self._prompt_assembly_service = PromptAssemblyService()
         self._runtime_router = RuntimeRouter()
+        self._protocol_registry = get_protocol_registry()
 
     def _extract_tell_user_markdown(self, text: str) -> str:
         raw = str(text or "")
@@ -273,8 +275,10 @@ class HeartbeatOrchestrator:
     def _planner_failure_backoff_seconds(self, heartbeat_cfg: dict) -> int:
         min_interval = self.resolve_planner_min_interval(heartbeat_cfg)
         failure_count = max(1, int(getattr(self._manager, "_heartbeat_planner_failure_count", 0) or 0))
-        scaled = min_interval * min(failure_count, 3)
-        return max(min_interval, min(HEARTBEAT_PLANNER_FAILURE_BACKOFF_MAX_SECONDS, scaled))
+        if failure_count <= 1:
+            return 0
+        scaled = min_interval * min(failure_count - 1, 3)
+        return min(HEARTBEAT_PLANNER_FAILURE_BACKOFF_MAX_SECONDS, max(0, scaled))
 
     def _read_planner_state(self, workspace: str) -> dict:
         state = self._manager._load_planner_state(workspace)
@@ -375,11 +379,12 @@ class HeartbeatOrchestrator:
     def _build_metabolism_branch(self) -> dict:
         prompt = (
             "role=heartbeat-executor-agent\n"
-            "output_dir=./工作区/governance\n"
+            "output_dir=./工作区/06_governance_ops/metabolism\n"
             "你作为 heartbeat-executor-agent，执行固定的 heartbeat 新陈代谢并行支路。\n"
-            "目标：轻量核对本轮相关的 docs、长期记忆索引、recent 与任务上下文之间是否存在过时、冲突、失配或待复核项。\n"
-            "只做低风险、小步动作：补一句说明、更新索引、标记待复核、补交叉引用、提出归档建议。\n"
-            "不要做大规模清扫，不要因为文档写得完整就压过当前运行事实与最近改动。\n"
+            "目标：只做当前 still-valid 的轻量治理，优先核对目录 README、索引、任务板和最近升级计划是否过时。\n"
+            "允许的小步动作：更新 README、补目录索引、归档过时说明、把旧任务标为 done/deferred/obsolete。\n"
+            "禁止继续维护 guardian 旧巡检、self_mind 桥接配额、已经废弃的心跳配额实验等过时任务。\n"
+            "不要做大规模清扫，不要用旧文档压过当前运行事实与最近改动。\n"
             "如果本轮未发现需要处理的项，也要返回一句明确结论，说明本轮代谢检查通过。"
         )
         return {
@@ -660,24 +665,20 @@ class HeartbeatOrchestrator:
         return normalized_groups
 
     def _build_executor_protocol_block(self) -> str:
-        return (
-            "【heartbeat 执行协议】\n"
-            "1. 你是执行者，不是机械流水线；在 branch 目标与边界内，自主选择最高效路径，优先做成事。\n"
-            "2. 除非 branch 明确要求细拆，否则默认先用较大颗粒度完成目标，再在必要处自行补微步骤。\n"
-            "3. 遇到外部调用失败、权限错误、配置错位、ID 不匹配、接口异常等可恢复问题时，不要只报失败；先完成至少一轮“诊断 -> 换路/修正 -> 复试”。\n"
-            "4. 对 chat_id、open_id、receive_id、container_id、user_id 一类外部标识，默认先核实类型与来源；错误码若暗示对象不在会话、类型不对或权限不符，应主动怀疑拿错 ID 或应用上下文。\n"
-            "5. 若命中明确错误码，请解释它意味着什么、你尝试了哪些替代路径、为什么最终仍成功或仍受阻。像 Feishu 230002 这类错误，不能只原样抄回执。\n"
-            "6. 完成前做首轮自验收：写清目标是否达成、证据是什么、剩余不确定性是什么、若继续迭代最值得补哪一步。\n\n"
-        )
+        rendered = self._protocol_registry.render_prompt_block("heartbeat_executor", heading="heartbeat 执行协议")
+        return rendered or ""
 
     def _build_update_agent_protocol_block(self) -> str:
-        return (
-            "【统一维护入口协议】\n"
-            "1. 本分支属于 role/prompt/code/config 的维护升级任务时，优先按 update-agent 的维护协议执行。\n"
-            "2. 先找单一真源，再做替换或收敛；不要在角色文档末尾野蛮追加相似规则。\n"
-            "3. Soul 保留稳定价值观、感情和人设；运行机制、维护流程、升级闸门优先落在 role/prompt/config/docs，而不是继续塞回 Soul。\n"
-            "4. 结果至少写清：改了什么、为什么这样改、验证了什么、还有什么风险。\n\n"
-        )
+        rendered = self._protocol_registry.render_prompt_block("update_agent_maintenance", heading="统一维护入口协议")
+        return rendered or ""
+
+    def _build_task_collaboration_protocol_block(self) -> str:
+        rendered = self._protocol_registry.render_prompt_block("task_collaboration", heading="任务协作协议")
+        return rendered or ""
+
+    def _build_self_update_protocol_block(self) -> str:
+        rendered = self._protocol_registry.render_prompt_block("self_update", heading="自我更新协作协议")
+        return rendered or ""
 
     def _resolve_branch_agent_role(self, branch: dict) -> str:
         role_name = str(branch.get("agent_role") or "executor").strip() or "executor"
@@ -741,25 +742,33 @@ class HeartbeatOrchestrator:
         if team_id:
             definition = load_team_definition(workspace, team_id)
             if definition is None:
-                duration = time.time() - started
                 available_team_ids = [item.team_id for item in load_team_catalog(workspace) if str(item.team_id).strip()]
                 available_text = ", ".join(available_team_ids[:8]) if available_team_ids else "(none)"
+                print(
+                    f"[heartbeat-branch] team fallback | branch_id={branch_id} | team_id={team_id} | role={role_name} | registered={available_text}",
+                    flush=True,
+                )
+                branch = dict(branch or {})
+                branch.pop("team_id", None)
+                branch.setdefault("planner_note", "")
+                branch["planner_note"] = (
+                    str(branch.get("planner_note") or "").strip() + "\n"
+                    + f"[runtime] unregistered team_id={team_id}; fallback to role execution={role_name}; registered teams={available_text}"
+                ).strip()
+            else:
+                with self._manager.runtime_request_scope(routing.runtime_request):
+                    result = self._team_executor.execute_team(team_id, str(branch.get("prompt") or "").strip(), workspace, branch_timeout, effective_model)
+                duration = time.time() - started
                 payload = self._branch_result_base(branch, branch_id, role_name, team_id, duration)
-                payload.update({"ok": False, "output": "", "error": f"unregistered team_id: {team_id}. registered teams: {available_text}"})
+                payload.update(
+                    {
+                        "ok": bool(result.get("ok")),
+                        "output": str(result.get("output") or "").strip(),
+                        "tell_user_markdown": self._extract_tell_user_markdown(str(result.get("output") or "")),
+                        "error": str(result.get("error") or "").strip(),
+                    }
+                )
                 return payload
-            with self._manager.runtime_request_scope(routing.runtime_request):
-                result = self._team_executor.execute_team(team_id, str(branch.get("prompt") or "").strip(), workspace, branch_timeout, effective_model)
-            duration = time.time() - started
-            payload = self._branch_result_base(branch, branch_id, role_name, team_id, duration)
-            payload.update(
-                {
-                    "ok": bool(result.get("ok")),
-                    "output": str(result.get("output") or "").strip(),
-                    "tell_user_markdown": self._extract_tell_user_markdown(str(result.get("output") or "")),
-                    "error": str(result.get("error") or "").strip(),
-                }
-            )
-            return payload
         skill_block, skill_error = self._load_branch_skill_block(workspace, branch)
         if skill_error:
             duration = time.time() - started
@@ -774,8 +783,10 @@ class HeartbeatOrchestrator:
         prompt_parts.append(self._build_process_role_block(process_role))
         if skill_block:
             prompt_parts.append(skill_block)
+        prompt_parts.append(self._build_task_collaboration_protocol_block())
         if role_name == "update-agent":
             prompt_parts.append(self._build_update_agent_protocol_block())
+            prompt_parts.append(self._build_self_update_protocol_block())
         prompt_parts.append(self._build_executor_protocol_block())
         prompt_parts.append(
             "【运行时路由】\n"
@@ -971,7 +982,6 @@ class HeartbeatOrchestrator:
                     max_parallel=max_parallel,
                 )
                 entry = consolidated["primary_entry"]
-                self._manager._promote_entry_into_self_mind_cognition(workspace, entry, source="heartbeat")
                 entries.append(entry)
                 entries.extend(consolidated["companion_entries"])
                 lt = entry.get("long_term_candidate") if isinstance(entry.get("long_term_candidate"), dict) else {}
@@ -1006,24 +1016,8 @@ class HeartbeatOrchestrator:
         template = self._manager._load_heartbeat_prompt_template(workspace)
         if "{json_schema}" not in template:
             template = template.rstrip() + "\n\n## JSON Schema\n\n{json_schema}\n"
-        if "{soul_text}" not in template:
-            template = template.rstrip() + "\n\n## Soul 摘录\n\n{soul_text}\n"
-        if "{role_text}" not in template:
-            template = template.rstrip() + "\n\n## 角色摘录\n\n{role_text}\n"
-        if "{local_memory_text}" not in template:
-            template = template.rstrip() + "\n\n## 长期记忆候选\n\n{local_memory_text}\n"
-        if "{task_workspace_text}" not in template:
-            template = template.rstrip() + "\n\n## 任务工作区\n\n{task_workspace_text}\n"
-        if "{skills_text}" not in template:
-            template = template.rstrip() + "\n\n## 可复用 Skills\n\n{skills_text}\n"
-        if "{subagents_text}" not in template:
-            template = template.rstrip() + "\n\n## 可复用 Sub-Agents\n\n{subagents_text}\n"
-        if "{teams_text}" not in template:
-            template = template.rstrip() + "\n\n## 可复用 Agent Teams\n\n{teams_text}\n"
-        if "{public_library_text}" not in template:
-            template = template.rstrip() + "\n\n## 公用 Agent/Team 参考库\n\n{public_library_text}\n"
-        if "{maintenance_entry_text}" not in template:
-            template = template.rstrip() + "\n\n## 统一维护入口\n\n{maintenance_entry_text}\n"
+        if "{tasks_context}" not in template and "{short_tasks_json}" not in template and "{long_tasks_json}" not in template:
+            template = template.rstrip() + "\n\n## 任务与上下文（heartbeat_tasks.md）\n\n{tasks_context}\n"
         if "{context_text}" not in template and "{agent_prompt}" not in template:
             template = template.rstrip() + "\n\n## 额外上下文\n\n{context_text}\n"
         json_schema = (

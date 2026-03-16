@@ -81,6 +81,10 @@ def _iter_skill_dirs(skills_root: Path) -> list[Path]:
     for skill_file in skills_root.rglob("SKILL.md"):
         if "__pycache__" in skill_file.parts:
             continue
+        if any(str(part or "").startswith("_tmp") for part in skill_file.parts):
+            continue
+        if any(part in {".git", ".hg", ".svn", "node_modules"} for part in skill_file.parts):
+            continue
         skill_dirs.append(skill_file.parent)
     return sorted(skill_dirs)
 
@@ -104,7 +108,7 @@ def load_skill_catalog(workspace: str | Path | None) -> list[SkillMetadata]:
         skill_file = skill_dir / "SKILL.md"
         try:
             text = skill_file.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             continue
         metadata = _parse_frontmatter(text)
         relative_dir = prompt_path_text(skill_dir.relative_to(root))

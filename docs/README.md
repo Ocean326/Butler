@@ -1,31 +1,39 @@
 # Butler Docs
 
-根目录 `docs/` 现在作为 Butler 文档的统一入口。
+`docs/` 是 Butler 的唯一正式文档入口。
 
-今日未归档：
-
-1. [0314 self_mind 循环现状与接回对话窗口方案](/C:/Users/Lenovo/Desktop/研究生/Butler/docs/0314_self_mind循环现状与接回对话窗口方案.md)
-2. [0314 升级前现状文档（自检版本）](/C:/Users/Lenovo/Desktop/研究生/Butler/docs/0314升级前现状文档（自检版本）.md)
-3. [0315 guardian 下线与后台控制现状](/C:/Users/Lenovo/Desktop/研究生/Butler/docs/0315_guardian下线与后台控制现状.md)
-
-目录约定：
+## 目录结构
 
 - `concepts/`
-  - 长期有效的概念、架构、约定、接入说明、排障地图
-- `daily-upgrades/`
-  - 按天记录的升级方案、升级构思、变更说明、阶段总结
+  - 长期有效的概念、架构、协议、接入说明、排障地图
+- `daily-upgrade/`
+  - 按日期归档的阶段性改动、现状、计划、排查记录
+  - 统一使用 `docs/daily-upgrade/<MMDD>/` 目录
 - `tools/`
-  - 文档生成脚本等辅助工具
+  - 文档辅助脚本
 
-建议阅读顺序：
+## 最近改动入口
 
-1. [0313 升级对照总结](/C:/Users/Lenovo/Desktop/研究生/Butler/docs/daily-upgrades/20260314_0313升级对照总结.md)
-2. [0314 升级前现状：任务调度与记忆链路](/C:/Users/Lenovo/Desktop/研究生/Butler/docs/daily-upgrades/20260314_0314升级前现状_任务调度与记忆链路.md)
-3. [当前系统架构](/C:/Users/Lenovo/Desktop/研究生/Butler/docs/concepts/当前系统架构_20260314.md)
-4. 需要继续追历史时，再看 `daily-upgrades/` 中对应日期文档
-5. 需要补上下文或排障时，再看 `concepts/` 中的全景、架构、记忆与守护文档
+1. [0316 执行结果：解耦与心跳治理](./daily-upgrade/0316/0316执行结果_解耦与心跳治理.md)
+2. [0316 Bootstrap 升级方案和计划](./daily-upgrade/0316/0316_bootstrap升级方案和计划.md)
+3. [0316 Prompt 组成说明：Talk / Heartbeat / Self-Mind](./daily-upgrade/0316/0316_prompt组成说明_talk_heartbeat_self_mind.md)
+4. [0316 现状分析与升级计划](./daily-upgrade/0316/0316现状分析与升级计划.md)
+5. [0315 现状文档](./daily-upgrade/0315/0315现状文档.md)
+6. [0315 计划文档](./daily-upgrade/0315/0315计划文档.md)
+7. [工程化目标架构](./daily-upgrade/0315/工程化目标架构_20260315.md)
+8. [20260315 工程化与长期规范化改造方案](./daily-upgrade/0315/20260315_工程化与长期规范化改造方案.md)
+9. [代码健康约束](./concepts/代码健康约束_20260315.md)
 
-说明：
+## 建议阅读顺序
 
-- `butler_main/butler_bot_code/docs/` 下的旧文档已迁移完成，根目录 `docs/` 是唯一正式文档入口。
-- 旧目录现在只保留迁移说明 `README.md`，不再存放正文文档。
+1. [0313 升级对照总结](./daily-upgrade/0313/20260314_0313升级对照总结.md)
+2. [0314 升级前现状：任务调度与记忆链路](./daily-upgrade/0314/20260314_0314升级前现状_任务调度与记忆链路.md)
+3. [当前系统架构](./concepts/当前系统架构_20260314.md)
+4. [0315 现状文档](./daily-upgrade/0315/0315现状文档.md)
+5. 需要追历史时，再进入 `daily-upgrade/<MMDD>/`
+
+## 维护规则
+
+1. 新的阶段性文档不要直接放在 `docs/` 根目录。
+2. 文档内优先使用相对路径，不写机器相关绝对路径。
+3. `butler_main/butler_bot_code/docs/` 只保留迁移说明，不再承载正式正文。

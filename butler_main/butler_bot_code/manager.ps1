@@ -22,7 +22,7 @@ $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$WorkspaceRoot = Split-Path -Parent $RootDir
+$WorkspaceRoot = Split-Path -Parent (Split-Path -Parent $RootDir)
 $RegistryPath = Join-Path $RootDir "registry.json"
 $RunDir = Join-Path $RootDir "run"
 $LogDir = Join-Path $RootDir "logs"
@@ -30,6 +30,7 @@ $LogDir = Join-Path $RootDir "logs"
 function Get-PythonExecutable {
     $candidates = @(
         (Join-Path $WorkspaceRoot ".venv\Scripts\python.exe"),
+        (Join-Path (Split-Path -Parent $RootDir) ".venv\Scripts\python.exe"),
         (Join-Path $RootDir "..\.venv\Scripts\python.exe")
     )
     foreach ($candidate in $candidates) {
@@ -190,6 +191,41 @@ function Test-MainRuntimeHealthy {
     return (((Get-Date) - $updatedAt).TotalSeconds -le 90)
 }
 
+function Wait-ForMainStartup {
+    param(
+        [int]$TimeoutSeconds = 20,
+        [int]$PollMilliseconds = 500
+    )
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        $mainState = Get-MainRuntimeState
+        if (Test-MainRuntimeHealthy $mainState) {
+            return @{
+                Success = $true
+                State = $mainState
+                Reason = "state-file"
+            }
+        }
+
+        $mainProc = Get-ButlerMainProcesses | Select-Object -First 1
+        if ($mainProc) {
+            return @{
+                Success = $true
+                State = $null
+                Reason = "process-detect"
+            }
+        }
+
+        Start-Sleep -Milliseconds $PollMilliseconds
+    }
+
+    return @{
+        Success = $false
+        State = $null
+        Reason = "timeout"
+    }
+}
+
 function Get-LogSegmentFile {
     param(
         [string]$Name,
@@ -230,6 +266,20 @@ function Get-LogSegmentFile {
 
     $nextSeg = $lastSeg + 1
     return (Join-Path $LogDir ("{0}_{1}_{2:000}{3}" -f $Name, $dateTag, $nextSeg, $suffix))
+}
+
+function Remove-OldBotLogs {
+    param(
+        [string]$Name,
+        [int]$KeepDays = 3
+    )
+    $cutoff = (Get-Date).AddDays(-[math]::Max(1, $KeepDays))
+    $regex = "^$([regex]::Escape($Name))_\d{8}_\d{3}(\.err)?\.log$"
+    Get-ChildItem $LogDir -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match $regex -and $_.LastWriteTime -lt $cutoff } |
+        ForEach-Object {
+            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+        }
 }
 
 function Test-FileContainsNullByte {
@@ -285,6 +335,7 @@ function Start-Bot {
     }
     $null = New-Item -ItemType Directory -Path $RunDir -Force
     $null = New-Item -ItemType Directory -Path $LogDir -Force
+    Remove-OldBotLogs -Name $Name -KeepDays 3
     $logFile = Get-LogSegmentFile -Name $Name -IsError:$false -MaxLines 1000
     $errFile = Get-LogSegmentFile -Name $Name -IsError:$true -MaxLines 1000
     # 使用 cmd 的追加重定向，避免 PowerShell 5.1 重定向产生 UTF-16 混写乱码。
@@ -295,6 +346,24 @@ function Start-Bot {
     $argList = @('/d', '/c', $cmdLine)
     $p = Start-Process -FilePath "cmd.exe" -ArgumentList $argList -WorkingDirectory (Split-Path -Parent $bot.Script) -WindowStyle Hidden -PassThru
     $p.Id | Out-File -FilePath $pidFile -Encoding utf8
+    if ($Name -eq "butler_bot") {
+        $startup = Wait-ForMainStartup
+        if ($startup.Success) {
+            if ($startup.State) {
+                Write-Host "已启动 $Name (PID=$([int]$startup.State.pid))，日志: $logFile"
+            } else {
+                Write-Host "已启动 $Name（状态文件稍后刷新），日志: $logFile"
+            }
+            return
+        }
+        if ($p.HasExited) {
+            Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+            Write-Host "启动失败（包装进程已退出），请查看 err 日志: $errFile"
+            return 1
+        }
+        Write-Host "启动中的 $Name 尚未写入健康状态，请查看日志: $logFile"
+        return
+    }
     Start-Sleep -Milliseconds 800
     if ($p.HasExited -and $p.ExitCode -ne 0) {
         Remove-Item $pidFile -Force -ErrorAction SilentlyContinue

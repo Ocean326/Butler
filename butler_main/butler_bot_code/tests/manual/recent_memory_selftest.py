@@ -4,7 +4,7 @@ import sys
 import time
 from pathlib import Path
 
-root = Path(r"c:\Users\Lenovo\Desktop\研究生\Bulter")
+root = Path(__file__).resolve().parents[4]
 bots_dir = root / "butler_bot_code" / "butler_bot"
 config_path = root / "butler_bot_code" / "configs" / "butler_bot.json"
 recent_path = root / "butler_bot_agent" / "agents" / "recent_memory" / "recent_memory.json"

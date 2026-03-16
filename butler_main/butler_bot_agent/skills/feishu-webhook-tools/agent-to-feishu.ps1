@@ -13,7 +13,7 @@ param(
     [string] $Prompt,
     [string] $Secret = "",
     [string] $AgentCmd = "$env:LOCALAPPDATA\cursor-agent\versions\dist-package\cursor-agent.cmd",
-    [string] $WorkspaceRoot = "c:\Users\Lenovo\Desktop\研究生",
+    [string] $WorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\\..\\..\\..")).Path,
     [string] $Model = "auto",
     [int]    $TimeoutSeconds = 300
 )

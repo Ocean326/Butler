@@ -44,7 +44,7 @@
 
 {local_memory_text}
 
-## 当前任务工作区
+## 任务工作区
 
 {task_workspace_text}
 

@@ -129,7 +129,7 @@ class AgentTeamExecutor:
                         )
                         future_map[future] = member
                     for future in as_completed(future_map):
-                        item = future.result()
+                        item = self._resolve_parallel_member_result(future_map[future], future, started=started)
                         item["step_id"] = str(step.get("step_id") or "step")
                         item["run_mode"] = "parallel"
                         all_results.append(item)
@@ -159,6 +159,21 @@ class AgentTeamExecutor:
             "duration_seconds": round(time.time() - started, 2),
             "error": "",
         }
+
+    def _resolve_parallel_member_result(self, member: dict, future, *, started: float) -> dict:
+        try:
+            return future.result()
+        except Exception as exc:
+            role_name = str((member or {}).get("role") or "").strip() or "unknown-agent"
+            task = str((member or {}).get("task") or "").strip()
+            return {
+                "ok": False,
+                "agent_role": role_name,
+                "task": task,
+                "output": "",
+                "error": str(exc),
+                "duration_seconds": round(time.time() - started, 2),
+            }
 
     def _format_member_task(self, template: str, task: str, team_results: str) -> str:
         mapping = {

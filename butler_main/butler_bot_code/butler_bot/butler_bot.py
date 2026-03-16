@@ -34,10 +34,11 @@ from agent import (
 )
 from execution.agent_team_executor import AgentTeamExecutor
 from utils.markdown_safety import safe_truncate_markdown, sanitize_markdown_structure
-from memory_manager import MemoryManager, build_cursor_cli_env, resolve_cursor_cli_cmd_path
+from memory_manager import MemoryManager
 from services.request_intake_service import RequestIntakeService
 from registry.skill_registry import render_skill_catalog_for_prompt
 from runtime import cli_runtime as cli_runtime_service
+from runtime.cursor_runtime_support import resolve_cursor_cli_cmd_path
 
 
 MARKDOWN_H2_RE = re.compile(r"(?m)^##\s+")
@@ -79,6 +80,10 @@ CLI_DIRECTIVE_PATTERNS = [
         r"^\s*(?:请)?(?:切换到|改用|使用|换成|换到|本轮用|这次用|用)\s*(?P<cli>cursor(?:-cli)?|codex(?:-cli)?)\s*(?:模式|命令行|cli)?[：:,，\s]*(?P<rest>[\s\S]*)$",
         re.IGNORECASE,
     ),
+]
+SELF_MIND_CHAT_PATTERNS = [
+    re.compile(r"^\s*(?:@?self[-_\s]?mind|selfmind|sm|小我|内心)\s*[:：,，]\s*(?P<rest>[\s\S]*)$", re.IGNORECASE),
+    re.compile(r"^\s*(?:跟|和)?\s*(?:@?self[-_\s]?mind|selfmind|小我|内心)\s*(?:聊聊|说|讲|对话)?\s*[:：,，]\s*(?P<rest>[\s\S]*)$", re.IGNORECASE),
 ]
 
 
@@ -200,6 +205,17 @@ def _parse_runtime_control(user_prompt: str, cfg: dict) -> dict:
         "cli": runtime_request.get("cli") or "",
         "runtime": runtime_request,
     }
+
+
+def _extract_self_mind_chat_request(user_prompt: str) -> tuple[str, bool]:
+    raw = str(user_prompt or "").strip()
+    if not raw:
+        return "", False
+    for pattern in SELF_MIND_CHAT_PATTERNS:
+        match = pattern.match(raw)
+        if match:
+            return str(match.group("rest") or "").strip(), True
+    return raw, False
 
 
 def _list_available_models(workspace: str, timeout: int, cfg: dict | None = None, cli_name: str | None = None) -> tuple[list[str], str | None]:
@@ -518,7 +534,10 @@ def run_agent(
     runtime_request = dict(resolved_runtime_request)
     effective_model = str(resolved_runtime_request.get("model") or "auto")
     effective_cli = str(resolved_runtime_request.get("cli") or "cursor")
+    max_len = cfg.get("max_reply_len", 4000)
+    use_stream = bool(stream_callback) or stream_output
     effective_prompt = str(control.get("prompt") or "").strip()
+    self_mind_prompt, self_mind_chat = _extract_self_mind_chat_request(effective_prompt)
     if not effective_prompt:
         return (
             f"已识别本轮 CLI 为 {effective_cli}，模型为 {effective_model}。"
@@ -558,6 +577,25 @@ def run_agent(
         TURN_CONTEXT.turn_suppress_task_merge = True
         return str(explicit_task_result.get("reply") or "已处理心跳任务指令。")
 
+    if self_mind_chat:
+        effective_self_mind_prompt = self_mind_prompt or "你现在在想什么？"
+        pending_memory_id, previous_pending = MEMORY.begin_pending_turn(f"[self_mind_chat] {effective_self_mind_prompt}", workspace)
+        TURN_CONTEXT.pending_memory_id = pending_memory_id
+        TURN_CONTEXT.turn_model = effective_model
+        TURN_CONTEXT.turn_cli_request = runtime_request
+        TURN_CONTEXT.turn_user_prompt = f"[self_mind_chat] {effective_self_mind_prompt}"
+        del previous_pending
+        prompt = MEMORY._build_self_mind_chat_prompt(workspace, effective_self_mind_prompt)
+        if use_stream:
+            out, ok = _run_agent_streaming(prompt, workspace, timeout, effective_model, on_segment=stream_callback)
+        else:
+            out, ok = _run_agent_via_cli(prompt, workspace, timeout, effective_model)
+        final_text = sanitize_markdown_structure(out if ok and out else (out or "self_mind 这轮没组织出有效回复。"))
+        return safe_truncate_markdown(final_text, int(max_len))
+
+    intake_decision = REQUEST_INTAKE_SERVICE.classify(effective_prompt)
+    recent_mode = "content_share" if str((intake_decision or {}).get("mode") or "").strip() == "content_share" else "default"
+
     pending_memory_id, previous_pending = MEMORY.begin_pending_turn(effective_prompt, workspace)
     TURN_CONTEXT.pending_memory_id = pending_memory_id
     TURN_CONTEXT.turn_model = effective_model
@@ -567,6 +605,7 @@ def run_agent(
         effective_prompt,
         exclude_memory_id=pending_memory_id,
         previous_pending=previous_pending,
+        recent_mode=recent_mode,
     )
     print(
         f"[agent-run] pending_memory_id={pending_memory_id} | model={effective_model} | user={re.sub(r'\s+', ' ', (effective_prompt or '').strip())[:100]}"
@@ -574,9 +613,8 @@ def run_agent(
         flush=True,
     )
     print(f"[agent-prompt] {re.sub(r'\s+', ' ', user_prompt_with_recent)[:200]}", flush=True)
-    skills_prompt = _render_available_skills_prompt(workspace)
-    capabilities_prompt = _render_available_agent_capabilities_prompt(workspace)
-    intake_decision = REQUEST_INTAKE_SERVICE.classify(effective_prompt)
+    skills_prompt = "" if recent_mode == "content_share" else _render_available_skills_prompt(workspace)
+    capabilities_prompt = "" if recent_mode == "content_share" else _render_available_agent_capabilities_prompt(workspace)
     prompt = build_feishu_agent_prompt(
         user_prompt_with_recent,
         image_paths,
@@ -589,11 +627,8 @@ def run_agent(
         f"[agent-prompt-stats] user_len={len(effective_prompt)} | recent_len={len(user_prompt_with_recent)} | skills_len={len(skills_prompt)} | capabilities_len={len(capabilities_prompt)} | full_len={len(prompt)}",
         flush=True,
     )
-    max_len = cfg.get("max_reply_len", 4000)
-
     # 根据是否提供 stream_callback 或 stream_output 选择流式或一次性调用 Cursor CLI。
     # stream_callback：飞书等会传，用于最后一段推送；stream_output=True 且无 callback 时流式打印到 stdout。
-    use_stream = bool(stream_callback) or stream_output
     buffered_segments: list[str] = []
     if use_stream:
         def _capture_segment(segment: str) -> None:

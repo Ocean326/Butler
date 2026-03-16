@@ -88,7 +88,7 @@
 
 ### 方式 B：在每日自动化脚本中增加飞书推送
 
-在 `daily/DailyResearchOps.ps1` 执行完三项任务后，将日志或摘要推送到飞书群，便于在手机上查看执行结果。
+在 `butler_bot_agent/skills/daily-inspection/DailyResearchOps.ps1` 执行完三项任务后，将日志或摘要推送到飞书群，便于在手机上查看执行结果。
 
 ---
 
@@ -108,7 +108,7 @@
 ## 六、快速验证
 
 ```powershell
-cd "c:\Users\Lenovo\Desktop\研究生\Butler\butler_main"
+Set-Location .\butler_main
 
 # 1. 纯消息推送测试
 .\butler_bot_agent\skills\feishu-webhook-tools\SendToFeishu.ps1 -WebhookUrl "https://open.feishu.cn/open-apis/bot/v2/hook/xxx" -Message "Cursor Agent 接入飞书测试"

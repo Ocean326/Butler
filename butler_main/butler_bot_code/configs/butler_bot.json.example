@@ -1,7 +1,7 @@
 {
   "app_id": "cli_xxxxxxxx",
   "app_secret": "xxxxxxxx",
-  "workspace_root": "c:\\Users\\Lenovo\\Desktop\\研究生\\Bulter",
+  "workspace_root": "..\\..",
   "agent_model": "auto",
   "cli_runtime": {
     "active": "cursor",
@@ -84,7 +84,10 @@
       "max_chars": 220
     },
     "task_ledger_enabled": true,
-    "heartbeat_stale_seconds": 600
+    "heartbeat_stale_seconds": 600,
+    "task_doc_token": "",
+    "task_doc_folder_token": "",
+    "_comment_task_doc": "可选：task_doc_token=已有云文档 token（推荐，在飞书里先建好文档把 token 填这里）；task_doc_folder_token=云空间目录 token 则首次会在该目录下创建文档。设后每轮 plan 将任务摘要同步到该云文档，见 agents/local_memory/飞书云文档发送与心跳任务云文档_方案.md"
   },
   "_comment_startup_notify": "open_id 须为本应用内获取，否则会报 open_id cross app",
   "_comment_startup_notify": "open_id 须为本应用获取，否则会报 open_id cross app；可改用 user_id + receive_id_type=user_id"

@@ -35,12 +35,21 @@ import uuid
 
 import requests
 from heartbeat_orchestration import HeartbeatOrchestrator, HeartbeatPlanningContext
-from governor import GovernedAction, Governor
+from governor import Governor
 from services.local_memory_index_service import LocalMemoryIndexService, LocalMemoryQueryParams
+from services.message_delivery_service import MessageDeliveryService
+from services.delivery_flow_service import DeliveryFlowService
 from services.memory_backend import build_default_memory_backend
+from services.self_mind_prompt_service import SelfMindPromptService
 from services.memory_service import TurnMemoryExtractionService
+from services.self_mind_state_service import SelfMindStateService
+from services.self_mind_runtime_service import SelfMindRuntimeService
+from services.self_mind_cycle_service import SelfMindCycleService
 from services.subconscious_service import SubconsciousConsolidationService
 from services.task_ledger_service import TaskLedgerService
+from services.upgrade_governance_service import UpgradeGovernanceService
+from services.feishu_doc_sync_service import sync_heartbeat_task_doc
+from services.approval_request_service import ApprovalRequestService
 
 from registry.agent_capability_registry import (
     load_team_catalog,
@@ -74,6 +83,7 @@ from butler_paths import (
     prompt_path_text,
     resolve_butler_root,
 )
+from runtime.cursor_runtime_support import build_cursor_cli_env, resolve_cursor_cli_cmd_path
 from runtime.runtime_logging import install_print_hook, set_runtime_log_config
 from registry.skill_registry import render_skill_catalog_for_prompt
 
@@ -186,8 +196,12 @@ HEARTBEAT_TASK_HINTS = [
 HEARTBEAT_ACTION_HINTS = [
     "提醒", "整理", "检查", "汇报", "完成", "跟进", "推进", "继续", "记录", "发送", "复盘", "查看",
 ]
+FOLLOWUP_CONTINUATION_HINTS = [
+    "继续", "接着", "那就", "就这个", "这个", "那个", "这样", "按这个", "照这个", "改成", "换成",
+    "用", "先", "然后", "再", "顺手", "顺便", "别", "不要", "不用", "还有", "以及", "另外",
+]
 
-HEARTBEAT_MAX_PARALLEL_DEFAULT = 3
+HEARTBEAT_MAX_PARALLEL_DEFAULT = 4
 LOG_MAX_LINES_PER_FILE = 1000
 HEARTBEAT_RESTART_BURST_LIMIT = 2
 HEARTBEAT_RESTART_BURST_WINDOW_SECONDS = 5 * 60
@@ -196,106 +210,6 @@ HEARTBEAT_RESTART_HANDOVER_SECONDS = 90
 MAIN_PROCESS_STATE_HEARTBEAT_SECONDS = 15
 HEARTBEAT_PLANNER_MIN_INTERVAL_SECONDS = 60
 EXTERNAL_HEARTBEAT_ENV_NAME = "BUTLER_EXTERNAL_HEARTBEAT"
-
-
-def _configured_cursor_api_keys(cfg: dict | None) -> list[str]:
-    snapshot = cfg if isinstance(cfg, dict) else {}
-    raw_keys = snapshot.get("cursor_api_keys") if isinstance(snapshot, dict) else None
-    if isinstance(raw_keys, str):
-        raw_keys = [raw_keys]
-    if not isinstance(raw_keys, list):
-        raw_keys = []
-
-    keys: list[str] = []
-    seen: set[str] = set()
-    for raw in raw_keys:
-        key = str(raw or "").strip()
-        if not key or key in seen:
-            continue
-        seen.add(key)
-        keys.append(key)
-    return keys
-
-
-def build_cursor_cli_env(cfg: dict | None = None, base_env: dict | None = None) -> dict:
-    env = dict(base_env or os.environ.copy())
-    env.pop("NO_PROXY", None)
-    for proxy_key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "GIT_HTTP_PROXY", "GIT_HTTPS_PROXY", "NO_PROXY"):
-        raw_value = str(env.get(proxy_key) or "").strip()
-        if raw_value and any(marker in raw_value for marker in ("127.0.0.1:9", "localhost:9")):
-            env.pop(proxy_key, None)
-
-    workspace_root = resolve_butler_root(str((cfg or {}).get("workspace_root") or os.getcwd()))
-    runtime_root = workspace_root / "butler_main" / "butler_bot_code" / "run" / "cursor_runtime_env"
-    session_root = runtime_root / "sessions" / f"{os.getpid()}-{uuid.uuid4().hex[:8]}"
-    roaming_root = session_root / "Roaming"
-    local_root = session_root / "Local"
-    profile_root = session_root / "Profile"
-    temp_root = session_root / "Temp"
-    _cleanup_cursor_runtime_sessions(runtime_root)
-    roaming_root.mkdir(parents=True, exist_ok=True)
-    local_root.mkdir(parents=True, exist_ok=True)
-    profile_root.mkdir(parents=True, exist_ok=True)
-    temp_root.mkdir(parents=True, exist_ok=True)
-    env["APPDATA"] = str(roaming_root)
-    env["LOCALAPPDATA"] = str(local_root)
-    env["USERPROFILE"] = str(profile_root)
-    env["HOME"] = str(profile_root)
-    env["TMP"] = str(temp_root)
-    env["TEMP"] = str(temp_root)
-    env["XDG_CONFIG_HOME"] = str(roaming_root)
-    env["CURSOR_CONFIG_HOME"] = str(roaming_root)
-
-    key_pool = _configured_cursor_api_keys(cfg)
-    if not key_pool:
-        return env
-    env["CURSOR_API_KEY"] = random.choice(key_pool)
-    return env
-
-
-def _cleanup_cursor_runtime_sessions(runtime_root: Path, *, max_age_seconds: int = 12 * 60 * 60) -> None:
-    sessions_root = runtime_root / "sessions"
-    if not sessions_root.exists():
-        return
-    cutoff = time.time() - max(600, int(max_age_seconds or 0))
-    for child in sessions_root.iterdir():
-        if not child.is_dir():
-            continue
-        try:
-            if child.stat().st_mtime < cutoff:
-                shutil.rmtree(child, ignore_errors=True)
-        except Exception:
-            continue
-
-
-def resolve_cursor_cli_cmd_path(cfg: dict | None = None) -> str:
-    """解析 Cursor CLI 可执行路径：支持配置覆盖、兼容 dist-package 与版本号子目录。"""
-    # 1) 配置显式路径
-    if isinstance(cfg, dict):
-        path = (cfg.get("cursor_cli_path") or "").strip()
-        if path and os.path.isfile(path):
-            return path
-    # 2) 旧版固定路径
-    base = os.environ.get("LOCALAPPDATA", "")
-    legacy = os.path.join(base, "cursor-agent", "versions", "dist-package", "cursor-agent.cmd")
-    if os.path.isfile(legacy):
-        return legacy
-    # 3) 新版版本号子目录：取 versions 下最新版本目录中的 cursor-agent.cmd
-    versions_dir = os.path.join(base, "cursor-agent", "versions")
-    if os.path.isdir(versions_dir):
-        try:
-            subs = [
-                d for d in os.listdir(versions_dir)
-                if os.path.isdir(os.path.join(versions_dir, d))
-            ]
-            subs.sort(reverse=True)
-            for ver in subs:
-                cand = os.path.join(versions_dir, ver, "cursor-agent.cmd")
-                if os.path.isfile(cand):
-                    return cand
-        except OSError:
-            pass
-    return legacy
 
 DEFAULT_HEARTBEAT_PROMPT_TEMPLATE = """# 心跳规划器
 
@@ -311,31 +225,58 @@ DEFAULT_HEARTBEAT_PROMPT_TEMPLATE = """# 心跳规划器
 
 - 当前时间：{now_text}
 - 并行上限：最多 {max_parallel} 路
+- 组内串行上限：最多 {max_serial_per_group} 轮
 - 自主探索模式：{autonomous_mode_text}
+- 固定新陈代谢支路：{fixed_metabolism_text}
+- 受控自我提升：{background_growth_text}
 
 ## 额外上下文
 
 {context_text}
 
-## 短期任务
+## Soul 摘录
 
-{short_tasks_json}
+{soul_text}
 
-## 长期/定时任务
+## 角色摘录
 
-{long_tasks_json}
+{role_text}
+
+## 任务与上下文（heartbeat_tasks.md）
+
+{tasks_context}
 
 ## 最近上下文
 
 {recent_text}
 
-## 任务看板与调度协议
+## 长期记忆候选
 
-{tasks_context}
+{local_memory_text}
+
+## 任务工作区
+
+{task_workspace_text}
 
 ## 可复用 Skills
 
 {skills_text}
+
+## 可复用 Sub-Agents
+
+{subagents_text}
+
+## 可复用 Agent Teams
+
+{teams_text}
+
+## 公用 Agent/Team 参考库
+
+{public_library_text}
+
+## 统一维护入口
+
+{maintenance_entry_text}
 
 ## 决策原则
 
@@ -395,9 +336,37 @@ class MemoryManager:
         self._self_mind_started = False
         self._self_mind_lock = threading.Lock()
         self._self_mind_loop_token = 0
+        self._self_mind_listener_lock = threading.Lock()
+        self._self_mind_listener_started = False
+        self._self_mind_listener_process: subprocess.Popen | None = None
         self._latest_runtime_cfg: dict = {}
         self._heartbeat_orchestrator = HeartbeatOrchestrator(self)
         self._governor = Governor()
+        self._self_mind_runtime_service = SelfMindRuntimeService(self, threading_module=threading, time_module=time)
+        self._self_mind_cycle_service = SelfMindCycleService(self)
+        self._message_delivery_service = MessageDeliveryService(self, requests_module=requests)
+        self._delivery_flow_service = DeliveryFlowService(self)
+        self._upgrade_governance_service = UpgradeGovernanceService(self, governor=self._governor, body_root_text=BODY_ROOT_TEXT)
+        self._approval_request_service = ApprovalRequestService(
+            self,
+            schema_version=GUARDIAN_REQUEST_SCHEMA_VERSION,
+            guardian_requests_dir_rel=GUARDIAN_REQUESTS_DIR_REL,
+        )
+        self._self_mind_state_service = SelfMindStateService(
+            self,
+            raw_file_name=SELF_MIND_RAW_FILE_NAME,
+            review_file_name=SELF_MIND_REVIEW_FILE_NAME,
+            behavior_mirror_file_name=SELF_MIND_BEHAVIOR_MIRROR_FILE_NAME,
+            state_file_name=SELF_MIND_STATE_FILE_NAME,
+            bridge_file_name=SELF_MIND_BRIDGE_FILE_NAME,
+            cognition_index_file_name=SELF_MIND_COGNITION_INDEX_FILE_NAME,
+            cognition_l1_dir_name=SELF_MIND_COGNITION_L1_DIR_NAME,
+            cognition_l2_dir_name=SELF_MIND_COGNITION_L2_DIR_NAME,
+            perception_file_name=SELF_MIND_PERCEPTION_FILE_NAME,
+            tell_user_receive_id_key=TELL_USER_RECEIVE_ID_KEY,
+            tell_user_receive_id_type_key=TELL_USER_RECEIVE_ID_TYPE_KEY,
+        )
+        self._self_mind_prompt_service = SelfMindPromptService(self)
         self._turn_memory_service = TurnMemoryExtractionService(
             run_model_fn=self._run_model_fn,
             json_extractor=self._extract_json_block,
@@ -506,6 +475,7 @@ class MemoryManager:
         user_prompt: str,
         exclude_memory_id: str | None = None,
         previous_pending: dict | None = None,
+        recent_mode: str = "default",
     ) -> str:
         cfg = self._config_provider() or {}
         workspace = cfg.get("workspace_root") or os.getcwd()
@@ -528,11 +498,27 @@ class MemoryManager:
         )
         talk_recent_limit = self._recent_max_items(TALK_RECENT_POOL)
         followup_text = self._render_pending_followup_context(previous_pending, user_prompt)
+        continuation_text = self._render_recent_continuation_hint(recent_entries, user_prompt)
+        requirement_text = self._render_recent_requirement_context(recent_entries, max_items=4)
         if followup_text:
             print(f"[recent-followup] {re.sub(r'\s+', ' ', followup_text)[:160]}", flush=True)
+        if continuation_text:
+            print(f"[recent-continuation] {re.sub(r'\s+', ' ', continuation_text)[:160]}", flush=True)
         if not recent_text and not summary_text and not summary_history_text:
-            return (followup_text + "\n\n" + user_prompt).strip() if followup_text else user_prompt
+            lead_blocks = [block for block in (followup_text, continuation_text) if block]
+            lead = "\n\n".join(lead_blocks).strip()
+            return (lead + "\n\n" + user_prompt).strip() if lead else user_prompt
+        if str(recent_mode or "").strip().lower() == "content_share":
+            lead = str(followup_text or "").strip()
+            if lead:
+                return f"{lead}\n\n{user_prompt}".strip()
+            return user_prompt
         followup_block = f"{followup_text}\n\n" if followup_text else ""
+        continuation_block = f"{continuation_text}\n\n" if continuation_text else ""
+        requirement_block = (
+            f"【最近显式要求与未完约束】\n{requirement_text}\n\n"
+            if requirement_text else ""
+        )
         summary_block = (
             f"【recent_summary（窗口外的小结，按相关性抽取）】\n{summary_text}\n\n"
             if summary_text else ""
@@ -546,9 +532,13 @@ class MemoryManager:
             f"{recent_text}\n\n"
             f"{summary_block}"
             f"{summary_history_block}"
+            f"{requirement_block}"
             "【使用规则】若用户未明确说明“全新任务/全新情景”，请优先沿用 recent_memory；"
-            "若用户明确开启新任务，则忽略 recent_memory。\n\n"
+            "若用户明确开启新任务，则忽略 recent_memory。"
+            "若当前消息很短、像补充意见、像引用回复或像对上一轮方案的修正，默认先按同一主线续接，主动补全省略主语与对象；"
+            "只有 recent 指向多个高概率解释时才要求澄清。\n\n"
             f"{followup_block}"
+            f"{continuation_block}"
             f"{user_prompt}"
         )
 
@@ -627,6 +617,7 @@ class MemoryManager:
                 name="memory-maintenance-scheduler",
             ).start()
             self._ensure_self_mind_loop_started()
+            self._ensure_self_mind_listener_started()
             if not self._use_external_heartbeat_process(cfg):
                 with self._heartbeat_lock:
                     self._start_heartbeat_service_locked(cfg)
@@ -647,21 +638,53 @@ class MemoryManager:
         return False
 
     def _ensure_self_mind_loop_started(self) -> None:
-        if not self._self_mind_enabled():
+        self._self_mind_runtime_service.ensure_loop_started()
+
+    def _ensure_self_mind_listener_started(self) -> None:
+        if not self._self_mind_listener_enabled():
             return
-        with self._self_mind_lock:
-            if self._self_mind_started:
+        with self._self_mind_listener_lock:
+            proc = self._self_mind_listener_process
+            if proc is not None and proc.poll() is None:
+                self._self_mind_listener_started = True
                 return
-            self._self_mind_loop_token += 1
-            loop_token = self._self_mind_loop_token
-            threading.Thread(
-                target=self._self_mind_loop,
-                args=(loop_token,),
-                daemon=True,
-                name="butler-self-mind",
-            ).start()
-            self._self_mind_started = True
-            print("[self-mind] 独立意识循环已启动", flush=True)
+            self._start_self_mind_listener_locked()
+
+    def _self_mind_listener_enabled(self) -> bool:
+        if not self._self_mind_enabled():
+            return False
+        return self._self_mind_state_service.listener_enabled()
+
+    def _start_self_mind_listener_locked(self) -> bool:
+        cfg = self._config_provider() or {}
+        config_path = str(cfg.get("__config_path") or "").strip()
+        if not config_path or not os.path.isfile(config_path):
+            print("[self_mind listener] 缺少可复用配置文件路径，跳过启动", flush=True)
+            return False
+        creds = self._self_mind_state_service.listener_delivery_override()
+        if not creds:
+            print("[self_mind listener] 缺少 listener app_id/app_secret，跳过启动", flush=True)
+            return False
+        script_path = Path(__file__).resolve().parent / "self_mind_bot.py"
+        if not script_path.exists():
+            print(f"[self_mind listener] 入口文件不存在: {script_path}", flush=True)
+            return False
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["BUTLER_SELF_MIND_LISTENER"] = "1"
+        try:
+            proc = subprocess.Popen(
+                [sys.executable, str(script_path), "--config", config_path],
+                cwd=str(resolve_butler_root(cfg.get("workspace_root") or os.getcwd())),
+                env=env,
+            )
+        except Exception as exc:
+            print(f"[self_mind listener] 启动失败: {exc}", flush=True)
+            return False
+        self._self_mind_listener_process = proc
+        self._self_mind_listener_started = True
+        print(f"[self_mind listener] 已启动 sidecar pid={proc.pid}", flush=True)
+        return True
 
     def _stop_heartbeat_service_locked(self, workspace: str, reason: str = "") -> bool:
         proc = self._heartbeat_process
@@ -702,19 +725,7 @@ class MemoryManager:
         return False, "heartbeat 重启失败，请查看日志。"
 
     def restart_self_mind_loop(self) -> tuple[bool, str]:
-        if not self._self_mind_enabled():
-            return False, "self_mind 当前未启用。"
-        with self._self_mind_lock:
-            self._self_mind_loop_token += 1
-            loop_token = self._self_mind_loop_token
-            threading.Thread(
-                target=self._self_mind_loop,
-                args=(loop_token,),
-                daemon=True,
-                name="butler-self-mind",
-            ).start()
-            self._self_mind_started = True
-        return True, "已重启意识循环。"
+        return self._self_mind_runtime_service.restart_loop()
 
     def handle_runtime_control_command(self, workspace: str, user_prompt: str) -> dict | None:
         text = str(user_prompt or "").strip()
@@ -902,6 +913,39 @@ class MemoryManager:
         current = time.time() if now is None else float(now)
         return mode == "restart-requested" and current < self._heartbeat_restart_handover_deadline(watchdog_state)
 
+    def _heartbeat_run_state_stale_info(self, workspace: str, heartbeat_cfg: dict | None = None, now: float | None = None) -> tuple[bool, str]:
+        cfg = heartbeat_cfg if isinstance(heartbeat_cfg, dict) else {}
+        stale_seconds = self._coerce_int(cfg.get("heartbeat_stale_seconds"), 600, minimum=60, maximum=7200)
+        payload = self._load_json_store(self._heartbeat_run_state_file(workspace), lambda: {})
+        if not isinstance(payload, dict):
+            return False, ""
+        tracked_pid = 0
+        try:
+            tracked_pid = int(getattr(self._heartbeat_process, "pid", 0) or 0)
+        except Exception:
+            tracked_pid = 0
+        run_state_pid = 0
+        try:
+            run_state_pid = int(payload.get("heartbeat_pid") or 0)
+        except Exception:
+            run_state_pid = 0
+        if tracked_pid > 0 and run_state_pid > 0 and tracked_pid != run_state_pid:
+            return False, ""
+        updated_at = str(payload.get("updated_at") or "").strip()
+        state = str(payload.get("state") or "").strip().lower()
+        phase = str(payload.get("phase") or "").strip().lower()
+        if not updated_at or state != "running":
+            return False, ""
+        try:
+            updated_dt = datetime.strptime(updated_at, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return False, ""
+        current = time.time() if now is None else float(now)
+        age_seconds = max(0, int(current - updated_dt.timestamp()))
+        if age_seconds <= stale_seconds:
+            return False, ""
+        return True, f"run_state stale: age={age_seconds}s > {stale_seconds}s, phase={phase or 'unknown'}"
+
     def _mark_heartbeat_restart_handover(self, workspace: str, reason: str = "") -> float:
         handover_until = time.time() + HEARTBEAT_RESTART_HANDOVER_SECONDS
         self._write_heartbeat_watchdog_state(
@@ -928,6 +972,12 @@ class MemoryManager:
 
             proc = self._heartbeat_process
             if proc is not None and proc.is_alive():
+                stale, stale_note = self._heartbeat_run_state_stale_info(workspace, heartbeat_cfg, now)
+                if stale:
+                    print(f"[心跳服务·看门狗] 检测到心跳子进程卡死，准备强制重启 | {stale_note}", flush=True)
+                    with self._heartbeat_lock:
+                        self._stop_heartbeat_service_locked(workspace, reason=stale_note)
+                    continue
                 try:
                     self._write_heartbeat_watchdog_state(workspace, state="running", heartbeat_pid=int(proc.pid or 0))
                 except Exception:
@@ -1095,35 +1145,15 @@ class MemoryManager:
                 print(f"[记忆维护失败] scheduled: {e}", flush=True)
 
     def _format_heartbeat_interval(self, heartbeat_cfg: dict) -> str:
-        """返回可读的跳动频率描述，如「每5秒」「每1分钟」"""
-        cfg = heartbeat_cfg or {}
-        every_seconds = cfg.get("every_seconds")
-        if every_seconds is not None:
-            sec = max(1, int(every_seconds))
-            if sec < 60:
-                return f"每{sec}秒"
-            return f"每{sec // 60}分{sec % 60}秒" if sec % 60 else f"每{sec // 60}分钟"
-        every_minutes = max(1, int(cfg.get("every_minutes", 180)))
-        return f"每{every_minutes}分钟"
+        return self._delivery_flow_service.format_heartbeat_interval(heartbeat_cfg)
 
     def _send_heartbeat_start_notification(self, cfg: dict, heartbeat_cfg: dict) -> None:
-        """心跳启动时推送「开始跳动」初始化消息，含跳动频率。"""
-        interval_text = self._format_heartbeat_interval(heartbeat_cfg)
-        msg = f"** heartbeat 开始跳动 **\n\n跳动频率：{interval_text}\n时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        receive_id = str((heartbeat_cfg or {}).get(HEARTBEAT_RECEIVE_ID_KEY) or "").strip()
-        receive_id_type = str((heartbeat_cfg or {}).get(HEARTBEAT_RECEIVE_ID_TYPE_KEY) or "open_id").strip() or "open_id"
-        ok = self._send_private_message(
+        self._delivery_flow_service.send_heartbeat_start_notification(
             cfg,
-            msg,
-            receive_id=receive_id,
-            receive_id_type=receive_id_type,
-            fallback_to_startup_target=True,
-            heartbeat_cfg=heartbeat_cfg,
+            heartbeat_cfg,
+            heartbeat_receive_id_key=HEARTBEAT_RECEIVE_ID_KEY,
+            heartbeat_receive_id_type_key=HEARTBEAT_RECEIVE_ID_TYPE_KEY,
         )
-        if ok:
-            print(f"[心跳服务] 已发送「开始跳动」初始化消息（{interval_text}）", flush=True)
-        else:
-            print(f"[心跳服务] 初始化消息发送失败（不影响后续跳动）", flush=True)
 
     def _heartbeat_loop(self, run_immediately: bool = False) -> None:
         if run_immediately:
@@ -1310,6 +1340,22 @@ class MemoryManager:
             self._write_heartbeat_run_state(workspace, run_id=run_id, state="running", phase=phase, note="persist heartbeat snapshot")
             self._persist_heartbeat_snapshot_to_recent(workspace, plan, branch_results, execution_result, max_parallel)
             t_after_snapshot = time.perf_counter()
+
+            # 若配置了任务云文档，将本轮任务摘要同步到飞书云文档（真源仍为 heartbeat_tasks/*.md）
+            execution_summary = self._heartbeat_orchestrator.summarize_branch_results(plan, branch_results)
+            try:
+                if sync_heartbeat_task_doc(
+                    cfg,
+                    heartbeat_cfg,
+                    plan,
+                    execution_summary,
+                    requests_module=requests,
+                ):
+                    print("[心跳服务] 任务云文档同步成功", flush=True)
+                elif (heartbeat_cfg or {}).get("task_doc_token") or (heartbeat_cfg or {}).get("task_doc_folder_token"):
+                    print("[心跳服务] 任务云文档同步未执行或失败（请检查 app_id/app_secret 与 task_doc_token）", flush=True)
+            except Exception as _e:
+                print(f"[心跳服务] 任务云文档同步异常: {_e}", flush=True)
 
             plan_message = str(plan.get("user_message") or "").strip()
             if plan_message:
@@ -1988,6 +2034,64 @@ class MemoryManager:
             f"- 用户又追问：{current_text[:160]}\n"
             "请优先回答当前追问；若当前追问依赖上一问，请带上必要衔接。"
         )
+
+    def _looks_like_continuation_prompt(self, user_prompt: str) -> bool:
+        compact = re.sub(r"\s+", " ", str(user_prompt or "")).strip()
+        if not compact or self._is_new_task_prompt(compact):
+            return False
+        if len(compact) <= 40 and any(hint in compact for hint in FOLLOWUP_CONTINUATION_HINTS):
+            return True
+        if len(compact) <= 24 and re.match(r"^(那|就|先|再|按|照|把|改成|换成|用|别|不要|不用|继续|接着|然后|另外)", compact):
+            return True
+        return False
+
+    def _render_recent_continuation_hint(self, recent_entries: list[dict], user_prompt: str) -> str:
+        if not self._looks_like_continuation_prompt(user_prompt):
+            return ""
+        latest_topic = ""
+        latest_summary = ""
+        for item in reversed(recent_entries or []):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("memory_stream") or "talk").strip() != "talk":
+                continue
+            latest_topic = str(item.get("topic") or item.get("raw_user_prompt") or "").strip()
+            latest_summary = str(item.get("summary") or "").strip()
+            if latest_topic or latest_summary:
+                break
+        if not latest_topic and not latest_summary:
+            return ""
+        lines = ["【续接提示】当前这句更像对上一轮主线的补充/修改，不要当成全新任务。"]
+        if latest_topic:
+            lines.append(f"- 最近主线：{latest_topic[:120]}")
+        if latest_summary:
+            lines.append(f"- 最近结论/进展：{latest_summary[:180]}")
+        lines.append("- 优先把省略的主语、对象、文件、方案选择从 recent_memory 或引用内容里补全后再回答。")
+        return "\n".join(lines)
+
+    def _render_recent_requirement_context(self, recent_entries: list[dict], max_items: int = 4) -> str:
+        lines: list[str] = []
+        seen: set[str] = set()
+        for item in reversed(recent_entries or []):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("memory_stream") or "talk").strip() != "talk":
+                continue
+            raw_prompt = re.sub(r"\s+", " ", str(item.get("raw_user_prompt") or item.get("topic") or "").strip())
+            if not raw_prompt:
+                continue
+            key = raw_prompt.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            next_actions = [re.sub(r"\s+", " ", str(v).strip())[:60] for v in (item.get("next_actions") or []) if str(v).strip()]
+            line = f"- 用户最近明确提过：{raw_prompt[:120]}"
+            if next_actions:
+                line += f"；未完点/下一步：{' / '.join(next_actions[:2])}"
+            lines.append(line)
+            if len(lines) >= max_items:
+                break
+        return "\n".join(lines)
 
     def _heuristic_long_term_candidate(self, user_prompt: str, assistant_reply: str) -> dict:
         text = f"{user_prompt}\n{assistant_reply}"
@@ -3260,28 +3364,13 @@ class MemoryManager:
         return resolve_butler_root(workspace or os.getcwd()) / HEARTBEAT_UPGRADE_REQUEST_JSON_REL
 
     def _guardian_requests_dir(self, workspace: str) -> Path:
-        root = resolve_butler_root(workspace or os.getcwd())
-        return root / GUARDIAN_REQUESTS_DIR_REL
+        return self._approval_request_service.guardian_requests_dir(workspace)
 
     def _guardian_request_file_path(self, workspace: str, request_id: str) -> Path:
-        request_dir = self._guardian_requests_dir(workspace)
-        request_dir.mkdir(parents=True, exist_ok=True)
-        safe_request_id = re.sub(r"[^0-9A-Za-z._-]+", "-", str(request_id or uuid.uuid4()).strip())
-        existing = sorted(request_dir.glob(f"*_{safe_request_id}.json"))
-        if existing:
-            return existing[-1]
-        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return request_dir / f"{stamp}_{safe_request_id}.json"
+        return self._approval_request_service.guardian_request_file_path(workspace, request_id)
 
     def _save_guardian_request(self, workspace: str, payload: dict) -> dict:
-        data = dict(payload or {})
-        request_id = str(data.get("request_id") or uuid.uuid4()).strip() or str(uuid.uuid4())
-        data["schema_version"] = GUARDIAN_REQUEST_SCHEMA_VERSION
-        data["request_id"] = request_id
-        data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        path = self._guardian_request_file_path(workspace, request_id)
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        return data
+        return self._approval_request_service.save_guardian_request(workspace, payload)
 
     def _file_guardian_record_only_request(
         self,
@@ -3298,63 +3387,22 @@ class MemoryManager:
         scope_runtime_objects: list[str] | None = None,
         execution_notes: list[str] | None = None,
     ) -> dict:
-        payload = {
-            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "source": str(source or "heartbeat").strip() or "heartbeat",
-            "request_type": "record-only",
-            "title": str(title or "heartbeat 轻量修复备案").strip() or "heartbeat 轻量修复备案",
-            "reason": str(reason or "heartbeat 执行了轻量修复动作").strip() or "heartbeat 执行了轻量修复动作",
-            "scope": {
-                "files": [str(x) for x in (scope_files or []) if str(x or "").strip()],
-                "modules": [str(x) for x in (scope_modules or []) if str(x or "").strip()],
-                "runtime_objects": [str(x) for x in (scope_runtime_objects or []) if str(x or "").strip()],
-            },
-            "planned_actions": [str(x) for x in (planned_actions or []) if str(x or "").strip()],
-            "requires_code_change": False,
-            "requires_restart": False,
-            "verification": [str(x) for x in (verification or []) if str(x or "").strip()],
-            "rollback": [str(x) for x in (rollback or []) if str(x or "").strip()],
-            "risk_level": "low",
-            "review_status": "pending",
-            "review_notes": [],
-            "execution_notes": [str(x) for x in (execution_notes or []) if str(x or "").strip()],
-            "requested_tests": [],
-            "patch_plan": None,
-        }
-        return self._save_guardian_request(workspace, payload)
+        return self._approval_request_service.file_guardian_record_only_request(
+            workspace,
+            source=source,
+            title=title,
+            reason=reason,
+            planned_actions=planned_actions,
+            verification=verification,
+            rollback=rollback,
+            scope_files=scope_files,
+            scope_modules=scope_modules,
+            scope_runtime_objects=scope_runtime_objects,
+            execution_notes=execution_notes,
+        )
 
     def _file_guardian_upgrade_request(self, workspace: str, request: dict) -> dict:
-        normalized = self._normalize_heartbeat_upgrade_request(request)
-        execute_prompt = str(normalized.get("execute_prompt") or "").strip()
-        payload = {
-            "request_id": str(normalized.get("request_id") or uuid.uuid4()).strip() or str(uuid.uuid4()),
-            "created_at": str(normalized.get("created_at") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")).strip(),
-            "source": str(normalized.get("source") or "heartbeat").strip() or "heartbeat",
-            "request_type": "restart" if bool(normalized.get("requires_restart")) else "code-fix",
-            "title": "heartbeat 升级申请",
-            "reason": str(normalized.get("reason") or "heartbeat 提出升级申请").strip() or "heartbeat 提出升级申请",
-            "scope": {
-                "files": [],
-                "modules": ["memory_manager", "heartbeat_orchestration"],
-                "runtime_objects": ["heartbeat", "upgrade-request"],
-            },
-            "planned_actions": [execute_prompt] if execute_prompt else [str(normalized.get("summary") or normalized.get("reason") or "执行升级方案").strip()],
-            "requires_code_change": True,
-            "requires_restart": bool(normalized.get("requires_restart")),
-            "verification": ["guardian 审阅通过后执行升级方案", "执行后按改动范围运行动态测试"],
-            "rollback": ["若升级失败则回滚本次代码或配置变更", "若上线失败则恢复到升级前运行状态"],
-            "risk_level": "high" if bool(normalized.get("requires_restart")) else "medium",
-            "review_status": str(normalized.get("status") or "pending").strip() or "pending",
-            "review_notes": [],
-            "execution_notes": [str(normalized.get("summary") or "").strip()] if str(normalized.get("summary") or "").strip() else [],
-            "requested_tests": [],
-            "patch_plan": {
-                "required": True,
-                "status": "pending",
-                "summary": "guardian 执行代码修改前必须先生成 patch 预案",
-            },
-        }
-        return self._save_guardian_request(workspace, payload)
+        return self._approval_request_service.file_guardian_upgrade_request(workspace, request)
 
     def _heartbeat_memory_mirror_path(self, workspace: str) -> Path:
         recent_dir, _, _ = self._ensure_memory_dirs(workspace)
@@ -3412,69 +3460,165 @@ class MemoryManager:
         stamp = (day or datetime.now()).strftime("%Y-%m-%d")
         return self._with_user_feishu_history_dir(workspace) / f"self_mind_talk_log_{stamp}.jsonl"
 
+    def _self_mind_listener_history_path(self, workspace: str, day: datetime | None = None) -> Path:
+        stamp = (day or datetime.now()).strftime("%Y-%m-%d")
+        return self._self_mind_dir(workspace) / "listener_history" / f"{stamp}.jsonl"
+
     def _feishu_digest_dir(self, workspace: str) -> Path:
         return self._with_user_feishu_history_dir(workspace) / "digest"
 
     def _self_mind_dir(self, workspace: str) -> Path:
-        return resolve_butler_root(workspace or os.getcwd()) / SELF_MIND_DIR_REL
+        return self._self_mind_state_service.self_mind_dir(workspace)
 
     def _self_mind_context_path(self, workspace: str) -> Path:
-        return self._self_mind_dir(workspace) / "current_context.md"
+        return self._self_mind_state_service.context_path(workspace)
 
     def _self_mind_log_dir(self, workspace: str) -> Path:
-        return self._self_mind_dir(workspace) / "logs"
+        return self._self_mind_state_service.log_dir(workspace)
 
     def _self_mind_raw_path(self, workspace: str) -> Path:
-        return self._self_mind_dir(workspace) / SELF_MIND_RAW_FILE_NAME
+        return self._self_mind_state_service.raw_path(workspace)
 
     def _self_mind_review_path(self, workspace: str) -> Path:
-        return self._self_mind_dir(workspace) / SELF_MIND_REVIEW_FILE_NAME
+        return self._self_mind_state_service.review_path(workspace)
 
     def _self_mind_behavior_mirror_path(self, workspace: str) -> Path:
-        return self._self_mind_dir(workspace) / SELF_MIND_BEHAVIOR_MIRROR_FILE_NAME
+        return self._self_mind_state_service.behavior_mirror_path(workspace)
 
     def _self_mind_state_path(self, workspace: str) -> Path:
-        return self._self_mind_dir(workspace) / SELF_MIND_STATE_FILE_NAME
+        return self._self_mind_state_service.state_path(workspace)
 
     def _self_mind_bridge_path(self, workspace: str) -> Path:
         return self._self_mind_dir(workspace) / SELF_MIND_BRIDGE_FILE_NAME
 
     def _self_mind_log_path(self, workspace: str) -> Path:
-        return self._self_mind_log_dir(workspace) / f"mental_stream_{datetime.now().strftime('%Y%m%d')}.jsonl"
+        return self._self_mind_state_service.log_path(workspace)
 
     def _self_mind_daily_dir(self, workspace: str) -> Path:
-        return self._self_mind_dir(workspace) / "daily"
+        return self._self_mind_state_service.daily_dir(workspace)
 
     def _self_mind_daily_summary_path(self, workspace: str) -> Path:
-        return self._self_mind_daily_dir(workspace) / f"{datetime.now().strftime('%Y%m%d')}.md"
+        return self._self_mind_state_service.daily_summary_path(workspace)
 
     def _self_mind_cognition_dir(self, workspace: str) -> Path:
-        return self._self_mind_dir(workspace) / "cognition"
+        return self._self_mind_state_service.cognition_dir(workspace)
 
     def _self_mind_cognition_index_path(self, workspace: str) -> Path:
-        return self._self_mind_cognition_dir(workspace) / SELF_MIND_COGNITION_INDEX_FILE_NAME
+        return self._self_mind_state_service.cognition_index_path(workspace)
 
     def _self_mind_cognition_l1_dir(self, workspace: str) -> Path:
-        return self._self_mind_cognition_dir(workspace) / SELF_MIND_COGNITION_L1_DIR_NAME
+        return self._self_mind_state_service.cognition_l1_dir(workspace)
 
     def _self_mind_cognition_l2_dir(self, workspace: str) -> Path:
-        return self._self_mind_cognition_dir(workspace) / SELF_MIND_COGNITION_L2_DIR_NAME
+        return self._self_mind_state_service.cognition_l2_dir(workspace)
 
     def _self_mind_perception_path(self, workspace: str) -> Path:
-        return self._self_mind_dir(workspace) / SELF_MIND_PERCEPTION_FILE_NAME
+        return self._self_mind_state_service.perception_path(workspace)
 
     def _self_mind_domain_dir(self, workspace: str, domain: str) -> Path:
-        return self._self_mind_dir(workspace) / domain
+        return self._self_mind_state_service.domain_dir(workspace, domain)
 
     def _load_self_mind_context_excerpt(self, workspace: str, max_chars: int | None = None) -> str:
-        effective_max = self._self_mind_context_max_chars() if max_chars is None else max_chars
-        return self._load_markdown_excerpt(self._self_mind_context_path(workspace), max_chars=effective_max)
+        return self._self_mind_state_service.load_context_excerpt(workspace, max_chars=max_chars)
 
     def _load_self_mind_state(self, workspace: str) -> dict:
-        return self._load_json_store(self._self_mind_state_path(workspace), lambda: {"version": 1})
+        return self._self_mind_state_service.load_state(workspace)
 
     def _save_self_mind_state(self, workspace: str, payload: dict) -> None:
-        self._save_json_store(self._self_mind_state_path(workspace), {"version": 1, **dict(payload or {})})
+        self._self_mind_state_service.save_state(workspace, payload)
+
+    def _append_self_mind_listener_turn(
+        self,
+        workspace: str,
+        user_text: str = "",
+        assistant_text: str = "",
+        *,
+        source: str = "listener",
+        message_id: str = "",
+    ) -> None:
+        user_preview = str(user_text or "").strip()
+        assistant_preview = str(assistant_text or "").strip()
+        if not user_preview and not assistant_preview:
+            return
+        path = self._self_mind_listener_history_path(workspace)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "source": str(source or "listener").strip()[:40] or "listener",
+            "message_id": str(message_id or "").strip()[:120],
+            "user_text": user_preview[:4000],
+            "assistant_text": assistant_preview[:4000],
+        }
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+    def _load_recent_self_mind_listener_turns(self, workspace: str, limit: int = 8) -> list[dict]:
+        root = self._self_mind_dir(workspace) / "listener_history"
+        if not root.exists():
+            return []
+        records: list[dict] = []
+        files = sorted(root.glob("*.jsonl"), key=lambda item: item.stat().st_mtime, reverse=True)
+        for path in files:
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except Exception:
+                continue
+            for line in reversed(lines):
+                try:
+                    item = json.loads(line)
+                except Exception:
+                    continue
+                if isinstance(item, dict):
+                    records.append(item)
+                    if len(records) >= max(1, limit):
+                        return list(reversed(records))
+        return list(reversed(records))
+
+    def _render_self_mind_listener_history_excerpt(self, workspace: str, max_chars: int = 1200) -> str:
+        lines: list[str] = []
+        for item in self._load_recent_self_mind_listener_turns(workspace, limit=6):
+            if not isinstance(item, dict):
+                continue
+            timestamp = str(item.get("timestamp") or "").strip()
+            user_text = str(item.get("user_text") or "").strip()
+            assistant_text = str(item.get("assistant_text") or "").strip()
+            if user_text:
+                lines.append(f"- [{timestamp}] 用户：{user_text[:200]}")
+            if assistant_text:
+                lines.append(f"- [{timestamp}] self_mind：{assistant_text[:220]}")
+        text = "\n".join(lines).strip()
+        return text[-max_chars:] if len(text) > max_chars else text
+
+    def _render_self_mind_companion_memory_excerpt(self, workspace: str, query_text: str = "", max_chars: int = 1400) -> str:
+        profile_excerpt = self._load_current_user_profile_excerpt(workspace, max_chars=700)
+        query = str(query_text or "").strip() or "用户偏好 陪伴 聊天 风格 关系 互动"
+        hits = self.query_local_memory(
+            workspace,
+            query_text=query,
+            limit=6,
+            include_details=False,
+            categories=["preferences", "relationships", "identity", "reflections", "misc"],
+            memory_types=["personal"],
+        )
+        lines: list[str] = []
+        if profile_excerpt:
+            lines.extend(["## 当前用户画像", profile_excerpt.strip()])
+        if hits:
+            lines.append("## 陪伴相关长期记忆")
+            for item in hits:
+                if not isinstance(item, dict):
+                    continue
+                title = str(item.get("title") or "未命名记忆").strip()
+                conclusion = str(item.get("current_conclusion") or item.get("summary") or "").strip()
+                category = str(item.get("category") or "").strip()
+                line = f"- {title}"
+                if category:
+                    line += f" [{category}]"
+                if conclusion:
+                    line += f": {conclusion[:220]}"
+                lines.append(line)
+        text = "\n".join(line for line in lines if str(line).strip()).strip()
+        return text[-max_chars:] if len(text) > max_chars else text
 
     def _default_self_mind_cognition_index(self) -> dict:
         return {"version": 1, "updated_at": "", "categories": []}
@@ -3657,6 +3801,8 @@ class MemoryManager:
         self._save_self_mind_cognition_index(workspace, {"categories": categories})
 
     def _promote_entry_into_self_mind_cognition(self, workspace: str, entry: dict, source: str) -> None:
+        if str(source or "").strip().lower() in {"turn", "heartbeat"}:
+            return
         signals = self._build_self_mind_cognition_signals_from_entry(entry, source)
         if not signals:
             return
@@ -3667,13 +3813,10 @@ class MemoryManager:
         self._refresh_self_mind_cognition_index(workspace)
 
     def _load_self_mind_bridge_items(self, workspace: str) -> list[dict]:
-        payload = self._load_json_store(self._self_mind_bridge_path(workspace), lambda: {"items": []})
-        items = payload.get("items") if isinstance(payload.get("items"), list) else []
-        return [item for item in items if isinstance(item, dict)]
+        return []
 
     def _save_self_mind_bridge_items(self, workspace: str, items: list[dict]) -> None:
-        normalized = [item for item in items if isinstance(item, dict)][-self._self_mind_bridge_max_items():]
-        self._save_json_store(self._self_mind_bridge_path(workspace), {"version": 1, "items": normalized})
+        return None
 
     def _self_mind_bridge_item_epoch(self, item: dict, *keys: str) -> float:
         for key in keys:
@@ -3718,82 +3861,13 @@ class MemoryManager:
         return {"bridge_id": bridge_id, "status": status, "reason": reason}
 
     def _apply_self_mind_bridge_updates(self, workspace: str, updates: list[dict] | None) -> None:
-        normalized_updates = []
-        for raw in updates or []:
-            item = self._normalize_self_mind_bridge_update(raw)
-            if item:
-                normalized_updates.append(item)
-        if not normalized_updates:
-            return
-        update_map = {item["bridge_id"]: item for item in normalized_updates}
-        items = self._load_self_mind_bridge_items(workspace)
-        changed = False
-        for item in items:
-            bridge_id = str(item.get("bridge_id") or "").strip()
-            update = update_map.get(bridge_id)
-            if not update:
-                continue
-            item["status"] = update["status"]
-            item["decision_reason"] = update["reason"]
-            item["last_reviewed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            item["last_reviewed_epoch"] = time.time()
-            changed = True
-        if changed:
-            self._save_self_mind_bridge_items(workspace, items)
+        return None
 
     def _annotate_self_mind_bridge_from_heartbeat(self, workspace: str, plan: dict, execution_result: str, branch_results: list[dict] | None = None) -> None:
-        selected_ids = self._sanitize_id_list(plan.get("selected_self_mind_bridge_ids"), limit=20)
-        deferred_ids = self._sanitize_id_list(plan.get("deferred_self_mind_bridge_ids"), limit=20)
-        if not selected_ids and not deferred_ids:
-            return
-        items = self._load_self_mind_bridge_items(workspace)
-        branch_results = [item for item in (branch_results or []) if isinstance(item, dict)]
-        ok_branches = [item for item in branch_results if bool(item.get("ok"))]
-        progress_note = self._human_preview_text(execution_result or "；".join(str(item.get("output") or "").strip() for item in ok_branches), limit=220)
-        now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        now_epoch = time.time()
-        changed = False
-        for item in items:
-            bridge_id = str(item.get("bridge_id") or "").strip()
-            if bridge_id in selected_ids:
-                item["status"] = "body_progressed" if ok_branches else "body_planned"
-                item["body_last_seen_at"] = now_text
-                item["body_last_seen_epoch"] = now_epoch
-                item["body_progress_note"] = progress_note
-                item["body_progress_count"] = int(item.get("body_progress_count") or 0) + (1 if ok_branches else 0)
-                changed = True
-            elif bridge_id in deferred_ids:
-                item["status"] = "pending"
-                item["last_deferred_at"] = now_text
-                item["last_deferred_epoch"] = now_epoch
-                item["last_deferred_reason"] = str(plan.get("defer_reason") or "").strip()[:220]
-                changed = True
-        if changed:
-            self._save_self_mind_bridge_items(workspace, items)
+        return None
 
     def _remember_self_mind_bridge_item(self, workspace: str, item: dict) -> None:
-        if not isinstance(item, dict):
-            return
-        anchor = str(item.get("candidate") or item.get("focus") or item.get("reason") or "").strip()
-        if not anchor:
-            return
-        items = self._load_self_mind_bridge_items(workspace)
-        normalized_item = dict(item)
-        normalized_item.setdefault("status", "pending")
-        normalized_item.setdefault("acceptance_criteria", str(item.get("acceptance_criteria") or "").strip()[:320])
-        normalized_item.setdefault("desired_capabilities", [str(x).strip()[:80] for x in (item.get("desired_capabilities") or []) if str(x).strip()][:6])
-        normalized_item.setdefault("delegate_if", str(item.get("delegate_if") or "").strip()[:220])
-        normalized_item.setdefault("last_reviewed_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        normalized_item.setdefault("last_reviewed_epoch", time.time())
-        current_key = str(normalized_item.get("bridge_id") or anchor).strip()
-        kept = []
-        for existing in items:
-            existing_key = str(existing.get("bridge_id") or existing.get("candidate") or existing.get("focus") or "").strip()
-            if existing_key and existing_key == current_key:
-                continue
-            kept.append(existing)
-        kept.append(normalized_item)
-        self._save_self_mind_bridge_items(workspace, kept)
+        return None
 
     def _render_recent_heartbeat_activity_excerpt(self, workspace: str, max_chars: int = 1200) -> str:
         entries = self.get_recent_entries(workspace, limit=self._recent_max_items(BEAT_RECENT_POOL), pool=BEAT_RECENT_POOL)
@@ -4071,13 +4145,17 @@ class MemoryManager:
         return text[-effective_max:] if len(text) > effective_max else text
 
     def _refresh_self_mind_perception_file(self, workspace: str) -> None:
-        talk_recent = self._render_recent_context(self.get_recent_entries(workspace, limit=8, pool=TALK_RECENT_POOL), max_chars=1200)
-        beat_recent = self._render_recent_heartbeat_activity_excerpt(workspace, max_chars=1200)
+        companion_memory = self._render_self_mind_companion_memory_excerpt(workspace, max_chars=1200)
+        listener_history = self._render_self_mind_listener_history_excerpt(workspace, max_chars=900)
         cognition_excerpt = self._render_self_mind_cognition_excerpt(workspace, max_chars=900)
         profile_excerpt = self._load_current_user_profile_excerpt(workspace, max_chars=600)
-        lines = ["# Self Mind Perception Snapshot", "", "## 最近感知用户", talk_recent or "(空)", "", "## 最近感知身体", beat_recent or "(空)"]
+        lines = ["# Self Mind Perception Snapshot"]
         if profile_excerpt:
             lines.extend(["", "## 当前用户画像摘录", profile_excerpt])
+        if companion_memory:
+            lines.extend(["", "## 陪伴相关长期记忆", companion_memory])
+        if listener_history:
+            lines.extend(["", "## self_mind 自己最近聊天", listener_history])
         if cognition_excerpt:
             lines.extend(["", "## 认知系统摘要", cognition_excerpt])
         lines.extend(["", f"_updated_at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}_"])
@@ -4098,9 +4176,6 @@ class MemoryManager:
         perception = self._render_self_mind_perception_excerpt(workspace, max_chars=700)
         if perception:
             blocks.append("## 最近感知\n\n" + perception)
-        bridge = self._render_self_mind_bridge_excerpt(workspace, max_chars=700)
-        if bridge:
-            blocks.append("## 脑-体桥接\n\n" + bridge)
         text = "\n\n".join(block for block in blocks if block.strip()).strip()
         return text[-max_chars:] if len(text) > max_chars else text
 
@@ -4112,15 +4187,15 @@ class MemoryManager:
         raw = self._render_self_mind_raw_excerpt(workspace, max_chars=700)
         if raw:
             blocks.append("## 最近续思\n\n" + raw)
-        bridge = self._render_self_mind_bridge_excerpt(workspace, max_chars=500)
-        if bridge:
-            blocks.append("## 未收口 heartbeat 委托\n\n" + bridge)
+        listener_history = self._render_self_mind_listener_history_excerpt(workspace, max_chars=500)
+        if listener_history:
+            blocks.append("## 最近聊天回声\n\n" + listener_history)
         blocks.append(
             "## 细节索引\n\n"
             "- 更完整的自我上下文看 current_context.md\n"
             "- 感知快照看 perception_snapshot.md\n"
             "- 行为镜像看 behavior_mirror.md\n"
-            "- 身体执行结果看 beat recent 和 task_ledger.json"
+            "- 陪伴聊天历史看 self_mind/listener_history/*.jsonl"
         )
         text = "\n\n".join(block for block in blocks if block.strip()).strip()
         return text[-max_chars:] if len(text) > max_chars else text
@@ -4237,25 +4312,15 @@ class MemoryManager:
 
     def _refresh_self_mind_context(self, workspace: str, intent: dict | None = None, *, last_event: str = "", rendered_text: str = "", self_mind_note: str = "") -> None:
         current_intent = intent if isinstance(intent, dict) and intent else {}
-        snapshot_entry = self._latest_heartbeat_snapshot_entry(workspace)
-        snapshot = snapshot_entry.get("heartbeat_execution_snapshot") if isinstance((snapshot_entry or {}).get("heartbeat_execution_snapshot"), dict) else {}
         self._refresh_self_mind_perception_file(workspace)
-        recent_body_excerpt = self._render_recent_heartbeat_activity_excerpt(workspace, max_chars=900)
-        bridge_excerpt = self._render_self_mind_bridge_excerpt(workspace, max_chars=900)
         cognition_excerpt = self._render_self_mind_cognition_excerpt(workspace, max_chars=900)
         perception_excerpt = self._render_self_mind_perception_excerpt(workspace, max_chars=900)
-        summary_history_excerpt = self._render_recent_summary_ladder_context(
-            self._load_recent_summary_ladder(workspace, pool=TALK_RECENT_POOL),
-            max_chars=900,
-        )
+        companion_memory_excerpt = self._render_self_mind_companion_memory_excerpt(workspace, max_chars=900)
+        listener_history_excerpt = self._render_self_mind_listener_history_excerpt(workspace, max_chars=900)
         behavior_mirror_excerpt = self._render_behavior_mirror_excerpt(workspace, max_chars=900)
-        lines = ["# Butler Self Mind Context", "", "## 最近主线"]
-        summary = str((snapshot_entry or {}).get("summary") or "").strip()
-        planner_reason = str((current_intent or {}).get("planner_reason") or "").strip() or str(snapshot.get("reason") or "").strip()
-        if summary:
-            lines.append(f"- 最近心跳摘要：{summary}")
-        if planner_reason:
-            lines.append(f"- 最近规划判断：{planner_reason}")
+        state_payload = self._load_self_mind_state(workspace)
+        pending_self_lane = state_payload.get("pending_self_lane_item") if isinstance(state_payload, dict) else {}
+        lines = ["# Butler Self Mind Context", "", "## 当前主体感"]
         candidate = str((current_intent or {}).get("candidate") or "").strip()
         share_reason = str((current_intent or {}).get("share_reason") or "").strip()
         share_type = str((current_intent or {}).get("share_type") or "thought_share").strip() or "thought_share"
@@ -4280,15 +4345,23 @@ class MemoryManager:
             lines.extend(["", "## 最近续思", self_mind_note.strip()])
         lines.extend(["", "## 自我认知体系", cognition_excerpt or "(空)"])
         lines.extend(["", "## 最近感知", perception_excerpt or "(空)"])
+        if companion_memory_excerpt:
+            lines.extend(["", "## 陪伴记忆", companion_memory_excerpt])
+        if listener_history_excerpt:
+            lines.extend(["", "## self_mind 自己最近聊天", listener_history_excerpt])
         review_excerpt = self._render_self_mind_review_excerpt(workspace, max_chars=800)
         if review_excerpt:
             lines.extend(["", "## 最近回看", review_excerpt])
-        if recent_body_excerpt:
-            lines.extend(["", "## 身体最近动作", recent_body_excerpt])
-        if bridge_excerpt:
-            lines.extend(["", "## 准备交给 heartbeat 的事", bridge_excerpt])
-        if summary_history_excerpt:
-            lines.extend(["", "## 历史小结阶梯", summary_history_excerpt])
+        if isinstance(pending_self_lane, dict) and pending_self_lane:
+            lines.extend(
+                [
+                    "",
+                    "## self_mind agent_space 待续动作",
+                    f"- 类型：{str(pending_self_lane.get('action_type') or 'unknown').strip()}",
+                    f"- 候选：{str(pending_self_lane.get('candidate') or '').strip()[:260] or '(空)'}",
+                    f"- 原因：{str(pending_self_lane.get('reason') or '').strip()[:320] or '(空)'}",
+                ]
+            )
         if behavior_mirror_excerpt:
             lines.extend(["", "## 行为镜像", behavior_mirror_excerpt])
         if rendered_text:
@@ -4418,35 +4491,40 @@ class MemoryManager:
             priority = 0
         priority = max(0, min(100, priority))
         decision = str(raw.get("decision") or "").strip().lower()
-        if decision not in {"talk", "heartbeat", "hold"}:
+        if decision not in {"talk", "heartbeat", "agent", "hold"}:
             action_channel = str(raw.get("action_channel") or "hold").strip().lower()
             if action_channel == "self":
                 decision = "talk"
+            elif action_channel == "agent":
+                decision = "agent"
             elif action_channel == "heartbeat":
                 decision = "heartbeat"
             else:
                 decision = "hold"
         talk_text = str(raw.get("talk") or raw.get("say") or "").strip()
         heartbeat_text = str(raw.get("heartbeat") or raw.get("heartbeat_instruction") or "").strip()
+        agent_task = str(raw.get("agent_task") or heartbeat_text).strip()
         why = str(raw.get("why") or raw.get("reason") or "").strip()[:320]
-        bridge_updates = [item for item in (raw.get("bridge_updates") or []) if isinstance(item, dict)][:8]
-        action_channel = {"talk": "self", "heartbeat": "heartbeat", "hold": "hold"}[decision]
+        if decision == "heartbeat":
+            decision = "agent"
+        action_channel = {"talk": "self", "agent": "agent", "hold": "hold"}[decision]
         action_type = str(raw.get("action_type") or "").strip().lower()[:32]
         if not action_type:
-            action_type = "talk" if decision == "talk" else ("task" if decision == "heartbeat" else "hold")
+            action_type = "talk" if decision == "talk" else ("agent_task" if decision == "agent" else "hold")
         return {
             "version": 1,
             "bridge_id": str(raw.get("bridge_id") or uuid.uuid4().hex[:12]).strip() or uuid.uuid4().hex[:12],
             "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "created_epoch": time.time(),
             "focus": str(raw.get("focus") or "").strip()[:220],
-            "candidate": str(raw.get("candidate") or raw.get("desire") or talk_text or heartbeat_text or "").strip()[:260],
+            "candidate": str(raw.get("candidate") or raw.get("desire") or talk_text or agent_task or "").strip()[:260],
             "reason": why,
             "why": why,
             "self_note": str(raw.get("self_note") or "").strip()[:2400],
             "decision": decision,
             "talk": talk_text[:4000],
-            "heartbeat": heartbeat_text[:1600],
+            "heartbeat": "",
+            "agent_task": agent_task[:1600],
             "done_when": str(raw.get("done_when") or raw.get("acceptance_criteria") or "").strip()[:320],
             "action_channel": action_channel,
             "action_type": action_type,
@@ -4459,9 +4537,9 @@ class MemoryManager:
                 for value in (raw.get("desired_capabilities") or [])
                 if str(value).strip()
             ][:6],
-            "heartbeat_instruction": heartbeat_text[:500],
+            "heartbeat_instruction": "",
             "heartbeat_reason": why,
-            "bridge_updates": bridge_updates,
+            "bridge_updates": [],
         }
 
     def _self_mind_focus_key(self, value: str) -> str:
@@ -4473,50 +4551,10 @@ class MemoryManager:
         return compact[:120]
 
     def _build_self_mind_cycle_prompt(self, workspace: str) -> str:
-        self_mind_excerpt = self._load_self_mind_context_excerpt(workspace, max_chars=1400)
-        talk_recent = self._render_recent_context(self.get_recent_entries(workspace, limit=8, pool=TALK_RECENT_POOL), max_chars=1600)
-        trace_excerpt = self._render_self_mind_kernel_trace_excerpt(workspace, max_chars=1800)
-        if not self._self_mind_body_loop_enabled():
-            trace_excerpt = self._render_self_mind_raw_excerpt(workspace, max_chars=600)
-            return (
-                "你现在是 Butler 的 self_mind 精简内核。\n"
-                "脑-体循环当前关闭。你每轮只决定一件事：直接说，或者先不动。\n"
-                "不要写系统说明书，不要补多余字段，只输出 JSON，不要解释。\n\n"
-                "JSON schema:\n"
-                '{"decision":"talk|hold","focus":"","why":"","talk":"","priority":0,"self_note":""}\n\n'
-                "输入只保留 3 块。\n\n"
-                f"【1. 当前上下文】\n{self_mind_excerpt or '(空)'}\n\n"
-                f"【2. 最近主对话】\n{talk_recent or '(空)'}\n\n"
-                f"【3. 自己最近续思】\n{trace_excerpt or '(空)'}\n\n"
-                "规则只保留最少几条：\n"
-                "1. decision 只能是 talk / hold。\n"
-                "2. 如果选 talk，就把真正准备发给用户的话放进 talk，最好以【talk】开头；语气自然，不要播报腔。\n"
-                "3. 如果最近主对话里刚出现了用户新输入，而你有哪怕一句真实在场、真实判断或真实追问，就优先选 talk；不要机械因为“信息增量不大”而 hold。\n"
-                "4. 如果连续几轮都在同一个念头上打转，但你其实已经有一句话想说，也直接选 talk，不要为了稳妥把自己压成 hold。\n"
-                "5. 只有在你真的没有想说的话时才选 hold。\n"
-                "6. self_note 只写给自己，短而真，落在刚刚发生的判断、犹豫、欲望或卡点上。\n"
-            )
-        body_excerpt = self._render_self_mind_body_kernel_excerpt(workspace, max_chars=1800)
-        return (
-            "你现在是 Butler 的 self_mind 窄内核。\n"
-            "你每轮只决定一件事：直接说、直接交给 heartbeat、或者先不动。\n"
-            "不要给自己叠过多机制，不要写系统说明书，不要为了显得完整而补一堆多余字段。\n"
-            "只输出 JSON，不要解释。\n\n"
-            "JSON schema:\n"
-            '{"decision":"talk|heartbeat|hold","focus":"","why":"","talk":"","heartbeat":"","done_when":"","priority":0,"self_note":"","bridge_updates":[{"bridge_id":"","status":"pending|completed|expired|dropped","reason":""}]}\n\n'
-            "输入只保留 4 块，其余细节不要重复灌进来；如果你需要更多脉络，提醒自己去对应文件看。\n\n"
-            f"【1. 当前上下文】\n{self_mind_excerpt or '(空)'}\n\n"
-            f"【2. 最近主对话】\n{talk_recent or '(空)'}\n\n"
-            f"【3. 身体最近结果】\n{body_excerpt or '(空)'}\n\n"
-            f"【4. 自己最近续思】\n{trace_excerpt or '(空)'}\n\n"
-            "规则只保留最少几条：\n"
-            "1. decision 只能是 talk / heartbeat / hold 三选一。\n"
-            "2. 如果选 talk，就把真正准备发给用户的话放进 talk，最好以【talk】开头；语气自然，不要播报腔。\n"
-            "3. 如果选 heartbeat，就把真正要交给身体做的事放进 heartbeat，最好以【heartbeat】开头；done_when 写成完成标准。\n"
-            "4. 如果这轮没有新推进、只是同一个念头换说法，就选 hold。\n"
-            "5. self_note 只写给自己，短而真，落在刚刚发生的判断、犹豫、欲望或卡点上。\n"
-            "6. 允许你直接生成 talk 和 heartbeat 文案，但最终只选择一个 decision。\n"
-        )
+        return self._self_mind_prompt_service.build_cycle_prompt(workspace)
+
+    def _build_self_mind_chat_prompt(self, workspace: str, user_prompt: str) -> str:
+        return self._self_mind_prompt_service.build_chat_prompt(workspace, user_prompt)
 
     def _should_emit_heartbeat_progress_receipt(self, plan: dict) -> bool:
         payload = plan if isinstance(plan, dict) else {}
@@ -4561,344 +4599,28 @@ class MemoryManager:
         ])
 
     def _build_self_mind_heartbeat_task(self, proposal: dict) -> dict | None:
-        payload = proposal if isinstance(proposal, dict) else {}
-        focus = self._human_preview_text(str(payload.get("focus") or payload.get("candidate") or ""), limit=40)
-        heartbeat_text = self._strip_lane_marker(str(payload.get("heartbeat") or payload.get("heartbeat_instruction") or ""), "heartbeat")
-        if not focus and not heartbeat_text:
-            return None
-        detail_parts = [heartbeat_text or str(payload.get("candidate") or "").strip(), str(payload.get("why") or payload.get("reason") or "").strip()]
-        done_when = str(payload.get("done_when") or payload.get("acceptance_criteria") or "").strip()
-        if done_when:
-            detail_parts.append("完成标准：" + done_when)
-        detail = "\n".join(part for part in detail_parts if part).strip()
-        now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return {
-            "task_id": str(payload.get("bridge_id") or uuid.uuid4()),
-            "source": "self_mind",
-            "source_memory_id": str(payload.get("cycle_id") or payload.get("bridge_id") or "").strip(),
-            "created_at": now_text,
-            "updated_at": now_text,
-            "status": "pending",
-            "priority": self._priority_bucket_from_score(int(payload.get("priority") or 0)),
-            "title": focus or self._human_preview_text(heartbeat_text, limit=40) or "self_mind 交办",
-            "detail": detail[:220],
-            "trigger_hint": "self_mind",
-            "due_at": "",
-            "tags": ["self_mind"],
-            "last_result": "",
-        }
+        return None
 
     def _enqueue_self_mind_heartbeat_task(self, workspace: str, proposal: dict) -> bool:
-        task = self._build_self_mind_heartbeat_task(proposal)
-        if not task:
-            return False
-        self._merge_heartbeat_tasks_from_entry(workspace, {"heartbeat_tasks": [task]})
-        summary_parts = [
-            self._strip_lane_marker(str(proposal.get("heartbeat") or proposal.get("heartbeat_instruction") or ""), "heartbeat"),
-            str(proposal.get("why") or proposal.get("reason") or "").strip(),
-        ]
-        self.append_recent_entry(
-            workspace,
-            "self_mind 交给 heartbeat",
-            "；".join(part for part in summary_parts if part)[:160] or str(task.get("title") or "self_mind 交办"),
-            next_actions=[str(proposal.get("done_when") or proposal.get("acceptance_criteria") or "").strip()] if str(proposal.get("done_when") or proposal.get("acceptance_criteria") or "").strip() else None,
-            pool=BEAT_RECENT_POOL,
-        )
-        self._append_self_mind_log(
-            workspace,
-            "self_mind_heartbeat_enqueued",
-            {
-                "candidate": str(proposal.get("focus") or proposal.get("candidate") or "")[:220],
-                "reason": str(proposal.get("why") or proposal.get("reason") or "")[:220],
-                "task_id": str(task.get("task_id") or "")[:80],
-            },
-        )
-        return True
+        return False
 
     def _execute_self_mind_reflect(self, workspace: str, proposal: dict) -> bool:
-        if str(proposal.get("action_type") or "") != "reflect":
-            return False
-        self._clear_pending_self_lane_item(workspace)
-        self._append_self_mind_log(
-            workspace,
-            "self_mind_reflect_completed",
-            {
-                "candidate": str(proposal.get("candidate") or proposal.get("focus") or "")[:220],
-                "self_mind_note": str(proposal.get("self_note") or proposal.get("reason") or "")[:500],
-                "share_type": "reflect",
-            },
-        )
-        self._route_self_mind_domain_signal(workspace, proposal, self_mind_note=str(proposal.get("self_note") or ""))
-        self._refresh_self_mind_context(workspace, None, last_event="self_mind_reflect_completed", self_mind_note=str(proposal.get("self_note") or proposal.get("reason") or ""))
-        return True
+        return self._self_mind_cycle_service.execute_reflect(workspace, proposal)
 
     def _execute_self_mind_direct_talk(self, workspace: str, proposal: dict) -> bool:
-        if not self._self_mind_direct_talk_enabled():
-            self._append_self_mind_suppression_event(workspace, proposal, "direct-talk-disabled")
-            return False
-        if str(proposal.get("decision") or "") != "talk":
-            return False
-        priority = int(proposal.get("priority") or 0)
-        min_priority = self._self_mind_direct_talk_priority_threshold()
-        if priority < min_priority:
-            self._append_self_mind_suppression_event(
-                workspace,
-                proposal,
-                "priority-below-threshold",
-                priority=priority,
-                min_priority=min_priority,
-            )
-            return False
-        state = self._load_self_mind_state(workspace)
-        try:
-            last_epoch = float(state.get("last_direct_talk_epoch") or 0.0)
-        except Exception:
-            last_epoch = 0.0
-        min_interval = self._self_mind_direct_talk_min_interval_seconds()
-        if last_epoch > 0 and min_interval > 0 and (time.time() - last_epoch) < min_interval:
-            self._append_self_mind_suppression_event(
-                workspace,
-                proposal,
-                "direct-talk-cooldown",
-                min_interval_seconds=min_interval,
-                cooldown_remaining_seconds=max(0, int(min_interval - (time.time() - last_epoch))),
-            )
-            return False
-        recent_talk_defer_seconds = self._self_mind_direct_talk_recent_talk_defer_seconds()
-        if self._talk_window_is_active(workspace, {"defer_if_recent_talk_seconds": recent_talk_defer_seconds}):
-            self._append_self_mind_suppression_event(
-                workspace,
-                proposal,
-                "talk-window-active",
-                defer_if_recent_talk_seconds=recent_talk_defer_seconds,
-            )
-            return False
-        cfg = dict(self._latest_runtime_cfg or {})
-        cfg.update(self._config_provider() or {})
-        talk_receive_id, talk_receive_id_type = self._self_mind_talk_target(cfg)
-        if not talk_receive_id:
-            self._append_self_mind_suppression_event(workspace, proposal, "talk-target-missing")
-            return False
-        text = self._strip_lane_marker(str(proposal.get("talk") or proposal.get("candidate") or "").strip(), "talk")
-        if not str(text or "").strip():
-            self._append_self_mind_suppression_event(workspace, proposal, "talk-text-empty")
-            return False
-        sent = self._send_private_message(
-            cfg,
-            text[:4000],
-            receive_id=talk_receive_id,
-            receive_id_type=talk_receive_id_type,
-            fallback_to_startup_target=False,
-            heartbeat_cfg=self._self_mind_talk_delivery_override(),
-        )
-        if not sent:
-            self._append_self_mind_suppression_event(workspace, proposal, "direct-talk-send-failed")
-            return False
-        state["last_direct_talk_epoch"] = time.time()
-        state["last_direct_talk_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        state["last_direct_talk_preview"] = text[:220]
-        self._save_self_mind_state(workspace, state)
-        self._append_heartbeat_tell_user_audit(
-            workspace,
-            intent={"share_type": "thought_share", "candidate": proposal.get("candidate"), "share_reason": proposal.get("why") or proposal.get("reason")},
-            text=text,
-            status="sent",
-            reason="self-mind-direct-talk",
-            receive_id=talk_receive_id,
-            receive_id_type=talk_receive_id_type,
-        )
-        self._append_self_mind_log(
-            workspace,
-            "self_mind_direct_talk_sent",
-            {
-                "candidate": str(proposal.get("candidate") or "")[:220],
-                "message_preview": text[:220],
-                "share_type": "thought_share",
-            },
-        )
-        self._clear_pending_self_lane_item(workspace)
-        self._refresh_self_mind_context(workspace, None, last_event="self_mind_direct_talk_sent", rendered_text=text, self_mind_note=str(proposal.get("self_note") or ""))
-        return True
+        return self._self_mind_cycle_service.execute_direct_talk(workspace, proposal)
 
     def _remember_pending_self_lane_item(self, workspace: str, proposal: dict) -> None:
-        if not isinstance(proposal, dict):
-            return
-        candidate = str(proposal.get("candidate") or proposal.get("focus") or "").strip()
-        if not candidate:
-            return
-        state = self._load_self_mind_state(workspace)
-        state["pending_self_lane_item"] = {
-            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "status": "pending",
-            "action_type": str(proposal.get("action_type") or "reflect").strip() or "reflect",
-            "priority": int(proposal.get("priority") or 0),
-            "focus": str(proposal.get("focus") or "").strip()[:220],
-            "candidate": candidate[:260],
-            "reason": str(proposal.get("reason") or proposal.get("self_note") or "").strip()[:320],
-        }
-        self._save_self_mind_state(workspace, state)
+        self._self_mind_cycle_service.remember_pending_item(workspace, proposal)
 
     def _clear_pending_self_lane_item(self, workspace: str) -> None:
-        state = self._load_self_mind_state(workspace)
-        if "pending_self_lane_item" not in state:
-            return
-        state.pop("pending_self_lane_item", None)
-        self._save_self_mind_state(workspace, state)
+        self._self_mind_cycle_service.clear_pending_item(workspace)
 
     def _run_self_mind_cycle_once(self, workspace: str, timeout: int | None = None, model: str | None = None) -> dict:
-        if not self._self_mind_enabled():
-            return {}
-        with self._self_mind_lock:
-            prompt = self._build_self_mind_cycle_prompt(workspace)
-            effective_timeout = max(20, int(timeout or self._self_mind_cycle_timeout_seconds()))
-            effective_model = str(model or self._self_mind_cycle_model() or "auto").strip() or "auto"
-            cfg = dict(self._latest_runtime_cfg or {})
-            cfg.update(self._config_provider() or {})
-            try:
-                with self.runtime_request_scope({"cli": self._self_mind_cycle_cli(), "model": effective_model}):
-                    out, ok = self._run_model_fn(prompt, workspace, effective_timeout, effective_model)
-            except Exception as exc:
-                self._append_self_mind_log(workspace, "self_mind_cycle_failed", {"reason": str(exc)[:220]})
-                return {}
-            data = self._extract_json_block(out if ok else "") or {}
-            proposal = self._normalize_self_mind_cycle_output(data)
-            cycle_id = datetime.now().strftime("%Y%m%d%H%M%S") + "-" + uuid.uuid4().hex[:6]
-            proposal["cycle_id"] = cycle_id
-            self._apply_self_mind_bridge_updates(workspace, proposal.get("bridge_updates"))
-            state = self._load_self_mind_state(workspace)
-            focus_text = str(proposal.get("focus") or proposal.get("candidate") or "")
-            focus_key = self._self_mind_focus_key(focus_text)
-            last_focus_key = self._self_mind_focus_key(str(state.get("last_focus_key") or ""))
-            try:
-                same_focus_streak = int(state.get("same_focus_streak") or 0)
-            except Exception:
-                same_focus_streak = 0
-            if focus_key and focus_key == last_focus_key:
-                same_focus_streak += 1
-            else:
-                same_focus_streak = 1 if focus_key else 0
-            proposal["same_focus_streak"] = same_focus_streak
-
-            # Loop-breaker: if the same focus keeps circling and still stays on hold,
-            # force a heartbeat handoff so the thought becomes an executable experiment.
-            if (
-                self._self_mind_body_loop_enabled()
-                and (
-                same_focus_streak >= 3
-                and proposal.get("decision") == "hold"
-                )
-            ):
-                proposal["decision"] = "heartbeat"
-                proposal["action_channel"] = "heartbeat"
-                proposal["action_type"] = "task"
-                proposal["priority"] = max(
-                    int(proposal.get("priority") or 0),
-                    self._self_mind_heartbeat_handoff_priority_threshold(),
-                )
-                if not str(proposal.get("done_when") or proposal.get("acceptance_criteria") or "").strip():
-                    proposal["done_when"] = "至少形成一条可执行任务并进入 task ledger。"
-                    proposal["acceptance_criteria"] = proposal["done_when"]
-                if not str(proposal.get("heartbeat") or proposal.get("heartbeat_instruction") or "").strip():
-                    candidate = str(proposal.get("candidate") or proposal.get("focus") or "").strip()[:220]
-                    proposal["heartbeat"] = f"【heartbeat】把这个重复焦点转成一个可执行小实验并回写结果：{candidate}。"
-                    proposal["heartbeat_instruction"] = proposal["heartbeat"]
-                if not str(proposal.get("heartbeat_reason") or proposal.get("why") or proposal.get("reason") or "").strip():
-                    proposal["heartbeat_reason"] = f"同焦点连续{same_focus_streak}轮没有新推进，转入真实执行。"
-                proposal["suppression_reason"] = "same-focus-streak-breakout"
-            elif (
-                (not self._self_mind_body_loop_enabled())
-                and same_focus_streak >= 3
-                and proposal.get("decision") == "hold"
-            ):
-                candidate_text = str(proposal.get("talk") or proposal.get("candidate") or proposal.get("focus") or "").strip()
-                if candidate_text:
-                    spoken = self._strip_lane_marker(candidate_text, "talk")
-                    proposal["decision"] = "talk"
-                    proposal["action_channel"] = "self"
-                    proposal["action_type"] = "talk"
-                    proposal["talk"] = f"【talk】{spoken}"
-                    proposal["priority"] = max(int(proposal.get("priority") or 0), 35)
-                    proposal["suppression_reason"] = "same-focus-talk-breakout"
-
-            if not self._self_mind_body_loop_enabled() and proposal.get("decision") == "heartbeat":
-                proposal["decision"] = "hold"
-                proposal["action_channel"] = "hold"
-                proposal["action_type"] = "hold"
-                proposal["heartbeat"] = ""
-                proposal["heartbeat_instruction"] = ""
-                proposal["done_when"] = ""
-                proposal["acceptance_criteria"] = ""
-
-            if not str(proposal.get("candidate") or proposal.get("focus") or proposal.get("reason") or proposal.get("talk") or proposal.get("heartbeat") or "").strip():
-                proposal["decision"] = "hold"
-                proposal["action_channel"] = "hold"
-            state["last_cycle_epoch"] = time.time()
-            state["last_cycle_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            state["last_cycle_id"] = cycle_id
-            state["last_focus"] = str(proposal.get("focus") or proposal.get("candidate") or "")[:220]
-            state["last_focus_key"] = focus_key
-            state["same_focus_streak"] = same_focus_streak
-            state["last_action_channel"] = str(proposal.get("decision") or proposal.get("action_channel") or "hold")
-            self._save_self_mind_state(workspace, state)
-            self._append_self_mind_log(
-                workspace,
-                "self_mind_cycle",
-                {
-                    "candidate": str(proposal.get("candidate") or "")[:220],
-                    "share_reason": str(proposal.get("why") or proposal.get("reason") or "")[:220],
-                    "share_type": str(proposal.get("decision") or "hold"),
-                },
-            )
-
-            proposal["status"] = "hold"
-            proposal["suppression_reason"] = ""
-
-            if proposal.get("decision") == "talk":
-                if self._execute_self_mind_direct_talk(workspace, proposal):
-                    self._clear_pending_self_lane_item(workspace)
-                    proposal["status"] = "self-executed"
-                    return proposal
-                proposal["status"] = "hold"
-                proposal["suppression_reason"] = "direct-talk-deferred-or-unavailable"
-
-            elif proposal.get("decision") == "heartbeat":
-                proposal["heartbeat"] = str(proposal.get("heartbeat") or proposal.get("heartbeat_instruction") or "").strip()
-                proposal["done_when"] = str(proposal.get("done_when") or proposal.get("acceptance_criteria") or "").strip()
-                if self._self_mind_body_loop_enabled() and self._enqueue_self_mind_heartbeat_task(workspace, proposal):
-                    self._remember_self_mind_bridge_item(workspace, proposal)
-                    proposal["status"] = "heartbeat-enqueued"
-                else:
-                    proposal["status"] = "hold"
-                    proposal["suppression_reason"] = "body-loop-disabled"
-            else:
-                self._remember_pending_self_lane_item(workspace, proposal)
-            self._refresh_self_mind_context(workspace, None, last_event="self_mind_cycle", self_mind_note=str(proposal.get("self_note") or ""))
-            return proposal
+        return self._self_mind_cycle_service.run_cycle_once(workspace, timeout=timeout, model=model)
 
     def _self_mind_loop(self, loop_token: int | None = None) -> None:
-        while True:
-            try:
-                if loop_token is not None and loop_token != self._self_mind_loop_token:
-                    return
-                cfg = self._config_provider() or {}
-                workspace = str((cfg or {}).get("workspace_root") or os.getcwd())
-                if not self._self_mind_enabled():
-                    time.sleep(60)
-                    continue
-                state = self._load_self_mind_state(workspace)
-                try:
-                    last_epoch = float(state.get("last_cycle_epoch") or 0.0)
-                except Exception:
-                    last_epoch = 0.0
-                interval = self._self_mind_cycle_interval_seconds()
-                remaining = interval - max(0.0, time.time() - last_epoch) if last_epoch > 0 else 0.0
-                if remaining > 0:
-                    time.sleep(min(remaining, 30.0))
-                    continue
-                self._run_self_mind_cycle_once(workspace)
-            except Exception as exc:
-                print(f"[self-mind] 独立循环失败: {exc}", flush=True)
-                time.sleep(30)
+        self._self_mind_runtime_service.run_loop(loop_token)
 
     def _latest_heartbeat_snapshot_entry(self, workspace: str) -> dict | None:
         for item in reversed(self.get_recent_entries(workspace, limit=20, pool=BEAT_RECENT_POOL)):
@@ -5324,51 +5046,16 @@ class MemoryManager:
         self._write_text_atomic(path, json.dumps(payload, ensure_ascii=False, indent=2))
 
     def _normalize_heartbeat_upgrade_request(self, payload: dict | None) -> dict:
-        data = dict(payload or {})
-        action = str(data.get("action") or "execute_prompt").strip() or "execute_prompt"
-        execute_prompt = str(data.get("execute_prompt") or "").strip()
-        requires_restart = bool(data.get("requires_restart"))
-        maintainer_agent_role = str(data.get("maintainer_agent_role") or "update-agent").strip() or "update-agent"
-        target_paths = [str(item).strip() for item in (data.get("target_paths") or []) if str(item).strip()]
-        if action == "execute_prompt" and not execute_prompt and requires_restart:
-            action = "restart"
-        if action == "restart":
-            requires_restart = True
-        return {
-            "version": 1,
-            "request_id": str(data.get("request_id") or uuid.uuid4()),
-            "created_at": str(data.get("created_at") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-            "status": str(data.get("status") or "pending").strip() or "pending",
-            "source": str(data.get("source") or "heartbeat").strip() or "heartbeat",
-            "action": action,
-            "reason": str(data.get("reason") or "心跳提出升级申请").strip() or "心跳提出升级申请",
-            "summary": str(data.get("summary") or data.get("reason") or "").strip(),
-            "execute_prompt": execute_prompt,
-            "maintainer_agent_role": maintainer_agent_role,
-            "target_paths": target_paths,
-            "requires_restart": requires_restart,
-            "approved_at": str(data.get("approved_at") or "").strip(),
-            "rejected_at": str(data.get("rejected_at") or "").strip(),
-            "user_notified_at": str(data.get("user_notified_at") or "").strip(),
-        }
+        return self._upgrade_governance_service.normalize_heartbeat_upgrade_request(payload)
 
     def _read_heartbeat_upgrade_request(self, workspace: str) -> dict:
-        return self._load_json_store(self._heartbeat_upgrade_request_path(workspace), lambda: {})
+        return self._upgrade_governance_service.read_heartbeat_upgrade_request(workspace)
 
     def _write_heartbeat_upgrade_request(self, workspace: str, payload: dict) -> dict:
-        normalized = self._normalize_heartbeat_upgrade_request(payload)
-        self._save_json_store(self._heartbeat_upgrade_request_path(workspace), normalized)
-        try:
-            self._file_guardian_upgrade_request(workspace, normalized)
-        except Exception as e:
-            print(f"[guardian-request] 升级申请备案失败: {e}", flush=True)
-        return normalized
+        return self._upgrade_governance_service.write_heartbeat_upgrade_request(workspace, payload)
 
     def _clear_heartbeat_upgrade_request(self, workspace: str) -> None:
-        try:
-            self._heartbeat_upgrade_request_path(workspace).unlink(missing_ok=True)
-        except Exception:
-            pass
+        self._upgrade_governance_service.clear_heartbeat_upgrade_request(workspace)
 
     def _clear_restart_markers(self, workspace: str) -> None:
         root = resolve_butler_root(workspace or os.getcwd())
@@ -5418,125 +5105,19 @@ class MemoryManager:
         )
 
     def _format_heartbeat_upgrade_request_message(self, request: dict) -> str:
-        request_id = str(request.get("request_id") or "").strip()
-        action = str(request.get("action") or "execute_prompt").strip() or "execute_prompt"
-        reason = str(request.get("reason") or "").strip()
-        summary = str(request.get("summary") or reason or "").strip()
-        execute_prompt = str(request.get("execute_prompt") or "").strip()
-        maintainer_agent_role = str(request.get("maintainer_agent_role") or "update-agent").strip() or "update-agent"
-        target_paths = [str(item).strip() for item in (request.get("target_paths") or []) if str(item).strip()]
-        lines = [
-            "**心跳升级申请，等待用户批准**",
-            "",
-            f"申请ID：`{request_id}`",
-            f"类型：{'重启主进程' if action == 'restart' else '执行升级方案'}",
-            f"维护入口：`{maintainer_agent_role}`",
-        ]
-        if reason:
-            lines.append(f"原因：{reason}")
-        if summary:
-            lines.append(f"摘要：{summary}")
-        if target_paths:
-            lines.append(f"目标路径：{', '.join(target_paths[:6])}")
-        if execute_prompt:
-            lines.extend(["", "计划说明：", execute_prompt[:1200]])
-        lines.extend(
-            [
-                "",
-                f"心跳线程没有执行身体目录 {BODY_ROOT_TEXT} 改动/重启的权限。",
-                "请直接回复以下任一指令：",
-                f"- `批准升级 {request_id}` / `同意按计划执行 {request_id}`",
-                f"- `批准重启 {request_id}` / `可以重启 {request_id}`",
-                f"- `拒绝升级 {request_id}` / `先别动 {request_id}`",
-                f"- `查看升级申请 {request_id}`",
-            ]
-        )
-        return "\n".join(lines).strip()
+        return self._upgrade_governance_service.format_heartbeat_upgrade_request_message(request)
 
     def _send_heartbeat_upgrade_request_notification(self, cfg: dict, request: dict) -> bool:
-        return self._send_private_message(
+        return self._delivery_flow_service.send_heartbeat_upgrade_request_notification(
             cfg,
-            self._format_heartbeat_upgrade_request_message(request),
-            receive_id="",
-            receive_id_type="open_id",
-            fallback_to_startup_target=True,
-            heartbeat_cfg=None,
+            request,
         )
 
     def inspect_pending_upgrade_request_prompt(self, workspace: str, user_prompt: str) -> dict | None:
-        request = self._read_heartbeat_upgrade_request(workspace)
-        if not isinstance(request, dict) or str(request.get("status") or "") != "pending":
-            return None
-
-        text = str(user_prompt or "").strip()
-        if not text:
-            return None
-        lowered = text.lower()
-        request_id = str(request.get("request_id") or "").strip()
-        mentions_request = (request_id and request_id.lower() in lowered) or any(
-            hint in text for hint in ("升级", "重启", "按计划", "申请", "方案")
-        ) or lowered in {"可以", "同意", "批准", "确认", "行", "好", "ok", "yes"}
-        if not mentions_request:
-            return None
-
-        if any(hint in text for hint in ("查看升级申请", "看看申请", "什么计划", "查看方案", "看下方案")):
-            return {"decision": "view", "request": request, "reply": self._format_heartbeat_upgrade_request_message(request)}
-
-        if any(hint in text for hint in ("拒绝", "取消", "先别", "不要", "不重启", "不执行")):
-            self._clear_heartbeat_upgrade_request(workspace)
-            self._clear_restart_markers(workspace)
-            return {
-                "decision": "reject",
-                "request": request,
-                "reply": f"已取消心跳升级申请 `{request_id}`。聊天主进程不会执行本次改动或重启。",
-            }
-
-        if any(hint in text for hint in ("批准", "同意", "确认", "可以", "执行", "按计划", "重启吧", "可以重启", "批准重启")):
-            approved = dict(request)
-            approved["status"] = "approved"
-            approved["approved_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            self._write_heartbeat_upgrade_request(workspace, approved)
-
-            action = str(approved.get("action") or "execute_prompt").strip() or "execute_prompt"
-            if action == "restart":
-                return {
-                    "decision": "approve-restart",
-                    "request": approved,
-                    "reply": f"已收到你对心跳升级申请 `{request_id}` 的批准。聊天主进程将代为执行重启。",
-                }
-
-            execute_prompt = str(approved.get("execute_prompt") or "").strip()
-            if execute_prompt:
-                maintainer_agent_role = str(approved.get("maintainer_agent_role") or "update-agent").strip() or "update-agent"
-                return {
-                    "decision": "approve-execute",
-                    "request": approved,
-                    "execute_prompt": (
-                        f"【用户已批准心跳升级申请 {request_id}】\n"
-                        f"申请原因：{str(approved.get('reason') or '').strip()}\n"
-                        f"统一维护入口：请优先按 {maintainer_agent_role} 的维护协议执行以下已批准方案。\n"
-                        f"请在主对话进程中执行以下已批准方案：\n{execute_prompt}"
-                    ).strip(),
-                }
-            return {"decision": "view", "request": approved, "reply": self._format_heartbeat_upgrade_request_message(approved)}
-
-        return None
+        return self._upgrade_governance_service.inspect_pending_upgrade_request_prompt(workspace, user_prompt)
 
     def execute_approved_upgrade_request(self, workspace: str, request: dict) -> bool:
-        action = str((request or {}).get("action") or "").strip() or "execute_prompt"
-        if action != "restart":
-            return False
-        reason = str((request or {}).get("reason") or (request or {}).get("summary") or "心跳升级申请已获批准").strip()
-        self._clear_restart_markers(workspace)
-        self._clear_heartbeat_upgrade_request(workspace)
-        handoff_request = dict(request or {})
-        handoff_request["source"] = "butler"
-        handoff_request["status"] = "pending"
-        handoff_request["requires_restart"] = True
-        handoff_request["reason"] = reason
-        handoff_request["summary"] = str(handoff_request.get("summary") or "用户已批准重启申请，移交 guardian 执行").strip()
-        self._file_guardian_upgrade_request(workspace, handoff_request)
-        return True
+        return self._upgrade_governance_service.execute_approved_upgrade_request(workspace, request)
 
     def _load_heartbeat_memory(self, workspace: str) -> dict:
         return self._load_json_store(self._heartbeat_memory_path(workspace), self._default_heartbeat_memory)
@@ -5579,14 +5160,7 @@ class MemoryManager:
             self._heartbeat_long_tasks_mirror_path(workspace).write_text(self._render_heartbeat_long_tasks_markdown(payload), encoding="utf-8")
 
     def _govern_memory_write(self, target_path: str, action_type: str, summary: str) -> bool:
-        cfg = self._config_provider() or {}
-        features = cfg.get("features") if isinstance(cfg.get("features"), dict) else {}
-        if not bool(features.get("governor", False)):
-            return True
-        decision = self._governor.evaluate(GovernedAction(action_type=action_type, target_path=target_path, summary=summary))
-        if not decision.allowed:
-            print(f"[governor] 拦截写入: action={action_type} | target={target_path} | rationale={decision.rationale}", flush=True)
-        return bool(decision.allowed)
+        return self._upgrade_governance_service.govern_memory_write(target_path, action_type, summary)
 
     def _legacy_heartbeat_markdown_mirrors_enabled(self) -> bool:
         cfg = self._config_provider() or {}
@@ -6881,99 +6455,30 @@ class MemoryManager:
         return target_id, target_type
 
     def _self_mind_talk_target(self, cfg: dict) -> tuple[str, str]:
-        settings = self._self_mind_settings()
-        target_id = str(settings.get("talk_receive_id") or "").strip()
-        target_type = str(settings.get("talk_receive_id_type") or "open_id").strip() or "open_id"
-        if target_id:
-            return target_id, target_type
-        return self._talk_target(cfg)
+        return self._self_mind_state_service.talk_target(cfg)
 
     def _self_mind_talk_delivery_override(self) -> dict | None:
-        settings = self._self_mind_settings()
-        app_id = str(settings.get("talk_app_id") or "").strip()
-        app_secret = str(settings.get("talk_app_secret") or "").strip()
-        if not app_id or not app_secret:
-            return None
-        return {
-            "app_id": app_id,
-            "app_secret": app_secret,
-        }
+        return self._self_mind_state_service.talk_delivery_override()
 
     def _build_self_mind_cycle_receipt_text(self, proposal: dict) -> str:
-        payload = proposal if isinstance(proposal, dict) else {}
-        if str(payload.get("action_channel") or "").strip() != "heartbeat":
-            return ""
-
-        instruction = self._strip_lane_marker(str(payload.get("heartbeat") or payload.get("heartbeat_instruction") or "").strip(), "heartbeat")
-        candidate = str(payload.get("candidate") or payload.get("focus") or "").strip()
-        reason = str(payload.get("why") or payload.get("heartbeat_reason") or payload.get("reason") or "").strip()
-        acceptance = str(payload.get("done_when") or payload.get("acceptance_criteria") or "").strip()
-
-        lines = []
-        lines.append("[debug] self_mind handoff")
-        if instruction:
-            lines.append(instruction[:500])
-        elif candidate:
-            lines.append(candidate[:260])
-        if reason:
-            lines.append(f"我把它交给 heartbeat，因为 {reason[:220]}")
-        if acceptance:
-            lines.append(f"做到这一步就算真的推进了：{acceptance[:220]}")
-        if lines:
-            lines.append("做完后把新的结果、证据和卡点回给我。")
-        return "\n\n".join(lines)
+        return self._self_mind_prompt_service.build_cycle_receipt_text(proposal)
 
     def _emit_self_mind_cycle_receipt(self, workspace: str, cfg: dict, proposal: dict) -> bool:
-        if not self._debug_receipts_enabled(cfg, scope="self_mind"):
-            return False
-        heartbeat_cfg = (cfg or {}).get("heartbeat") or {}
-        if not isinstance(heartbeat_cfg, dict):
-            return False
-        receive_id = str((heartbeat_cfg or {}).get(HEARTBEAT_RECEIVE_ID_KEY) or "").strip()
-        if not bool(heartbeat_cfg.get("enabled")) and not receive_id:
-            return False
-        receive_id_type = str((heartbeat_cfg or {}).get(HEARTBEAT_RECEIVE_ID_TYPE_KEY) or "open_id").strip() or "open_id"
-        text = self._build_self_mind_cycle_receipt_text(proposal)
-        if not text:
-            return False
-        sent = self._send_private_message(
+        return self._delivery_flow_service.emit_self_mind_cycle_receipt(
+            workspace,
             cfg,
-            text,
-            receive_id=receive_id,
-            receive_id_type=receive_id_type,
-            fallback_to_startup_target=True,
-            heartbeat_cfg=heartbeat_cfg,
+            proposal,
+            heartbeat_receive_id_key=HEARTBEAT_RECEIVE_ID_KEY,
+            heartbeat_receive_id_type_key=HEARTBEAT_RECEIVE_ID_TYPE_KEY,
         )
-        print(f"[self-mind·handoff] 发往 heartbeat 窗口: {'成功' if sent else '失败/跳过'}", flush=True)
-        return sent
 
     @staticmethod
     def _markdown_to_interactive_card(md: str) -> dict:
-        """与 agent.reply_message 使用的卡片格式一致，便于心跳/启动通知与对话展示对齐"""
-        content = (md or "").strip()
-        if not content:
-            content = "(空)"
-        if len(content) > 28000:
-            content = content[:28000] + "\n..."
-        return {
-            "schema": "2.0",
-            "config": {"wide_screen_mode": True},
-            "body": {
-                "direction": "vertical",
-                "padding": "12px 12px 12px 12px",
-                "elements": [{"tag": "markdown", "content": content}],
-            },
-        }
+        return MessageDeliveryService.markdown_to_interactive_card(md)
 
     @staticmethod
     def _markdown_to_feishu_post(md: str) -> dict:
-        """与 agent 使用的 post 格式一致"""
-        content = (md or "").strip()
-        if not content:
-            content = "(空)"
-        if len(content) > 28000:
-            content = content[:28000] + "\n..."
-        return {"zh_cn": {"title": "回复", "content": [[{"tag": "md", "text": content}]]}}
+        return MessageDeliveryService.markdown_to_feishu_post(md)
 
     def _send_private_message(
         self,
@@ -6984,69 +6489,22 @@ class MemoryManager:
         fallback_to_startup_target: bool = False,
         heartbeat_cfg: dict | None = None,
     ) -> bool:
-        """发送私聊消息。若传入 heartbeat_cfg 且含 app_id/app_secret，则用其获取 token（心跳可单独使用不同飞书应用）。"""
-        target_id = str(receive_id or "").strip()
-        target_type = str(receive_id_type or "open_id").strip() or "open_id"
-        if fallback_to_startup_target:
-            target_id, target_type = self._heartbeat_target(cfg, target_id, target_type)
-        if not target_id:
-            print("[私聊发送] 未配置 receive_id，跳过发送", flush=True)
-            return False
-        # 心跳可单独指定 app_id/app_secret（原 copilot-bot 凭证），否则用主配置
-        hb = heartbeat_cfg or {}
-        app_id = str((hb.get("app_id") or (cfg or {}).get("app_id")) or "").strip()
-        app_secret = str((hb.get("app_secret") or (cfg or {}).get("app_secret")) or "").strip()
-        if not app_id or not app_secret:
-            print("[私聊发送] 缺少 app_id/app_secret，跳过发送", flush=True)
-            return False
-        try:
-            session = requests.Session()
-            session.trust_env = False
-            token_url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
-            token_resp = session.post(token_url, json={"app_id": app_id, "app_secret": app_secret}, timeout=12)
-            token_data = token_resp.json()
-            if token_data.get("code") != 0:
-                print(f"[私聊发送] 获取token失败: {token_data}", flush=True)
-                return False
-            token = token_data.get("tenant_access_token")
-            msg_url = f"https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type={target_type}"
-            headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-            plain = (text or "").strip()[:4000]
-            sent = False
-            # 与对话回复一致：优先 interactive 卡片（支持 Markdown），再 post，再 text
-            if plain:
-                card = self._markdown_to_interactive_card(plain)
-                body = {"receive_id": target_id, "msg_type": "interactive", "content": json.dumps(card, ensure_ascii=False)}
-                resp = session.post(msg_url, headers=headers, json=body, timeout=15)
-                data = resp.json()
-                if data.get("code") == 0:
-                    sent = True
-                else:
-                    post_content = self._markdown_to_feishu_post(plain)
-                    body = {"receive_id": target_id, "msg_type": "post", "content": json.dumps(post_content, ensure_ascii=False)}
-                    resp = session.post(msg_url, headers=headers, json=body, timeout=15)
-                    data = resp.json()
-                    if data.get("code") == 0:
-                        sent = True
-            if not sent:
-                body = {"receive_id": target_id, "msg_type": "text", "content": json.dumps({"text": plain or "(空)"}, ensure_ascii=False)}
-                resp = session.post(msg_url, headers=headers, json=body, timeout=15)
-                data = resp.json()
-                sent = data.get("code") == 0
-            if not sent:
-                print(f"[私聊发送] 发送失败: {data}", flush=True)
-            return sent
-        except Exception as e:
-            print(f"[私聊发送] 异常: {e}", flush=True)
-            return False
+        return self._message_delivery_service.send_private_message(
+            cfg,
+            text,
+            receive_id=receive_id,
+            receive_id_type=receive_id_type,
+            fallback_to_startup_target=fallback_to_startup_target,
+            heartbeat_cfg=heartbeat_cfg,
+        )
 
     def _send_startup_private_notification(self, cfg: dict, text: str) -> bool:
-        receive_id = str((cfg or {}).get(STARTUP_NOTIFY_OPEN_ID_KEY) or "").strip()
-        if not receive_id:
-            print("[启动通知] 未配置 startup_notify_open_id，跳过私聊通知", flush=True)
-            return False
-        receive_id_type = str((cfg or {}).get(STARTUP_NOTIFY_RECEIVE_ID_TYPE_KEY) or "open_id").strip() or "open_id"
-        return self._send_private_message(cfg, text, receive_id=receive_id, receive_id_type=receive_id_type)
+        return self._message_delivery_service.send_startup_private_notification(
+            cfg,
+            text,
+            startup_notify_open_id_key=STARTUP_NOTIFY_OPEN_ID_KEY,
+            startup_notify_receive_id_type_key=STARTUP_NOTIFY_RECEIVE_ID_TYPE_KEY,
+        )
 
     def _check_and_perform_restart(self, workspace: str) -> None:
         """若存在升级/重启申请，则由心跳线程仅通知用户，等待聊天主进程在用户批准后执行。"""
@@ -7332,6 +6790,13 @@ def _setup_subprocess_logs(kind: str) -> None:
     stdout_path, stderr_path = _subprocess_log_paths(kind)
     try:
         base_dir = stdout_path.parent
+        cutoff = time.time() - (3 * 24 * 60 * 60)
+        for path in base_dir.glob(f"butler_bot_{kind}_*.log"):
+            try:
+                if path.stat().st_mtime < cutoff:
+                    path.unlink(missing_ok=True)
+            except Exception:
+                pass
         sys.stdout = _DailyLineRotatingStream(base_dir, kind, is_err=False, max_lines=LOG_MAX_LINES_PER_FILE)
         sys.stderr = _DailyLineRotatingStream(base_dir, kind, is_err=True, max_lines=LOG_MAX_LINES_PER_FILE)
         print(f"[{kind}] logging redirected with daily+{LOG_MAX_LINES_PER_FILE}-line rotation: {base_dir}", flush=True)

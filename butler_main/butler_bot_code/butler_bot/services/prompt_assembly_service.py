@@ -9,8 +9,6 @@ from services.local_memory_index_service import LocalMemoryIndexService
 
 @dataclass(frozen=True)
 class DialoguePromptContext:
-    source_user_prompt: str
-    runtime_user_prompt: str
     prompt_mode: str
     butler_soul_text: str
     butler_main_agent_text: str
@@ -70,8 +68,6 @@ class PromptAssemblyService:
 
     def assemble_dialogue_prompt(self, context: DialoguePromptContext) -> str:
         blocks = [self._render_base_role_block()]
-        if context.runtime_user_prompt.strip():
-            blocks.append("【当前输入】\n" + context.runtime_user_prompt.strip())
         if context.butler_main_agent_text.strip():
             blocks.append("【主意识摘录】\n" + context.butler_main_agent_text.strip())
         if context.butler_soul_text.strip():
@@ -84,8 +80,6 @@ class PromptAssemblyService:
             blocks.append("【self_mind 当前上下文】\n" + context.self_mind_text.strip())
         if context.self_mind_cognition_text.strip():
             blocks.append("【self_mind 认知体系】\n" + context.self_mind_cognition_text.strip())
-        if context.source_user_prompt.strip() and context.source_user_prompt.strip() != context.runtime_user_prompt.strip():
-            blocks.append("【原始用户输入】\n" + context.source_user_prompt.strip())
         return "\n\n".join(block for block in blocks if block.strip()).strip()
 
     def assemble_planner_prompt(self, context: PlannerPromptContext) -> str:

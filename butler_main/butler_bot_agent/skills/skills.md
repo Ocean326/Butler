@@ -9,8 +9,9 @@
   - 在考虑新增 skill 前，先搜索本地 `./butler_bot_agent/skills` 与外部资源，尽量复用现有轮子；仅在无合适轮子或严重不适配时再新建 skill，并在说明中记录已检索过哪些方案、为何需要新轮子。
 
 - **典型触发场景（在使用过程中持续补充）**
-  - 飞书侧能力：历史消息、文档检索、群/会话工具等 → 优先查 `feishu_*` 相关 skills。
-  - 外部平台抓取与学习：小红书、论坛、网页资料等 → 优先查 `xiaohongshutools` 等相关 skills。
+  - 飞书侧能力：历史消息、文档检索、群/会话工具等 → 优先查 `feishu_*` 相关 skills；发云文档链接、心跳维护任务云文档 → `feishu-doc-sync`。
+  - 外部平台抓取与学习：小红书、论坛、网页资料等 → 优先查 `web-note-capture-cn` 等相关 skills。
+  - 中文内容平台单篇抓取：知乎专栏、小红书分享页、`xhslink` 等 → 优先查 `web-note-capture-cn`，默认走本地脚本与可选 cookie，不直接信任外部 skill 市场脚本。
   - **从 OpenClaw/Skills.sh 查找技能**：用户说「找个技能」「有没有能做 X 的技能」「从 OpenClaw 下好 find skills」等，或 Butler 缺能力需从公开技能库补充时 → 使用 `openclaw-find-skills`（按 `npx skills find` / `npx clawhub search` 流程查技能并给出安装命令）。
   - 日常巡检与治理：启动巡检、健康检查、配置/目录巡检等 → 优先查 `daily-inspection` 及后续运维类 skills。
   - 其他可复用流程：批处理、导出、整理套路等 → 优先查 `operations` / `general` 分类下的 skills。

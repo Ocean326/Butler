@@ -1,8 +1,10 @@
+from datetime import datetime
+from pathlib import Path
+
 from docx import Document
 from docx.shared import Pt
-from datetime import datetime
 
-out_path = r"c:\\Users\\Lenovo\\Desktop\\研究生\\scripts\\feishu-bots\\docs\\20260307_本轮改动与排查总结.docx"
+out_path = Path("docs/daily-upgrade/0307/20260307_本轮改动与排查总结.docx")
 
 doc = Document()
 style = doc.styles["Normal"]

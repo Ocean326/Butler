@@ -1,7 +1,9 @@
 import sys
+import json
 import unittest
 from pathlib import Path
 from unittest import mock
+from types import SimpleNamespace
 
 
 MODULE_DIR = Path(__file__).resolve().parents[1] / "butler_bot"
@@ -22,6 +24,24 @@ class _ImmediateThread:
 
 
 class AgentMessageFlowTests(unittest.TestCase):
+    def test_extract_message_includes_quote_and_rich_text(self):
+        payload = {
+            "text": "用PaddleOCR吧",
+            "quote": {"text": "把今天那条小红书连同图片 OCR 一起整理"},
+            "content": [
+                [{"tag": "text", "text": "补充：输出到 BrainStorm"}],
+            ],
+        }
+        data = SimpleNamespace(event=SimpleNamespace(message=SimpleNamespace(message_id="mid-q", content=json.dumps(payload, ensure_ascii=False))))
+
+        message_id, text, image_keys = agent._extract_message(data)
+
+        self.assertEqual(message_id, "mid-q")
+        self.assertEqual(image_keys, [])
+        self.assertIn("【引用内容】", text)
+        self.assertIn("图片 OCR", text)
+        self.assertIn("补充：输出到 BrainStorm", text)
+
     def test_normalize_feishu_text_repairs_markdown_heading_spacing(self):
         text = "###1. 标题\r\n-条目A"
         normalized = agent._normalize_feishu_text(text)
@@ -58,6 +78,36 @@ class AgentMessageFlowTests(unittest.TestCase):
             )
 
         self.assertEqual(sent, [("final", "最终完整回复")])
+
+    def test_immediate_receipt_is_sent_before_final_reply(self):
+        sent = []
+
+        def fake_run(prompt, stream_callback=None, image_paths=None):
+            return "最终完整回复"
+
+        with mock.patch.object(agent, "_claim_message", return_value=True), \
+             mock.patch.object(agent.threading, "Thread", _ImmediateThread), \
+             mock.patch.object(agent, "get_config", return_value={"workspace_root": "."}), \
+             mock.patch.object(agent, "_parse_decide_from_reply", side_effect=lambda text: (text, [])), \
+             mock.patch.object(agent, "_send_output_files"), \
+             mock.patch.object(agent, "_send_deduped_reply", side_effect=lambda message_id, text, **kwargs: sent.append((kwargs.get("channel"), text)) or True):
+            agent.handle_message_async(
+                message_id="mid-receipt",
+                prompt="hello",
+                image_keys=None,
+                run_agent_fn=fake_run,
+                supports_images=False,
+                supports_stream_segment=False,
+                immediate_receipt_text="我在，先接住这句，马上回你。",
+            )
+
+        self.assertEqual(
+            sent,
+            [
+                ("receipt", "我在，先接住这句，马上回你。"),
+                ("final", "最终完整回复"),
+            ],
+        )
 
     def test_empty_result_uses_latest_stream_snapshot_only(self):
         sent = []

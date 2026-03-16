@@ -189,6 +189,41 @@ class TaskLedgerServiceTests(unittest.TestCase):
             self.assertIn("验收摘要", final_report)
             self.assertIn('"cli": "codex"', final_report)
 
+    def test_save_creates_backup_and_load_recovers_when_primary_is_corrupted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            service = TaskLedgerService(str(workspace))
+
+            service.ensure_bootstrapped(
+                short_tasks=[
+                    {
+                        "task_id": "task-1",
+                        "title": "第一次保存",
+                        "detail": "第一次保存",
+                        "status": "pending",
+                    }
+                ]
+            )
+            service.ensure_bootstrapped(
+                short_tasks=[
+                    {
+                        "task_id": "task-2",
+                        "title": "第二次保存",
+                        "detail": "第二次保存",
+                        "status": "pending",
+                    }
+                ]
+            )
+
+            backup_path = service.path.with_name(service.path.name + ".bak")
+            self.assertTrue(backup_path.exists())
+
+            service.path.write_text("{bad json", encoding="utf-8")
+            payload = service.load()
+
+            self.assertEqual(len(payload["items"]), 1)
+            self.assertEqual(payload["items"][0]["task_id"], "task-1")
+
 
 if __name__ == "__main__":
     unittest.main()

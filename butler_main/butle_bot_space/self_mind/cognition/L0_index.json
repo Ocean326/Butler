@@ -55,8 +55,8 @@
       "title": "用户模型",
       "description": "对当前用户偏好、节奏、期待和关系状态的高阶理解。",
       "signal_count": 12,
-      "latest_summary": "本轮出现风险、阻塞或需要确认的点",
-      "latest_timestamp": "2026-03-15 13:12:30",
+      "latest_summary": "协作/建议",
+      "latest_timestamp": "2026-03-15 21:10:44",
       "l1_path": "./butler_main/butle_bot_space/self_mind/cognition/L1_summaries/user_model_用户模型.md",
       "l2_path": "./butler_main/butle_bot_space/self_mind/cognition/L2_details/user_model.jsonl"
     },
@@ -65,12 +65,12 @@
       "title": "自我模型",
       "description": "对自身角色、能力边界、成长方向与主体感的理解。",
       "signal_count": 12,
-      "latest_summary": "## 本轮心跳\n- 模式：short_task\n- 并行：并行 2 路，串行 0 路\n- 结果：成功 2，失败 0\n\n## 值得同步\n### 【heartbeat-metabolism】heartbeat-executor-agent\n-",
-      "latest_timestamp": "2026-03-15 13:12:30",
+      "latest_summary": "看一下后台任务 正在查看后台任务真源：`task_ledger.json` 与心跳看板中的未完成项。 正在确认 01 看板中是否还有其它 pending 项。 根据心跳任务真源（`local_memory/heartbeat_tasks`）当前状态，**后台任务**大致是这样： - -- ## 结论概览 | 看板 | 未完成（pending） | 说明 | |------|------------",
+      "latest_timestamp": "2026-03-15 21:10:44",
       "l1_path": "./butler_main/butle_bot_space/self_mind/cognition/L1_summaries/self_model_自我模型.md",
       "l2_path": "./butler_main/butle_bot_space/self_mind/cognition/L2_details/self_model.jsonl"
     }
   ],
   "version": 1,
-  "updated_at": "2026-03-15 13:12:30"
+  "updated_at": "2026-03-15 21:10:44"
 }

@@ -73,6 +73,39 @@ heartbeat_safe: true
             self.assertIn("roles=literature-agent/discussion-agent", prompt)
             self.assertIn("heartbeat-safe", prompt)
 
+    def test_load_skill_catalog_skips_temp_and_non_utf8_skill_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            good_dir = root / "butler_main" / "butler_bot_agent" / "skills" / "operations" / "good-skill"
+            good_dir.mkdir(parents=True, exist_ok=True)
+            (good_dir / "SKILL.md").write_text(
+                """---
+name: good-skill
+description: Valid utf8 skill.
+---
+""",
+                encoding="utf-8",
+            )
+
+            bad_dir = root / "butler_main" / "butler_bot_agent" / "skills" / "operations" / "bad-skill"
+            bad_dir.mkdir(parents=True, exist_ok=True)
+            (bad_dir / "SKILL.md").write_bytes(b"---\nname: bad-skill\ndescription: \xb3\xff\n---\n")
+
+            tmp_dir = root / "butler_main" / "butler_bot_agent" / "skills" / "_tmp_probe" / "temp-skill"
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+            (tmp_dir / "SKILL.md").write_text(
+                """---
+name: temp-skill
+description: Should be ignored.
+---
+""",
+                encoding="utf-8",
+            )
+
+            catalog = load_skill_catalog(root)
+
+            self.assertEqual([item.name for item in catalog], ["good-skill"])
+
 
 if __name__ == "__main__":
     unittest.main()

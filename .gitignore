@@ -10,8 +10,14 @@ __pycache__/
 .tmp_unittest_result.json
 _cursor_env/
 _tmp_task_debug/
+_tmp/
+_tmp_test/
+_tmp_test_manual/
+_tmp_test_harness/
 _tmp_xhs_skills/
 Microsoft/
+.git-rewrite/
+pytest-cache-files-*/
 dist/
 build/
 *.egg-info/
@@ -79,4 +85,4 @@ butler_main/butler_bot_agent/agents/local_memory/L2_details/
 butler_main/butler_bot_agent/agents/local_memory/heartbeat_long_tasks.json
 butler_main/butler_bot_agent/agents/local_memory/heartbeat_planner_state.json
 butler_main/butler_bot_agent/agents/local_memory/local_memory_write_journal.jsonl
-
+butler_main/butler_bot_code/.cursor/

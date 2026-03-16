@@ -10,8 +10,10 @@ import uuid
 TESTS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = TESTS_DIR.parents[2]
 TMP_ROOT = PROJECT_ROOT / ".tmp_pytest_runtime"
+FALLBACK_TMP_ROOT = Path(tempfile.gettempdir()) / "butler_pytest_runtime"
 
 TMP_ROOT.mkdir(parents=True, exist_ok=True)
+FALLBACK_TMP_ROOT.mkdir(parents=True, exist_ok=True)
 
 for key in ("TMP", "TEMP", "TMPDIR"):
     os.environ[key] = str(TMP_ROOT)
@@ -20,15 +22,22 @@ tempfile.tempdir = str(TMP_ROOT)
 
 
 def _workspace_mkdtemp(*, prefix: str = "tmp", suffix: str = "", dir: str | None = None) -> str:
-    base = Path(dir) if dir else TMP_ROOT
-    base.mkdir(parents=True, exist_ok=True)
-    while True:
-        candidate = base / f"{prefix}{uuid.uuid4().hex[:8]}{suffix}"
+    bases = [Path(dir)] if dir else [TMP_ROOT, FALLBACK_TMP_ROOT]
+    for base in bases:
         try:
-            candidate.mkdir(parents=True, exist_ok=False)
-            return str(candidate)
-        except FileExistsError:
+            base.mkdir(parents=True, exist_ok=True)
+        except Exception:
             continue
+        while True:
+            candidate = base / f"{prefix}{uuid.uuid4().hex[:8]}{suffix}"
+            try:
+                candidate.mkdir(parents=True, exist_ok=False)
+                return str(candidate)
+            except FileExistsError:
+                continue
+            except PermissionError:
+                break
+    raise PermissionError(f"unable to create temp directory under: {[str(item) for item in bases]}")
 
 
 class _WorkspaceTemporaryDirectory:

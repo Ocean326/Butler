@@ -9,6 +9,7 @@ from typing import Callable
 
 from services.acceptance_service import AcceptanceService
 from butler_paths import TASK_LEDGER_REL, TASK_WORKSPACES_DIR_REL, resolve_butler_root
+from utils.atomic_files import atomic_write_text, backup_path_for, read_text_with_backup
 
 
 TASK_SCHEMA_VERSION = 4
@@ -53,9 +54,15 @@ class TaskLedgerService:
         if not self.path.exists():
             return self._default_payload()
         try:
-            payload = json.loads(self.path.read_text(encoding="utf-8"))
+            payload = json.loads(read_text_with_backup(self.path, encoding="utf-8"))
         except Exception:
-            return self._default_payload()
+            backup = backup_path_for(self.path)
+            if not backup.exists():
+                return self._default_payload()
+            try:
+                payload = json.loads(backup.read_text(encoding="utf-8"))
+            except Exception:
+                return self._default_payload()
         if not isinstance(payload, dict):
             return self._default_payload()
         payload.setdefault("schema_version", TASK_SCHEMA_VERSION)
@@ -71,7 +78,7 @@ class TaskLedgerService:
         normalized["items"] = [self._normalize_item(item) for item in normalized.get("items") or [] if isinstance(item, dict)]
         normalized["runs"] = [item for item in normalized.get("runs") or [] if isinstance(item, dict)][-50:]
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8")
+        atomic_write_text(self.path, json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8", keep_backup=True)
         self._sync_task_workspaces(normalized)
         return normalized
 
@@ -429,7 +436,7 @@ class TaskLedgerService:
         normalized = dict(record or {})
         normalized["schema_version"] = TASK_WORKSPACE_SCHEMA_VERSION
         normalized["recent_notes"] = [note for note in normalized.get("recent_notes") or [] if isinstance(note, dict)][-20:]
-        paths["meta"].write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8")
+        atomic_write_text(paths["meta"], json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8", keep_backup=True)
         self._write_workspace_detail_markdown(normalized, paths["detail"])
         self._write_workspace_progress_markdown(normalized, paths["progress"])
         if str(normalized.get("status") or "").strip().lower() in {"done", "completed", "archived", "disabled"}:
@@ -457,7 +464,7 @@ class TaskLedgerService:
             bucket_dir.mkdir(parents=True, exist_ok=True)
             readme = bucket_dir / "README.md"
             if not readme.exists():
-                readme.write_text(f"# {bucket}\n\n本目录存放该生命周期阶段的任务工作区。\n", encoding="utf-8")
+                atomic_write_text(readme, f"# {bucket}\n\n本目录存放该生命周期阶段的任务工作区。\n", encoding="utf-8")
         for item in items:
             current, paths = self._load_task_workspace_by_item(item)
             record = self._build_workspace_record(item, current=current)
@@ -574,7 +581,7 @@ class TaskLedgerService:
             f"- runtime_profile: {json.dumps(record.get('runtime_profile') or {}, ensure_ascii=False)}",
             "",
         ]
-        path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+        atomic_write_text(path, "\n".join(lines).rstrip() + "\n", encoding="utf-8", keep_backup=True)
 
     def _write_workspace_progress_markdown(self, record: dict, path: Path) -> None:
         notes = [note for note in record.get("recent_notes") or [] if isinstance(note, dict)]
@@ -592,7 +599,7 @@ class TaskLedgerService:
                 detail = str(note.get("detail") or "").strip()
                 if detail:
                     lines.append(f"  细节: {detail[:800]}")
-        path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+        atomic_write_text(path, "\n".join(lines).rstrip() + "\n", encoding="utf-8", keep_backup=True)
 
     def _write_workspace_final_markdown(self, record: dict, path: Path) -> None:
         notes = [note for note in record.get("recent_notes") or [] if isinstance(note, dict)]
@@ -634,7 +641,7 @@ class TaskLedgerService:
                 "",
             ]
         )
-        path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+        atomic_write_text(path, "\n".join(lines).rstrip() + "\n", encoding="utf-8", keep_backup=True)
 
     def _join_inline_list(self, values) -> str:
         items = [str(value).strip() for value in (values or []) if str(value).strip()]

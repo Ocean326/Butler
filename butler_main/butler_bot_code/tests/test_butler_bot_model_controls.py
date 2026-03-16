@@ -55,6 +55,11 @@ class ButlerBotModelControlTests(unittest.TestCase):
         self.assertEqual(control["runtime"]["speed"], "medium")
         self.assertEqual(control["prompt"], "帮我写一份 Butler CLI 切换方案")
 
+    def test_extract_self_mind_chat_request(self):
+        prompt, is_self_mind = BUTLER_BOT._extract_self_mind_chat_request("self-mind: 你刚才为什么没回我")
+        self.assertTrue(is_self_mind)
+        self.assertEqual(prompt, "你刚才为什么没回我")
+
     def test_format_current_model_reply_includes_aliases(self):
         reply = BUTLER_BOT._format_current_model_reply({"agent_model": "auto", "model_aliases": {"fast": "gpt-5"}})
         self.assertIn("当前默认模型：auto", reply)
@@ -136,6 +141,41 @@ class ButlerBotModelControlTests(unittest.TestCase):
         self.assertEqual(out, "ok")
         self.assertEqual(mocked_run.call_args.args[0][-1], "-")
         self.assertEqual(mocked_run.call_args.kwargs["input"], "very long prompt")
+
+    def test_run_prompt_falls_back_to_codex_when_cursor_unavailable(self):
+        cfg = {
+            "cli_runtime": {
+                "active": "cursor",
+                "providers": {
+                    "cursor": {"enabled": True},
+                    "codex": {"enabled": True, "path": "codex"},
+                },
+            }
+        }
+        with mock.patch.object(BUTLER_BOT.cli_runtime_service, "_run_cursor", return_value=("S: [unavailable]", False)) as mocked_cursor, mock.patch.object(BUTLER_BOT.cli_runtime_service, "_run_codex", return_value=("codex ok", True)) as mocked_codex, mock.patch.object(BUTLER_BOT.cli_runtime_service, "cli_provider_available", return_value=True):
+            out, ok = BUTLER_BOT.cli_runtime_service.run_prompt("hello", "c:/workspace", 30, cfg, {"cli": "cursor"})
+
+        self.assertTrue(ok)
+        self.assertEqual(out, "codex ok")
+        self.assertEqual(mocked_cursor.call_count, 1)
+        self.assertEqual(mocked_codex.call_count, 1)
+        self.assertEqual(mocked_codex.call_args.args[4]["fallback_from"], "cursor")
+
+    def test_run_prompt_keeps_original_error_when_fallback_fails(self):
+        cfg = {
+            "cli_runtime": {
+                "active": "cursor",
+                "providers": {
+                    "cursor": {"enabled": True},
+                    "codex": {"enabled": True, "path": "codex"},
+                },
+            }
+        }
+        with mock.patch.object(BUTLER_BOT.cli_runtime_service, "_run_cursor", return_value=("S: [unavailable]", False)), mock.patch.object(BUTLER_BOT.cli_runtime_service, "_run_codex", return_value=("codex failed", False)), mock.patch.object(BUTLER_BOT.cli_runtime_service, "cli_provider_available", return_value=True):
+            out, ok = BUTLER_BOT.cli_runtime_service.run_prompt("hello", "c:/workspace", 30, cfg, {"cli": "cursor"})
+
+        self.assertFalse(ok)
+        self.assertEqual(out, "S: [unavailable]")
 
 
 if __name__ == "__main__":

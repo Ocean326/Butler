@@ -2,6 +2,8 @@
 
 `self_mind/` 是 Butler 在家里的主意识活动区。
 
+从 2026-03-16 起，飞书主 talk 不再把 `./butler_main/butler_bot_agent/agents/butler-agent.md` 当作主意识注入；前台对话如果需要读取「我当下怎么想」，应优先看这里的 `current_context.md` 与 `cognition/L0_index.json`。
+
 它不是与 `local_memory` 平行的另一套“知识+回忆”仓库，而是建立在 `local_memory` 之上的连续自我意识层。
 
 这里放的不是正式工作交付，也不是运行时技术日志，而是：
@@ -20,7 +22,7 @@
 
 - **认知体系层**：`cognition/`，维护高阶自我模型与世界观索引。
 - **连续意识层**：`current_context.md`、`raw_thoughts.json`、`thought_reviews.json`、`perception_snapshot.md`，维护最近在想什么、怎么看自己/用户/环境。
-- **行为输出层**：`behavior_queue.json`、`mind_body_bridge.json`、`behavior_mirror.md`，维护“想做什么、准备怎么做、做出去后看起来像什么”。
+- **行为输出层**：`behavior_mirror.md`，维护“说出去后看起来像什么”。
 
 - `current_context.md`
   当前主意识上下文快照。强调“最近在想什么、为什么、接下来可能往哪走”。
@@ -36,13 +38,8 @@
   对 Butler 自己在飞书侧的表达痕迹做镜像回看。优先吸收 tell_user 审计日志与飞书 digest，帮助主意识判断语气是否太硬、太播报、是否可读。
 - `perception_snapshot.md`
   最近感知快照。强调此刻对自己、用户、身体、环境和任务张力的感知，而不是长期知识。
-- `behavior_queue.json`
-  多层行为队列。把 self-lane、heartbeat-lane、deferred lane 等待办统一放在一个可回看的行为视图里。
 - `mind_loop_state.json`
   self-mind 独立意识循环的最近运行状态，例如上次转动时间、最近 focus、最近一次自己直接开口的时间。
-- `mind_body_bridge.json`
-  self-mind 想交给 heartbeat 身体去做的事项池。这里记录“脑子想做什么、为什么、优先级如何、应交给身体执行的原因”。
-  这里的事项不再只是一次性 handoff，还带有生命周期：`pending -> body_planned/body_progressed -> completed/expired/dropped`。
 
 ## 主动 / 被动两层
 
@@ -74,16 +71,8 @@
 
 - self-mind 有自己的独立周期，会单独判断“我现在最想继续的是什么”。
 - 如果只是低复杂度、可以自己完成的自然开口，self-mind 可以直接在自己的周期里组织语言并发出。
-- 如果是更复杂、需要任务推进、需要并行支路或身体执行器的动作，self-mind 会把事项写进 `mind_body_bridge.json`，交给 heartbeat planner 去桥接与分流。
-- heartbeat 不再只是定时执行器，也更明确成为 Butler 的“身体执行介质”；planner 则是脑子和身体之间的桥。
-
-当前版本里，真正落地的 self-mind 自执行能力主要是“低复杂度主动开口”；更重的探索/任务仍优先通过 bridge 交给 heartbeat。
-
-现在这一层又往前推了一步：
-
-- self-mind 会在独立循环里自己审视旧 bridge，决定继续跟、完成验收，还是过期放下。
-- heartbeat 不负责替 self-mind 自动结案；身体只负责把“我接到了、我推进到了哪一步”回写给 bridge。
-- 最后的“这件事算不算真正完成、还值不值得继续”由 self-mind 自己判断。
+- talk-heartbeat 只向 self_mind 提供可读背景，不再向 self_mind 写入记忆、桥接事项或执行回写。
+- 如果 self_mind 想做更重的事，只能把动作留给自己的 `./工作区/03_agent_upgrade/self_mind_agent_space/`，并复用公用 skills / public library；不能干预 talk-heartbeat。
 
 ## 更广义的自执行与委托
 
@@ -108,7 +97,7 @@
 - 不把长期制度性规则真源塞进来。
 - 允许保留半成熟想法，但要尽量让后续自己能看懂。
 
-一句话：这里是 Butler 的主意识与自由生活区，不是系统黑盒日志目录。
+一句话：这里是 Butler 的主意识与自由生活区，不是 talk-heartbeat 的任务池，也不是系统黑盒日志目录。
 
 ## 今日心跳片段 2026-03-11
 

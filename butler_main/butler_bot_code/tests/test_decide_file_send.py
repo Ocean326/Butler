@@ -48,7 +48,6 @@ def test_parse_decide():
     assert "./工作区/literature/GPT54_研究空白.md" in paths
     assert "./butler_bot_agent/agents/local_memory/GPT-5.4发布与文献整理记录.md" in paths
     print(f"[OK] 解析成功: {len(decide_list)} 条")
-    return decide_list
 
 
 def test_path_resolution():
@@ -73,7 +72,6 @@ def test_path_resolution():
         if ok:
             found.append(full)
     print(f"[OK] 可发送 {len(found)} 个文件")
-    return found
 
 
 def test_full_send_dry_run():

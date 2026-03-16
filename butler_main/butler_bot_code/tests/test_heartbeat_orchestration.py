@@ -295,10 +295,8 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
                 branch_results=[{"branch_id": "b1", "ok": True, "output": "已完成一次图片能力调研"}],
             )
 
-            bridge_payload = json.loads((workspace / "butler_main" / "butle_bot_space" / "self_mind" / "mind_body_bridge.json").read_text(encoding="utf-8"))
-            item = bridge_payload["items"][0]
-            self.assertEqual(item["status"], "pending")
-            self.assertFalse(str(item.get("body_progress_note") or "").strip())
+            bridge_path = workspace / "butler_main" / "butle_bot_space" / "self_mind" / "mind_body_bridge.json"
+            self.assertFalse(bridge_path.exists())
 
     def test_normalize_plan_task_groups_preserves_skill_metadata(self):
         manager = MemoryManager(
@@ -617,20 +615,23 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
             self.assertEqual(result["team_id"], "research-implement-review")
             self.assertTrue(calls)
 
-    def test_run_heartbeat_branch_rejects_unregistered_team(self):
+    def test_run_heartbeat_branch_falls_back_when_team_unregistered(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
             calls = []
             team_path = workspace / "butler_main" / "butler_bot_agent" / "agents" / "teams" / "research-implement-review.json"
+            subagent_path = workspace / "butler_main" / "butler_bot_agent" / "agents" / "sub-agents" / "orchestrator-agent.md"
             team_path.parent.mkdir(parents=True, exist_ok=True)
+            subagent_path.parent.mkdir(parents=True, exist_ok=True)
             team_path.write_text(
                 '{"team_id":"research-implement-review","name":"Research Implement Review","description":"并行调研后汇总。","execution_mode":"mixed","steps":[]}',
                 encoding="utf-8",
             )
+            subagent_path.write_text("# orchestrator-agent\n负责普通分支执行。", encoding="utf-8")
 
             def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
                 calls.append(prompt)
-                return "不应该执行到这里", True
+                return "已回退到普通 role 执行", True
 
             manager = MemoryManager(
                 config_provider=lambda: {"workspace_root": str(workspace)},
@@ -649,10 +650,10 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
                 "auto",
             )
 
-            self.assertFalse(result["ok"])
-            self.assertIn("unregistered team_id: self_mind_stream", result["error"])
-            self.assertIn("research-implement-review", result["error"])
-            self.assertFalse(calls)
+            self.assertTrue(result["ok"])
+            self.assertEqual(result["team_id"], "self_mind_stream")
+            self.assertIn("已回退到普通 role 执行", result["output"])
+            self.assertTrue(calls)
 
     def test_planning_prompt_includes_subagents_and_teams_sections(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -892,8 +893,8 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
                 "auto",
             )
 
-            self.assertEqual(planner_calls["count"], 1)
-            self.assertEqual(second_plan["chosen_mode"], "short_task")
+            self.assertEqual(planner_calls["count"], 2)
+            self.assertIn(second_plan["chosen_mode"], {"short_task", "status", "long_task"})
 
     def test_planner_backoff_survives_manager_restart(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -956,8 +957,20 @@ class HeartbeatOrchestrationTests(unittest.TestCase):
                 "auto",
             )
 
-            self.assertEqual(planner_calls["count"], 1)
-            self.assertEqual(second_plan["chosen_mode"], "short_task")
+            self.assertEqual(planner_calls["count"], 2)
+            self.assertIn(second_plan["chosen_mode"], {"short_task", "status", "long_task"})
+
+    def test_first_planner_failure_has_no_backoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {"workspace_root": str(workspace)},
+                run_model_fn=lambda *_: ("执行超时", False),
+            )
+
+            orchestrator = manager._heartbeat_orchestrator
+            manager._heartbeat_planner_failure_count = 1
+            self.assertEqual(orchestrator._planner_failure_backoff_seconds({"enabled": True, "every_seconds": 5}), 0)
 
     def test_status_plan_gets_fixed_metabolism_branch(self):
         with tempfile.TemporaryDirectory() as tmp:

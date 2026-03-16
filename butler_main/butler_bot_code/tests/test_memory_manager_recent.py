@@ -34,6 +34,34 @@ class MemoryManagerRecentTests(unittest.TestCase):
             self.assertIn("第一个问题是什么", prompt)
             self.assertIn("用户又追问：那第二个问题呢", prompt)
 
+    def test_prepare_user_prompt_with_recent_adds_continuation_hint_for_short_followup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(config_provider=lambda: {"workspace_root": str(workspace)}, run_model_fn=lambda *_: ("", False))
+            manager._save_recent_entries(
+                str(workspace),
+                [
+                    {
+                        "memory_id": "talk-1",
+                        "timestamp": "2026-03-16 10:00:00",
+                        "topic": "整理小红书网页与图片 OCR",
+                        "summary": "用户要求把网页正文和图片 OCR 一起整理到 BrainStorm。",
+                        "raw_user_prompt": "把今天那条小红书连同图片 OCR 一起整理到 BrainStorm",
+                        "memory_stream": "talk",
+                        "event_type": "conversation_turn",
+                        "status": "completed",
+                        "next_actions": ["优先确定 OCR 方案"],
+                    }
+                ],
+            )
+
+            prompt = manager.prepare_user_prompt_with_recent("用PaddleOCR吧")
+
+            self.assertIn("【续接提示】", prompt)
+            self.assertIn("不要当成全新任务", prompt)
+            self.assertIn("【最近显式要求与未完约束】", prompt)
+            self.assertIn("图片 OCR", prompt)
+
     def test_stale_pending_turn_is_not_reused_as_followup_context(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
@@ -219,22 +247,21 @@ class MemoryManagerRecentTests(unittest.TestCase):
             self.assertEqual(manager._recent_storage_max_chars("talk"), 30000)
             self.assertEqual(manager._long_maintenance_min_interval_seconds(), 1200)
 
-    def test_self_mind_cycle_prompt_is_narrow_kernel_with_four_blocks(self):
+    def test_self_mind_cycle_prompt_is_narrow_kernel_with_three_blocks(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
             manager = MemoryManager(
-                config_provider=lambda: {"workspace_root": str(workspace), "memory": {"self_mind": {"body_loop_enabled": True}}},
+                config_provider=lambda: {"workspace_root": str(workspace)},
                 run_model_fn=lambda *_: ("", False),
             )
 
             prompt = manager._build_self_mind_cycle_prompt(str(workspace))
 
-            self.assertIn("self_mind 窄内核", prompt)
+            self.assertIn("self_mind 精简内核", prompt)
             self.assertIn("【1. 当前上下文】", prompt)
-            self.assertIn("【2. 最近主对话】", prompt)
-            self.assertIn("【3. 身体最近结果】", prompt)
-            self.assertIn("【4. 自己最近续思】", prompt)
-            self.assertIn('"decision":"talk|heartbeat|hold"', prompt)
+            self.assertIn("【2. 用户画像与陪伴记忆】", prompt)
+            self.assertIn("【3. 自己最近续思】", prompt)
+            self.assertIn('"decision":"talk|agent|hold"', prompt)
 
     def test_normalize_self_mind_cycle_output_keeps_longer_self_note(self):
         manager = MemoryManager(config_provider=lambda: {"workspace_root": "."}, run_model_fn=lambda *_: ("", False))
@@ -510,6 +537,39 @@ class MemoryManagerRecentTests(unittest.TestCase):
             self.assertIn("【对话短期记忆】", prompt)
             self.assertIn("【最近在想什么】", prompt)
             self.assertIn("【关系与情绪信号】", prompt)
+
+    def test_prepare_user_prompt_with_recent_uses_lightweight_context_for_content_share(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(config_provider=lambda: {"workspace_root": str(workspace)}, run_model_fn=lambda *_: ("", False))
+
+            manager._save_recent_entries(
+                str(workspace),
+                [
+                    {
+                        "memory_id": "talk-1",
+                        "timestamp": "2026-03-10 10:00:00",
+                        "topic": "之前讨论过如何抓取小红书",
+                        "summary": "用户之前确认过不要总让他手工跑命令。",
+                        "raw_user_prompt": "以后你自己推进，不要只教我跑命令",
+                        "memory_stream": "talk",
+                        "event_type": "conversation_turn",
+                        "status": "completed",
+                        "next_actions": ["默认直接给结论"],
+                    },
+                ],
+            )
+
+            prompt = manager.prepare_user_prompt_with_recent(
+                "Ocean:\n一个文件让 Claude Code 战斗力翻倍 http://xhslink.com/o/AirylJSxpim",
+                recent_mode="content_share",
+            )
+            self.assertEqual(
+                prompt,
+                "Ocean:\n一个文件让 Claude Code 战斗力翻倍 http://xhslink.com/o/AirylJSxpim",
+            )
+            self.assertNotIn("【recent_memory", prompt)
+            self.assertNotIn("【使用规则】", prompt)
 
     def test_recent_summary_pool_is_generated_and_injected_by_relevance(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -842,22 +902,16 @@ class MemoryManagerRecentTests(unittest.TestCase):
             workspace = Path(tmp)
             manager = MemoryManager(config_provider=lambda: {"workspace_root": str(workspace)}, run_model_fn=lambda *_: ("", False))
 
-            manager._save_recent_summary_ladder(
-                str(workspace),
-                [
-                    {
-                        "bucket_key": "10d",
-                        "label": "最近10天",
-                        "summary": "最近10天主要在整理记忆架构。",
-                        "unresolved_points": ["还要补行为镜像链路"],
-                    }
-                ],
-            )
             manager._append_heartbeat_tell_user_audit(
                 str(workspace),
                 intent={"share_type": "thought_share", "share_reason": "想顺手说一句"},
                 text="作为系统：这是一次较硬的播报。",
                 status="ready",
+            )
+            manager._append_self_mind_listener_turn(
+                str(workspace),
+                "你这两天在想什么",
+                "我在想怎么更自然地陪你聊天。",
             )
 
             manager._refresh_self_mind_context(str(workspace), {"status": "pending", "share_type": "thought_share"}, last_event="intent_pending")
@@ -868,30 +922,30 @@ class MemoryManagerRecentTests(unittest.TestCase):
             text = context_path.read_text(encoding="utf-8")
             self.assertIn("自我认知体系", text)
             self.assertIn("最近感知", text)
-            self.assertIn("历史小结阶梯", text)
+            self.assertIn("self_mind 自己最近聊天", text)
             self.assertIn("行为镜像", text)
             self.assertTrue(mirror_path.exists())
             self.assertTrue(perception_path.exists())
             self.assertFalse((workspace / "butler_main" / "butle_bot_space" / "self_mind" / "behavior_queue.json").exists())
 
-    def test_self_mind_cycle_writes_bridge_for_heartbeat(self):
+    def test_self_mind_cycle_keeps_agent_task_as_pending_self_lane_item(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
 
             def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
                 payload = {
                     "focus": "继续推进记忆架构拆层",
-                    "why": "这件事已经超出单句表达，需要身体侧任务推进",
-                    "self_note": "planner 应该是脑和身体之间的桥，而不是让 heartbeat 代替脑子思考。",
-                    "decision": "heartbeat",
-                    "heartbeat": "【heartbeat】把 self-mind 和 heartbeat 的桥接规则再收紧一层",
+                    "why": "这件事已经超出单句表达，需要 self_mind 自己的工程空间推进",
+                    "self_note": "self_mind 读取 talk-heartbeat，但不再让它们反写我。",
+                    "decision": "agent",
+                    "agent_task": "把 self_mind 和 heartbeat 的边界再收紧一层，并写到 agent_space",
                     "priority": 88,
-                    "done_when": "先补 planner 输入，再补状态文件和测试",
+                    "done_when": "先补规则，再留结果、证据和下一步",
                 }
                 return json.dumps(payload, ensure_ascii=False), True
 
             manager = MemoryManager(
-                config_provider=lambda: {"workspace_root": str(workspace), "memory": {"self_mind": {"body_loop_enabled": True}}},
+                config_provider=lambda: {"workspace_root": str(workspace)},
                 run_model_fn=fake_model,
             )
             manager._save_recent_entries(
@@ -911,23 +965,18 @@ class MemoryManagerRecentTests(unittest.TestCase):
             )
             manager._run_self_mind_cycle_once(str(workspace), timeout=60, model="auto")
 
-            bridge_path = workspace / "butler_main" / "butle_bot_space" / "self_mind" / "mind_body_bridge.json"
             context_path = workspace / "butler_main" / "butle_bot_space" / "self_mind" / "current_context.md"
             state_path = workspace / "butler_main" / "butle_bot_space" / "self_mind" / "mind_loop_state.json"
 
-            self.assertTrue(bridge_path.exists())
             self.assertTrue(context_path.exists())
             self.assertTrue(state_path.exists())
-            bridge_payload = json.loads(bridge_path.read_text(encoding="utf-8"))
-            self.assertEqual(bridge_payload["items"][-1]["action_channel"], "heartbeat")
-            self.assertIn("桥接规则", bridge_payload["items"][-1]["candidate"])
-            beat_recent = manager.get_recent_entries(str(workspace), pool="beat")
-            self.assertTrue(any("身体侧任务推进" in str(item.get("summary") or "") or "self_mind" in str(item.get("topic") or "") for item in beat_recent))
-            ledger_payload = TaskLedgerService(str(workspace)).load()
-            self.assertTrue(any(str(item.get("source") or "") == "self_mind" for item in ledger_payload.get("items") or []))
+            state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+            pending_item = state_payload.get("pending_self_lane_item") or {}
+            self.assertEqual(pending_item.get("action_type"), "agent_task")
+            self.assertIn("边界再收紧一层", str(pending_item.get("candidate") or ""))
             context_text = context_path.read_text(encoding="utf-8")
-            self.assertIn("身体最近动作", context_text)
-            self.assertIn("准备交给 heartbeat 的事", context_text)
+            self.assertIn("当前主体感", context_text)
+            self.assertIn("self_mind agent_space 待续动作", context_text)
 
     def test_self_mind_cycle_can_send_direct_talk(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -964,27 +1013,23 @@ class MemoryManagerRecentTests(unittest.TestCase):
             state_payload = json.loads(state_path.read_text(encoding="utf-8"))
             self.assertIn("last_direct_talk_at", state_payload)
 
-    def test_self_mind_cycle_enqueues_real_heartbeat_task_instead_of_window_receipt(self):
+    def test_self_mind_cycle_no_longer_enqueues_heartbeat_task(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
 
             def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
                 payload = {
-                    "focus": "把这轮想法留给 heartbeat 看",
-                    "why": "先记账，再决定是否说出口。",
-                    "decision": "heartbeat",
-                    "heartbeat": "【heartbeat】把这个想法先落成任务，不要只发窗口消息。",
-                    "done_when": "进入 beat recent 和 task ledger",
+                    "focus": "把这轮想法留给 self_mind agent_space",
+                    "why": "先在自己的执行空间落结果，不干预心跳。",
+                    "decision": "agent",
+                    "agent_task": "把这个想法先落成 self_mind agent_space 里的任务，不要接 heartbeat。",
+                    "done_when": "进入 pending_self_lane_item",
                     "priority": 90,
                 }
                 return json.dumps(payload, ensure_ascii=False), True
 
             manager = MemoryManager(
-                config_provider=lambda: {
-                    "workspace_root": str(workspace),
-                    "memory": {"self_mind": {"body_loop_enabled": True}},
-                    "heartbeat": {"enabled": True, "receive_id": "hb-u", "receive_id_type": "open_id"},
-                },
+                config_provider=lambda: {"workspace_root": str(workspace)},
                 run_model_fn=fake_model,
             )
             sent_calls = []
@@ -992,12 +1037,12 @@ class MemoryManagerRecentTests(unittest.TestCase):
 
             proposal = manager._run_self_mind_cycle_once(str(workspace), timeout=60, model="auto")
 
-            self.assertEqual(proposal["status"], "heartbeat-enqueued")
+            self.assertEqual(proposal["status"], "agent-pending")
             self.assertEqual(sent_calls, [])
             beat_recent = manager.get_recent_entries(str(workspace), pool="beat")
-            self.assertTrue(any("窗口消息" in str(item.get("summary") or "") or "self_mind" in str(item.get("topic") or "") for item in beat_recent))
-            ledger_payload = TaskLedgerService(str(workspace)).load()
-            self.assertTrue(any(str(item.get("source") or "") == "self_mind" for item in ledger_payload.get("items") or []))
+            self.assertEqual(beat_recent, [])
+            state_payload = manager._load_self_mind_state(str(workspace))
+            self.assertEqual((state_payload.get("pending_self_lane_item") or {}).get("action_type"), "agent_task")
 
     def test_self_mind_direct_talk_requires_explicit_talk_target(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1143,23 +1188,14 @@ class MemoryManagerRecentTests(unittest.TestCase):
             )
 
             def fake_model(prompt: str, workspace_path: str, timeout: int, model: str):
-                payload = {
-                    "action_channel": "hold",
-                    "action_type": "none",
-                    "bridge_updates": [
-                        {"bridge_id": "bridge-done", "status": "completed", "reason": "身体已经有实质进展，这条可以收口验收"},
-                        {"bridge_id": "bridge-old", "status": "expired", "reason": "拖太久且没有持续价值，主动放下"},
-                    ],
-                }
+                payload = {"action_channel": "hold", "action_type": "none"}
                 return json.dumps(payload, ensure_ascii=False), True
 
             manager._run_model_fn = fake_model
             manager._run_self_mind_cycle_once(str(workspace), timeout=60, model="auto")
 
-            bridge_payload = json.loads((workspace / "butler_main" / "butle_bot_space" / "self_mind" / "mind_body_bridge.json").read_text(encoding="utf-8"))
-            statuses = {item["bridge_id"]: item["status"] for item in bridge_payload["items"]}
-            self.assertEqual(statuses["bridge-done"], "completed")
-            self.assertEqual(statuses["bridge-old"], "expired")
+            bridge_path = workspace / "butler_main" / "butle_bot_space" / "self_mind" / "mind_body_bridge.json"
+            self.assertFalse(bridge_path.exists())
 
     def test_self_mind_cycle_preserves_custom_action_label(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1170,23 +1206,22 @@ class MemoryManagerRecentTests(unittest.TestCase):
                     "focus": "想去网上逛一圈找灵感",
                     "candidate": "看看最近有没有能学来给用户惊喜的小技巧",
                     "reason": "这是一个还没必要硬塞进固定动作词表的新动作",
-                    "action_channel": "heartbeat",
+                    "action_channel": "agent",
                     "action_type": "web-roam",
                     "priority": 72,
-                    "heartbeat_instruction": "先查最近能复用的 skill 和外部案例",
+                    "agent_task": "先查最近能复用的 skill 和外部案例",
                 }
                 return json.dumps(payload, ensure_ascii=False), True
 
             manager = MemoryManager(
-                config_provider=lambda: {"workspace_root": str(workspace), "memory": {"self_mind": {"body_loop_enabled": True}}},
+                config_provider=lambda: {"workspace_root": str(workspace)},
                 run_model_fn=fake_model,
             )
             proposal = manager._run_self_mind_cycle_once(str(workspace), timeout=60, model="auto")
 
             self.assertEqual(proposal["action_type"], "web-roam")
-            bridge_path = workspace / "butler_main" / "butle_bot_space" / "self_mind" / "mind_body_bridge.json"
-            payload = json.loads(bridge_path.read_text(encoding="utf-8"))
-            self.assertEqual(payload["items"][-1]["action_type"], "web-roam")
+            state_payload = manager._load_self_mind_state(str(workspace))
+            self.assertEqual((state_payload.get("pending_self_lane_item") or {}).get("action_type"), "web-roam")
 
     def test_heartbeat_executor_branch_loads_subagent_role_excerpt(self):
         with tempfile.TemporaryDirectory() as tmp:

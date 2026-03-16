@@ -33,7 +33,6 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
                 root = Path(tmp)
                 soul_path = root / "butler_main" / "butler_bot_agent" / "agents" / "local_memory" / "Butler_SOUL.md"
                 profile_path = root / "butler_main" / "butler_bot_agent" / "agents" / "local_memory" / "Current_User_Profile.private.md"
-                butler_agent_path = root / "butler_main" / "butler_bot_agent" / "agents" / "butler-agent.md"
                 self_mind_path = root / "butler_main" / "butle_bot_space" / "self_mind" / "current_context.md"
                 cognition_index_path = root / "butler_main" / "butle_bot_space" / "self_mind" / "cognition" / "L0_index.json"
                 soul_path.parent.mkdir(parents=True, exist_ok=True)
@@ -41,7 +40,6 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
                 cognition_index_path.parent.mkdir(parents=True, exist_ok=True)
                 soul_path.write_text("# Butler SOUL\n可爱一点，轻快一点。", encoding="utf-8")
                 profile_path.write_text("# Current User Profile\n当前用户允许少量自然 emoji，并偏好少客服腔。", encoding="utf-8")
-                butler_agent_path.write_text("# Butler Main Agent\n先顺着主线想，再决定怎么说。", encoding="utf-8")
                 self_mind_path.write_text("# 当前上下文\n- 最近主线：在整理长期记录机制。", encoding="utf-8")
                 cognition_index_path.write_text(
                     '{"categories":[{"name":"价值观","summary":"优先保留连续主线，不把 self_mind 降成普通缓存。","signal_count":2}]}',
@@ -52,25 +50,20 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
 
                 prompt = module.build_feishu_agent_prompt("帮我设计一个长期记录机制")
 
-                self.assertIn("【灵魂基线】", prompt)
+                self.assertIn("【基础行为】", prompt)
                 self.assertIn("有一点可爱和元气", prompt)
                 self.assertIn(f"【灵魂真源】@{module.prompt_path_text(module.BUTLER_SOUL_FILE_REL)}", prompt)
                 self.assertIn("可爱一点，轻快一点。", prompt)
                 self.assertIn("【当前用户画像】", prompt)
                 self.assertIn("少量自然 emoji", prompt)
-                self.assertIn("【主意识真源】", prompt)
-                self.assertIn("先顺着主线想，再决定怎么说。", prompt)
-                self.assertIn("【self_mind 认知体系】", prompt)
-                self.assertIn("优先保留连续主线", prompt)
-                self.assertIn("【self_mind 当前上下文】", prompt)
-                self.assertIn("最近主线：在整理长期记录机制", prompt)
+                self.assertNotIn("butler-agent.md", prompt)
         finally:
             module.CONFIG.clear()
             module.CONFIG.update(original_config)
 
     def test_build_prompt_includes_skills_when_provided(self):
         prompt = module.build_feishu_agent_prompt(
-            "帮我整理飞书历史消息",
+            "帮我用 skill 整理飞书历史消息",
             skills_prompt="[feishu]\n- feishu-chat-history @ ./butler_main/butler_bot_agent/skills/feishu_chat_history",
         )
 
@@ -84,10 +77,8 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 soul_path = root / "butler_main" / "butler_bot_agent" / "agents" / "local_memory" / "Butler_SOUL.md"
-                butler_agent_path = root / "butler_main" / "butler_bot_agent" / "agents" / "butler-agent.md"
                 soul_path.parent.mkdir(parents=True, exist_ok=True)
                 soul_path.write_text("# Butler SOUL\n这里是完整灵魂摘录。", encoding="utf-8")
-                butler_agent_path.write_text("# Butler Main Agent\n维持主线判断。", encoding="utf-8")
                 module.CONFIG.clear()
                 module.CONFIG.update({"workspace_root": str(root)})
 
@@ -108,12 +99,10 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 update_agent_path = root / "butler_main" / "butler_bot_agent" / "agents" / "sub-agents" / "update-agent.md"
-                butler_agent_path = root / "butler_main" / "butler_bot_agent" / "agents" / "butler-agent.md"
                 soul_path = root / "butler_main" / "butler_bot_agent" / "agents" / "local_memory" / "Butler_SOUL.md"
                 update_agent_path.parent.mkdir(parents=True, exist_ok=True)
                 soul_path.parent.mkdir(parents=True, exist_ok=True)
                 update_agent_path.write_text("# update-agent\n先找单一真源，再收敛重复规则。", encoding="utf-8")
-                butler_agent_path.write_text("# Butler Main Agent\n主意识先判断后表达。", encoding="utf-8")
                 soul_path.write_text("# Butler SOUL\n保留人味。", encoding="utf-8")
                 module.CONFIG.clear()
                 module.CONFIG.update({"workspace_root": str(root)})
@@ -133,10 +122,7 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 local_dir = root / "butler_main" / "butler_bot_agent" / "agents" / "local_memory"
-                butler_agent_path = root / "butler_main" / "butler_bot_agent" / "agents" / "butler-agent.md"
                 local_dir.mkdir(parents=True, exist_ok=True)
-                butler_agent_path.parent.mkdir(parents=True, exist_ok=True)
-                butler_agent_path.write_text("# Butler Main Agent\n先判断主线。", encoding="utf-8")
                 (local_dir / "Current_User_Profile.private.md").write_text(
                     "# Current User Profile\n\n## 当前结论\n- 用户偏好少客服腔、自然一点。\n",
                     encoding="utf-8",
@@ -160,7 +146,6 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
                 subagent_path = root / "butler_main" / "butler_bot_agent" / "agents" / "sub-agents" / "discussion-agent.md"
                 team_path = root / "butler_main" / "butler_bot_agent" / "agents" / "teams" / "research-implement-review.json"
                 public_lib_path = root / "butler_main" / "butler_bot_agent" / "agents" / "public-library" / "agent_public_library.json"
-                butler_agent_path = root / "butler_main" / "butler_bot_agent" / "agents" / "butler-agent.md"
                 subagent_path.parent.mkdir(parents=True, exist_ok=True)
                 team_path.parent.mkdir(parents=True, exist_ok=True)
                 public_lib_path.parent.mkdir(parents=True, exist_ok=True)
@@ -173,7 +158,6 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
                     '{"items":[{"capability_id":"autogen-group-chat","name":"AutoGen Group Chat","category":"event-driven-team","description":"manager-led team","source_url":"https://example.com"}]}',
                     encoding="utf-8",
                 )
-                butler_agent_path.write_text("# Butler Main Agent\n主意识。", encoding="utf-8")
                 module.CONFIG.clear()
                 module.CONFIG.update({"workspace_root": str(root)})
 
@@ -187,6 +171,47 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
                 self.assertIn("research-implement-review", prompt)
                 self.assertIn("autogen-group-chat", prompt)
                 self.assertIn("【agent_runtime_request_json】", prompt)
+        finally:
+            module.CONFIG.clear()
+            module.CONFIG.update(original_config)
+
+    def test_build_prompt_uses_content_share_mode_for_shared_links(self):
+        prompt = module.build_feishu_agent_prompt(
+            "Ocean:\n一个文件让 Claude Code 战斗力翻倍 http://xhslink.com/o/AirylJSxpim\n复制后打开【小红书】查看笔记！",
+            raw_user_prompt="Ocean:\n一个文件让 Claude Code 战斗力翻倍 http://xhslink.com/o/AirylJSxpim\n复制后打开【小红书】查看笔记！",
+        )
+
+        self.assertIn("mode=content_share", prompt)
+        self.assertIn("先直接回应内容本身", prompt)
+        self.assertIn("不要把本机 PowerShell/终端操作转嫁给用户", prompt)
+        self.assertNotIn("【可复用 Skills】", prompt)
+
+    def test_build_prompt_only_includes_self_mind_context_when_explicitly_relevant(self):
+        original_config = dict(module.CONFIG)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                soul_path = root / "butler_main" / "butler_bot_agent" / "agents" / "local_memory" / "Butler_SOUL.md"
+                profile_path = root / "butler_main" / "butler_bot_agent" / "agents" / "local_memory" / "Current_User_Profile.private.md"
+                self_mind_path = root / "butler_main" / "butle_bot_space" / "self_mind" / "current_context.md"
+                cognition_index_path = root / "butler_main" / "butle_bot_space" / "self_mind" / "cognition" / "L0_index.json"
+                soul_path.parent.mkdir(parents=True, exist_ok=True)
+                self_mind_path.parent.mkdir(parents=True, exist_ok=True)
+                cognition_index_path.parent.mkdir(parents=True, exist_ok=True)
+                soul_path.write_text("# Butler SOUL\n可爱一点，轻快一点。", encoding="utf-8")
+                profile_path.write_text("# Current User Profile\n当前用户允许少量自然 emoji。", encoding="utf-8")
+                self_mind_path.write_text("# 当前上下文\n- 最近主线：在整理长期记录机制。", encoding="utf-8")
+                cognition_index_path.write_text(
+                    '{"categories":[{"name":"价值观","summary":"优先保留连续主线。","signal_count":2}]}',
+                    encoding="utf-8",
+                )
+                module.CONFIG.clear()
+                module.CONFIG.update({"workspace_root": str(root)})
+
+                prompt = module.build_feishu_agent_prompt("聊聊 self-mind 最近在想什么", raw_user_prompt="聊聊 self-mind 最近在想什么")
+
+                self.assertIn("【self_mind 认知体系】", prompt)
+                self.assertIn("【self_mind 当前上下文】", prompt)
         finally:
             module.CONFIG.clear()
             module.CONFIG.update(original_config)

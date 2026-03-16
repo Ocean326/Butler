@@ -262,6 +262,110 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
             state = manager._read_heartbeat_watchdog_state(str(workspace))
             self.assertEqual(str(state.get("state") or ""), "restart-requested")
 
+    def test_heartbeat_watchdog_restarts_stale_alive_process(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {
+                    "workspace_root": str(workspace),
+                    "heartbeat": {"enabled": True, "every_minutes": 1, "heartbeat_stale_seconds": 60},
+                },
+                run_model_fn=lambda *_: ("", False),
+            )
+
+            class AliveProc:
+                pid = 4321
+                def is_alive(self):
+                    return True
+                def terminate(self):
+                    return None
+                def join(self, timeout=None):
+                    return None
+                def kill(self):
+                    return None
+
+            manager._heartbeat_process = AliveProc()
+            manager._heartbeat_started = True
+            manager._write_heartbeat_run_state(
+                str(workspace),
+                run_id="stale-run",
+                state="running",
+                phase="execute",
+                note="stuck",
+            )
+            run_state = manager._heartbeat_run_state_file(str(workspace))
+            payload = json.loads(run_state.read_text(encoding="utf-8"))
+            payload["heartbeat_pid"] = 4321
+            payload["updated_at"] = "2026-03-16 00:00:00"
+            run_state.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            launches = []
+            stop_calls = []
+
+            def fake_stop(ws: str, reason: str = ""):
+                stop_calls.append(reason)
+                manager._heartbeat_process = None
+                manager._heartbeat_started = False
+                return True
+
+            def fake_start(cfg):
+                launches.append(dict(cfg))
+                manager._heartbeat_started = True
+
+            manager._stop_heartbeat_service_locked = fake_stop
+            manager._start_heartbeat_service_locked = fake_start
+
+            sleep_calls = {"count": 0}
+            def fake_sleep(seconds: float):
+                sleep_calls["count"] += 1
+                if sleep_calls["count"] >= 3:
+                    raise RuntimeError("stop-watchdog")
+
+            with mock.patch("memory_manager.time.sleep", side_effect=fake_sleep), mock.patch("memory_manager.time.time", return_value=datetime(2026, 3, 16, 1, 5, 0).timestamp()):
+                with self.assertRaises(RuntimeError):
+                    manager._heartbeat_process_watchdog_loop(str(workspace))
+
+            self.assertEqual(len(stop_calls), 1)
+            self.assertIn("run_state stale", stop_calls[0])
+            self.assertEqual(len(launches), 1)
+
+    def test_heartbeat_run_state_stale_check_ignores_previous_pid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manager = MemoryManager(
+                config_provider=lambda: {
+                    "workspace_root": str(workspace),
+                    "heartbeat": {"enabled": True, "heartbeat_stale_seconds": 60},
+                },
+                run_model_fn=lambda *_: ("", False),
+            )
+
+            class AliveProc:
+                pid = 5555
+
+            manager._heartbeat_process = AliveProc()
+            manager._write_heartbeat_run_state(
+                str(workspace),
+                run_id="old-run",
+                state="running",
+                phase="execute",
+                note="old",
+            )
+            run_state = manager._heartbeat_run_state_file(str(workspace))
+            payload = json.loads(run_state.read_text(encoding="utf-8"))
+            payload["heartbeat_pid"] = 4444
+            payload["updated_at"] = "2026-03-16 00:00:00"
+            run_state.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            stale, note = manager._heartbeat_run_state_stale_info(
+                str(workspace),
+                {"heartbeat_stale_seconds": 60},
+                datetime(2026, 3, 16, 1, 5, 0).timestamp(),
+            )
+
+            self.assertFalse(stale)
+            self.assertEqual(note, "")
+
     def test_heartbeat_activity_timestamp_updates_even_when_send_skipped(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
@@ -847,12 +951,12 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
 
             payload = manager._load_heartbeat_memory(str(workspace))
             by_id = {item["task_id"]: item for item in payload["tasks"]}
-            self.assertEqual(stats["exec_calls"], 4)
+            self.assertEqual(stats["exec_calls"], 3)
             self.assertLessEqual(active["max"], 3)
             self.assertEqual(by_id["task-1"]["status"], "done")
             self.assertEqual(by_id["task-2"]["status"], "done")
             self.assertEqual(by_id["task-3"]["status"], "done")
-            self.assertEqual(by_id["task-4"]["status"], "done")
+            self.assertEqual(by_id["task-4"]["status"], "waiting_input")
 
             sent_msg = ""
             entries = manager._load_recent_entries(str(workspace), pool=BEAT_RECENT_POOL)
@@ -861,7 +965,7 @@ class MemoryManagerMaintenanceTests(unittest.TestCase):
             latest = snapshots[-1]
             snap = latest.get("heartbeat_execution_snapshot") if isinstance(latest.get("heartbeat_execution_snapshot"), dict) else {}
             self.assertTrue(bool(snap.get("parallel_used")))
-            self.assertEqual(int(snap.get("parallel_branch_count") or 0), 5)
+            self.assertEqual(int(snap.get("parallel_branch_count") or 0), 4)
             self.assertEqual(int(snap.get("serial_branch_count") or 0), 0)
             self.assertEqual(len(snap.get("deferred_task_ids") or []), 1)
 
