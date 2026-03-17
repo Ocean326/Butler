@@ -36,6 +36,8 @@ import uuid
 import requests
 from heartbeat_orchestration import HeartbeatOrchestrator, HeartbeatPlanningContext
 from governor import Governor
+from memory_pipeline import MemoryPipelineFeatureFlags, MemoryPipelineOrchestrator
+from memory_pipeline.models import ProfileWriteRequest
 from services.local_memory_index_service import LocalMemoryIndexService, LocalMemoryQueryParams
 from services.message_delivery_service import MessageDeliveryService
 from services.delivery_flow_service import DeliveryFlowService
@@ -375,9 +377,13 @@ class MemoryManager:
             normalize_heartbeat_tasks=self._normalize_heartbeat_tasks,
         )
         self._subconscious_service = SubconsciousConsolidationService()
+        self._memory_pipeline = MemoryPipelineOrchestrator(self)
         self._memory_backend_lock = threading.Lock()
         self._memory_backend_cache: dict[str, object] = {}
         self._runtime_request_local = threading.local()
+
+    def _memory_pipeline_flags(self) -> MemoryPipelineFeatureFlags:
+        return self._memory_pipeline.flags()
 
     def get_runtime_request_override(self) -> dict:
         override = getattr(self._runtime_request_local, "runtime_request", None)
@@ -479,8 +485,6 @@ class MemoryManager:
     ) -> str:
         cfg = self._config_provider() or {}
         workspace = cfg.get("workspace_root") or os.getcwd()
-        if self._is_new_task_prompt(user_prompt):
-            return user_prompt
         recent_entries = self._load_recent_entries(workspace)
         if exclude_memory_id:
             recent_entries = [
@@ -508,11 +512,6 @@ class MemoryManager:
             lead_blocks = [block for block in (followup_text, continuation_text) if block]
             lead = "\n\n".join(lead_blocks).strip()
             return (lead + "\n\n" + user_prompt).strip() if lead else user_prompt
-        if str(recent_mode or "").strip().lower() == "content_share":
-            lead = str(followup_text or "").strip()
-            if lead:
-                return f"{lead}\n\n{user_prompt}".strip()
-            return user_prompt
         followup_block = f"{followup_text}\n\n" if followup_text else ""
         continuation_block = f"{continuation_text}\n\n" if continuation_text else ""
         requirement_block = (
@@ -533,8 +532,7 @@ class MemoryManager:
             f"{summary_block}"
             f"{summary_history_block}"
             f"{requirement_block}"
-            "【使用规则】若用户未明确说明“全新任务/全新情景”，请优先沿用 recent_memory；"
-            "若用户明确开启新任务，则忽略 recent_memory。"
+            "【使用规则】默认沿用 recent_memory 做上下文续接。"
             "若当前消息很短、像补充意见、像引用回复或像对上一轮方案的修正，默认先按同一主线续接，主动补全省略主语与对象；"
             "只有 recent 指向多个高概率解释时才要求澄清。\n\n"
             f"{followup_block}"
@@ -1678,6 +1676,25 @@ class MemoryManager:
             _, _, local_dir = self._ensure_memory_dirs(workspace)
             model_summary = ""
             model_ok = False
+            pipeline_actions: list[str] = []
+            pipeline_flags = self._memory_pipeline_flags()
+            run_local_rewrite = True
+            if pipeline_flags.maintenance_agent:
+                maintenance_result, pipeline_actions = self._memory_pipeline.run_maintenance(
+                    workspace=workspace,
+                    reason=reason,
+                    scope="local",
+                )
+                run_local_rewrite = maintenance_result.run_local_rewrite
+            if not run_local_rewrite:
+                return {
+                    "model_ok": True,
+                    "model_summary": "maintenance_memory_agent 判定本轮无需执行 local rewrite",
+                    "files": len(self._local_memory_files(local_dir)),
+                    "compressed": 0,
+                    "skipped": False,
+                    "pipeline_actions": pipeline_actions,
+                }
 
             try:
                 prompt = self._build_file_manager_memory_prompt(local_dir, reason)
@@ -1732,18 +1749,42 @@ class MemoryManager:
                 "files": len(self._local_memory_files(local_dir)),
                 "compressed": compressed,
                 "skipped": False,
+                "pipeline_actions": pipeline_actions,
             }
 
     def _run_recent_memory_maintenance_once(self, workspace: str, timeout: int, model: str, reason: str) -> dict:
         with self._memory_lock:
             entries = self._load_recent_entries(workspace)
+            pipeline_actions: list[str] = []
+            pipeline_flags = self._memory_pipeline_flags()
+            should_prune = True
+            should_compact = True
+            if pipeline_flags.maintenance_agent:
+                maintenance_result, pipeline_actions = self._memory_pipeline.run_maintenance(
+                    workspace=workspace,
+                    reason=reason,
+                    scope="recent",
+                )
+                should_prune = maintenance_result.run_recent_prune
+                should_compact = maintenance_result.run_recent_compact
             active_entries, stale_entries = self._split_stale_recent_entries(entries)
             archive_path = ""
-            if stale_entries:
+            if should_prune and stale_entries:
                 archive_path = self._archive_stale_recent_entries(workspace, stale_entries, reason=f"{reason}-stale", pool=TALK_RECENT_POOL)
                 entries = active_entries
-            compacted_entries, info = self._compact_recent_entries_if_needed(entries, workspace, timeout, model, reason)
+            if should_compact:
+                compacted_entries, info = self._compact_recent_entries_if_needed(entries, workspace, timeout, model, reason)
+            else:
+                compacted_entries = entries
+                info = {
+                    "compacted": False,
+                    "archived_count": 0,
+                    "reflections_count": 0,
+                    "before_count": len(entries),
+                    "after_count": len(entries),
+                }
             info["stale_count"] = len(stale_entries)
+            info["pipeline_actions"] = pipeline_actions
             if archive_path:
                 info["stale_archive_path"] = archive_path
             promoted_count = self._promote_recent_long_term_candidates(
@@ -1805,11 +1846,33 @@ class MemoryManager:
                 entries.extend(companion_entries)
 
                 lt = entry.get("long_term_candidate") if isinstance(entry.get("long_term_candidate"), dict) else {}
-                if lt.get("should_write") and lt.get("summary") and self._govern_memory_write(
-                    target_path=prompt_path_text(LOCAL_MEMORY_DIR_REL / "semantic_memory.md"),
-                    action_type="memory-write",
-                    summary=str(lt.get("title") or "对话沉淀"),
-                ):
+                pipeline_flags = self._memory_pipeline_flags()
+                allow_local_write = bool(
+                    lt.get("should_write") and lt.get("summary") and self._govern_memory_write(
+                        target_path=prompt_path_text(LOCAL_MEMORY_DIR_REL / "semantic_memory.md"),
+                        action_type="memory-write",
+                        summary=str(lt.get("title") or "对话沉淀"),
+                    )
+                )
+                should_merge_tasks = not suppress_task_merge
+                if pipeline_flags.post_turn_agent:
+                    governed, local_actions, _profile_actions = self._memory_pipeline.run_post_turn(
+                        workspace=workspace,
+                        memory_id=entry_id,
+                        user_prompt=user_prompt,
+                        assistant_reply=assistant_reply,
+                        candidate_memory=entry,
+                        suppress_task_merge=suppress_task_merge,
+                        allow_local_write=allow_local_write,
+                        allow_profile_write=True,
+                    )
+                    if governed.mark_promoted and any(
+                        action in {"write-new", "append-existing", "append-similar", "duplicate-skip"}
+                        for action in local_actions
+                    ):
+                        self._mark_recent_entry_local_promoted(entry, local_actions[-1], source="post-turn-agent")
+                    should_merge_tasks = governed.should_merge_tasks
+                elif allow_local_write:
                     action = self._upsert_local_memory(
                         workspace,
                         str(lt.get("title") or "对话沉淀"),
@@ -1824,7 +1887,7 @@ class MemoryManager:
                     if action in {"write-new", "append-existing", "append-similar", "duplicate-skip"}:
                         self._mark_recent_entry_local_promoted(entry, action, source="per-turn")
 
-                if (not suppress_task_merge) and self._govern_memory_write(
+                if should_merge_tasks and self._govern_memory_write(
                     target_path=prompt_path_text(STATE_DIR_REL / "task_ledger.json"),
                     action_type="task-ledger-write",
                     summary=str(entry.get("topic") or "本轮任务候选"),
@@ -3026,19 +3089,32 @@ class MemoryManager:
                 if t and t < cutoff:
                     stale.append(e)
 
-            reflections = self._select_necessary_reflections(stale)
-            for r in reflections:
-                self._upsert_local_memory(
-                    workspace,
-                    str(r.get("title") or "对话反思沉淀"),
-                    str(r.get("summary") or ""),
-                    [str(x) for x in (r.get("keywords") or [])],
-                    source_type="recent-compact",
-                    source_memory_id=str(r.get("source_memory_id") or ""),
-                    source_reason=str(reason or "compact"),
-                    source_topic=str(r.get("title") or ""),
+            pipeline_flags = self._memory_pipeline_flags()
+            pipeline_config = self._memory_pipeline.config()
+            if pipeline_flags.compact_agent and len(old_entries) >= pipeline_config.recent_compact_min_entries:
+                compact_result, compact_actions = self._memory_pipeline.run_compact(
+                    workspace=workspace,
+                    reason=reason,
+                    pool=pool,
+                    old_entries=old_entries,
+                    keep_entries=keep_entries,
                 )
-            info["reflections_count"] = len(reflections)
+                info["reflections_count"] = len(compact_result.summary_candidates)
+                info["pipeline_compact_actions"] = compact_actions
+            else:
+                reflections = self._select_necessary_reflections(stale)
+                for r in reflections:
+                    self._upsert_local_memory(
+                        workspace,
+                        str(r.get("title") or "对话反思沉淀"),
+                        str(r.get("summary") or ""),
+                        [str(x) for x in (r.get("keywords") or [])],
+                        source_type="recent-compact",
+                        source_memory_id=str(r.get("source_memory_id") or ""),
+                        source_reason=str(reason or "compact"),
+                        source_topic=str(r.get("title") or ""),
+                    )
+                info["reflections_count"] = len(reflections)
 
             if pool == BEAT_RECENT_POOL:
                 try:
@@ -3300,6 +3376,28 @@ class MemoryManager:
             source_type="manual",
             source_reason="append_local_memory_entry",
             source_topic=str(title or "").strip(),
+        )
+
+    def remember_user_profile_entry(self, workspace: str, content: str, category: str = "preferences") -> str:
+        return self._memory_pipeline.apply_profile_write(
+            workspace,
+            ProfileWriteRequest(
+                action="remember",
+                category=category,
+                content=content,
+                reason="main-agent-direct-write",
+            ),
+        )
+
+    def forget_user_profile_entry(self, workspace: str, content: str, category: str = "preferences") -> str:
+        return self._memory_pipeline.apply_profile_write(
+            workspace,
+            ProfileWriteRequest(
+                action="forget",
+                category=category,
+                content=content,
+                reason="main-agent-direct-write",
+            ),
         )
 
     def query_local_memory(

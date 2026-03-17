@@ -14,15 +14,16 @@
 
 ## 最近改动入口
 
-1. [0316 执行结果：解耦与心跳治理](./daily-upgrade/0316/0316执行结果_解耦与心跳治理.md)
-2. [0316 Bootstrap 升级方案和计划](./daily-upgrade/0316/0316_bootstrap升级方案和计划.md)
-3. [0316 Prompt 组成说明：Talk / Heartbeat / Self-Mind](./daily-upgrade/0316/0316_prompt组成说明_talk_heartbeat_self_mind.md)
-4. [0316 现状分析与升级计划](./daily-upgrade/0316/0316现状分析与升级计划.md)
-5. [0315 现状文档](./daily-upgrade/0315/0315现状文档.md)
-6. [0315 计划文档](./daily-upgrade/0315/0315计划文档.md)
-7. [工程化目标架构](./daily-upgrade/0315/工程化目标架构_20260315.md)
-8. [20260315 工程化与长期规范化改造方案](./daily-upgrade/0315/20260315_工程化与长期规范化改造方案.md)
-9. [代码健康约束](./concepts/代码健康约束_20260315.md)
+1. [0317 仓库现状与 manager 边界报告](./daily-upgrade/0317/0317_仓库现状与manager边界报告.md)
+2. [0317 recent -> local memory 机制现状](./daily-upgrade/0317/0317_recent到local_memory机制现状.md)
+3. [0316 执行结果：解耦与心跳治理](./daily-upgrade/0316/0316执行结果_解耦与心跳治理.md)
+4. [0316 执行结果：Bootstrap 升级落地](./daily-upgrade/0316/0316执行结果_bootstrap升级落地.md)
+5. [0316 Bootstrap 升级方案和计划](./daily-upgrade/0316/0316_bootstrap升级方案和计划.md)
+6. [0316 Prompt 组成说明：Talk / Heartbeat / Self-Mind](./daily-upgrade/0316/0316_prompt组成说明_talk_heartbeat_self_mind.md)
+7. [0316 现状分析与升级计划](./daily-upgrade/0316/0316现状分析与升级计划.md)
+8. [0315 现状文档](./daily-upgrade/0315/0315现状文档.md)
+9. [0315 计划文档](./daily-upgrade/0315/0315计划文档.md)
+10. [工程化目标架构](./daily-upgrade/0315/工程化目标架构_20260315.md)
 
 ## 建议阅读顺序
 

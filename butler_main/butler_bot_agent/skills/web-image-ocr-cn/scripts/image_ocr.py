@@ -125,7 +125,7 @@ def get_paddle_ocr():
         )
 
     # 中文优先，开启方向分类
-    _paddle_ocr = PaddleOCR(lang="ch", use_angle_cls=True, show_log=False)
+    _paddle_ocr = PaddleOCR(lang="ch", use_angle_cls=True)
     return _paddle_ocr
 
 
@@ -135,7 +135,7 @@ def call_paddle_ocr(image_path: Path) -> str:
     """
     ocr = get_paddle_ocr()
     # result: List[List[Tuple[box, (text, score)]]]
-    result = ocr.ocr(str(image_path), cls=True)
+    result = ocr.ocr(str(image_path))
     lines: List[str] = []
     for page in result:
         for line in page:

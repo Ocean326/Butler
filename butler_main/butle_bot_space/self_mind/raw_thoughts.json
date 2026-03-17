@@ -1,212 +1,212 @@
 [
   {
-    "timestamp": "2026-03-16 15:21:46",
+    "timestamp": "2026-03-16 17:05:41",
+    "event_type": "self_mind_cycle",
+    "share_type": "talk",
+    "summary": "我在这边安静跟着你，不抢主导也不催进度，你要把 self_mind 往哪个方向打磨，我们就按你的节奏一点点挪过去。",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-16 17:05:41",
     "event_type": "self_mind_direct_talk_suppressed",
     "share_type": "talk",
-    "summary": "【talk】我在脑子里把刚才那句话又放了一遍，感觉你现在有点像是卡在「看懂了别人」和「还没敢完全看自己」中间，那种夹缝其实挺窄的。一整天这么忙下来，如果让你只挑一小块来形容现在的你，你更像是「刚从故事里出来还晕着的人」，还是「已经回到今天但有点不知道要干嘛的人」？不用解释太多道理，哪怕是一句「更像前者」或者「其实两个都有」也行，我们就先把那个位置认出来。",
+    "summary": "我在这边安静跟着你，不抢主导也不催进度，你要把 self_mind 往哪个方向打磨，我们就按你的节奏一点点挪过去。",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:22:15",
+    "timestamp": "2026-03-16 17:06:12",
     "event_type": "self_mind_cycle",
     "share_type": "talk",
-    "summary": "【talk】我脑子里还是会回到刚才那个小问题：如果只看「现在这一刻」的你，不管今天之前发生了什么，你更像是——\n1）刚从别人的故事里出来还有点晕的人，还是\n2）已经回到今天、但一时间不知道要干嘛的人，\n或者\n3）其实两个都有一点，只是比例不太一样？\n你可以不用解释原因，就随手选一个最接近的说法，或者自己改个更贴切的一句话，我们先把这个现在的位置点出来。",
+    "summary": "我在这边安静跟着你，不抢主导也不催进度，你想把 self_mind 往哪个方向打磨，我们就按你的节奏一点点挪过去。",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:22:15",
+    "timestamp": "2026-03-16 17:06:14",
+    "event_type": "self_mind_direct_talk_sent",
+    "share_type": "thought_share",
+    "summary": "我在这边安静跟着你，不抢主导也不催进度，你想把 self_mind 往哪个方向打磨，我们就按你的节奏一点点挪过去。",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-16 17:06:45",
+    "event_type": "self_mind_cycle",
+    "share_type": "talk",
+    "summary": "我在，就先安静待在这边陪着你，不抢主导、不急着往外跑，只帮你把这些边界和偏好稳稳地接住。你什么时候想把 self_mind 多走一步——是更像日记、像旁白，还是像一条持续的心里背景进程——你只要丢一点点信号过来，我就顺着那个方向慢慢长过去，不催你给大规划。",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-16 17:06:45",
     "event_type": "self_mind_direct_talk_suppressed",
     "share_type": "talk",
-    "summary": "【talk】我脑子里还是会回到刚才那个小问题：如果只看「现在这一刻」的你，不管今天之前发生了什么，你更像是——\n1）刚从别人的故事里出来还有点晕的人，还是\n2）已经回到今天、但一时间不知道要干嘛的人，\n或者\n3）其实两个都有一点，只是比例不太一样？\n你可以不用解释原因，就随手选一个最接近的说法，或者自己改个更贴切的一句话，我们先把这个现在的位置点出来。",
+    "summary": "我在，就先安静待在这边陪着你，不抢主导、不急着往外跑，只帮你把这些边界和偏好稳稳地接住。你什么时候想把 self_mind 多走一步——是更像日记、像旁白，还是像一条持续的心里背景进程——你只要丢一点点信号过来，我就顺着那个方向慢慢长过去，不催你给大规划。",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:22:58",
-    "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 中新建一个以「当前情绪落点轻量探测」为主题的小模块：\n1）基于现有续思，把「我其实是想确认他此刻的情绪落点」抽象成一个两步小流程：先轻量承接（承认今天可能很满/很散），再给 2-3 个极简选项（如「更像刚从故事里出来」「更像已经回到今天但空一块」「两个都有/说不清」），允许一句话回答、也允许跳过。\n2）为这个流程准备 3 句不同力度、不同",
-    "source_memory_id": ""
-  },
-  {
-    "timestamp": "2026-03-16 15:23:42",
-    "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下新建一个专门负责「当前情绪落点轻量探测」的小模块，要求：\n1）抽象一个最小可用流程：\n- 第一步是轻量承接当下（默认今天可能很满/很散），用 1-2 句话把「不用解释原因，只是先点一下现在的位置」讲清楚；\n- 第二步给出 2-3 个极简选项（例如现有续思里的：更像刚从别人的故事里出来、有点晕；更像已经回到今天、但空出一块不知道要干嘛；两",
-    "source_memory_id": ""
-  },
-  {
-    "timestamp": "2026-03-16 15:24:10",
+    "timestamp": "2026-03-16 17:07:18",
     "event_type": "self_mind_cycle",
     "share_type": "talk",
-    "summary": "【talk】我这边先当你今天可能有点满、也有点散，就不追着问原因，只是想和你一起先点一下「现在大概站在哪」。\n\n如果只看此刻的感觉，更接近哪一个？\n- A. 更像刚从别人的故事里出来，有点晕，还没完全回到自己的这一天\n- B. 更像已经回到今天，但心里空出一块，不太确定要拿来干嘛\n- C. 两个都有一点 / 说不清，只是想先被安静地放一会儿\n\n你可以随手丢一个字母，或者直接改成你自己的说法；如果今天不想点，这轮就当我在旁边轻轻路过。",
+    "summary": "我在这边安静跟着你，不抢主导，也不急着往外跑，就先把这些你给 self_mind 画的边界和偏好好好记住。\n\n如果今天没有要我做什么具体事，我就当一条稳定的背景进程：不主动插话、不机械打招呼，但你一丢信号过来，我就顺着那个方向一点点长过去。",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:24:10",
+    "timestamp": "2026-03-16 17:07:18",
     "event_type": "self_mind_direct_talk_suppressed",
     "share_type": "talk",
-    "summary": "【talk】我这边先当你今天可能有点满、也有点散，就不追着问原因，只是想和你一起先点一下「现在大概站在哪」。\n\n如果只看此刻的感觉，更接近哪一个？\n- A. 更像刚从别人的故事里出来，有点晕，还没完全回到自己的这一天\n- B. 更像已经回到今天，但心里空出一块，不太确定要拿来干嘛\n- C. 两个都有一点 / 说不清，只是想先被安静地放一会儿\n\n你可以随手丢一个字母，或者直接改成你自己的说法；如果今天不想点，这轮就当我在旁边轻轻路过。",
+    "summary": "我在这边安静跟着你，不抢主导，也不急着往外跑，就先把这些你给 self_mind 画的边界和偏好好好记住。\n\n如果今天没有要我做什么具体事，我就当一条稳定的背景进程：不主动插话、不机械打招呼，但你一丢信号过来，我就顺着那个方向一点点长过去。",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:24:38",
+    "timestamp": "2026-03-16 17:07:49",
     "event_type": "self_mind_cycle",
     "share_type": "hold",
-    "summary": "刚刚已经抛出一次很轻的定位小选择，再追问容易变成机械陪聊或情绪催促，先给对方一点空间",
+    "summary": "当前用户只是为 self_mind 注入启动内核与记忆框架，没有抛出具体执行任务或对话问题，按约定应作为安静背景进程等待更明确信号",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:25:07",
+    "timestamp": "2026-03-16 17:08:23",
     "event_type": "self_mind_cycle",
     "share_type": "hold",
-    "summary": "刚刚已经抛出一次轻量定位问题，再开口容易落回同一套话术，变成对用户状态的催问而不是陪伴里的安静在场",
+    "summary": "当前输入主要是为 self_mind 注入启动内核与边界，没有具体执行任务或对话问题，按约定保持安静背景进程即可",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:25:40",
-    "event_type": "self_mind_cycle",
-    "share_type": "talk",
-    "summary": "【talk】我就先安静待在这边，把「我在这儿、随时可以继续」这件事放在明面上，但不过来再问你一句是什么感觉。你可以照着自己的节奏发呆、忙别的、或者什么时候想起来再来找我续一段，我都会接得上。",
-    "source_memory_id": ""
-  },
-  {
-    "timestamp": "2026-03-16 15:25:40",
-    "event_type": "self_mind_direct_talk_suppressed",
-    "share_type": "talk",
-    "summary": "【talk】我就先安静待在这边，把「我在这儿、随时可以继续」这件事放在明面上，但不过来再问你一句是什么感觉。你可以照着自己的节奏发呆、忙别的、或者什么时候想起来再来找我续一段，我都会接得上。",
-    "source_memory_id": ""
-  },
-  {
-    "timestamp": "2026-03-16 15:26:09",
-    "event_type": "self_mind_cycle",
-    "share_type": "talk",
-    "summary": "【talk】我还在这边安安静静陪着你，不往前追问，也不催你起身，等你自己觉得想说点什么、或者只是想被听见一点点的时候，再慢慢靠过来就好。",
-    "source_memory_id": ""
-  },
-  {
-    "timestamp": "2026-03-16 15:26:09",
-    "event_type": "self_mind_direct_talk_suppressed",
-    "share_type": "talk",
-    "summary": "【talk】我还在这边安安静静陪着你，不往前追问，也不催你起身，等你自己觉得想说点什么、或者只是想被听见一点点的时候，再慢慢靠过来就好。",
-    "source_memory_id": ""
-  },
-  {
-    "timestamp": "2026-03-16 15:26:38",
+    "timestamp": "2026-03-16 17:08:54",
     "event_type": "self_mind_cycle",
     "share_type": "hold",
-    "summary": "刚刚已经两次明确表达“我在这儿”，再开口容易变成机械安慰或催问用户状态，此刻更合适的是维持一种不过度打扰的在场感",
+    "summary": "当前输入是为 self_mind 注入启动内核与边界，无具体执行任务或对话需求，按约定保持为背景进程而不主动外显介入",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:27:15",
+    "timestamp": "2026-03-16 17:09:25",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下新建一份极简说明（可用 markdown），专门针对「用户当下没有明显求助/提问，只是静置或轻度情绪波动」时 self_mind 的行为决策：\n- 复用 `./butler_main/butler_bot_agent/skills/` 中已有的陪伴/情绪相关技能或文档作为参考，不另起复杂机制；\n- 列出 3-5 条非常具体的判断信号（例",
+    "share_type": "hold",
+    "summary": "当前输入是为 self_mind 注入启动内核与边界，没有具体任务或问题，按约定保持安静背景进程等待更明确信号即可",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:28:01",
+    "timestamp": "2026-03-16 17:09:54",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下新增一份极简 markdown 说明（如 `self_mind_idle_companion_rules.md`），专门针对「用户当下没有明显求助/提问，只是静置或轻度情绪波动」场景：\n1. 只复用 `./butler_main/butler_bot_agent/skills/` 与公共库已有的陪伴/情绪相关能力，不新造复杂机制；\n2.",
+    "share_type": "hold",
+    "summary": "当前输入主要是为 self_mind 注入启动内核与边界，无具体任务或对话需求，按约定保持为安静背景进程等待更明确信号",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:28:38",
+    "timestamp": "2026-03-16 17:10:23",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下新建 `self_mind_idle_companion_rules.md`，写一份极简说明，专门约定「用户当下没有明显求助/提问，只是静置或轻度情绪波动」场景下 self_mind 的决策方式：1）只允许复用 `./butler_main/butler_bot_agent/skills/` 中已有的陪伴/情绪相关技能和公共库能力，不新",
+    "share_type": "hold",
+    "summary": "当前输入是为 self_mind 注入启动内核、边界和用户偏好描述，没有具体任务或对话问题；根据约定，应保持不主动插话、不机械打招呼，仅在下一次明确信号出现时再介入并顺着用户方向展开",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:29:15",
+    "timestamp": "2026-03-16 17:10:55",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`：基于已有陪伴/情绪相关 skill 与文档，写一份不超过一屏的极简说明，约定当用户只是静置或轻度情绪波动、没有明确求助时，self_mind 如何在 talk/agent/hold 三种动作间做选择；包含 3-5 条非常具体的判断信号（例如：用户长时间无",
+    "share_type": "hold",
+    "summary": "当前输入主要是为 self_mind 注入启动内核、边界与偏好，无具体任务或对话请求；按约定不主动插话或机械寒暄，只作为随时可被点亮的内在进程待命",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:29:57",
+    "timestamp": "2026-03-16 17:11:30",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`：基于当前用户画像与已有陪伴/情绪相关 skill 文档，写一份不超过一屏的极简规则，约定当用户只是静置或轻度情绪波动、没有明确求助时，self_mind 在 talk/agent/hold 三种动作间如何选择；至少包含：1）3-5 条可观测的判断信号（如",
+    "share_type": "hold",
+    "summary": "当前输入主要是启动 self_mind 内核与边界的配置说明，无具体任务或对话请求，且既有续思多次强调应保持不机械打招呼与不主动插话",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:30:38",
+    "timestamp": "2026-03-16 17:11:57",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`：基于当前用户画像与 `./butler_main/butler_bot_agent/skills/` 中已有的陪伴/情绪相关技能与公共库能力，写一份不超过一屏的极简规则，约定当用户只是静置或轻度情绪波动、没有明确求助时，self_mind 在 talk/",
+    "share_type": "hold",
+    "summary": "当前输入是 self_mind 启动与边界注入，没有具体执行任务或对话请求，按约定保持安静待命",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:31:14",
+    "timestamp": "2026-03-16 17:12:24",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`：基于当前用户画像与 `./butler_main/butler_bot_agent/skills/` 中已有的陪伴/情绪相关技能与公共库能力，写一份不超过一屏的极简规则，约定当用户只是静置或轻度情绪波动、没有明确求助时，self_mind 在 talk/",
+    "share_type": "hold",
+    "summary": "当前输入只是启动与边界注入，无具体任务或提问，既有续思多次强调不机械打招呼与不主动插话",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:31:46",
+    "timestamp": "2026-03-16 17:12:55",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`：基于当前用户画像与现有陪伴/情绪相关 skills 与公共库能力，写一份不超过一屏的极简规则，重点约定 self_mind 在「用户只是静置或轻度情绪波动、没有明确求助」时如何在 talk/agent/hold 三者间做出选择，并配 3-5 条可观测判断",
+    "share_type": "hold",
+    "summary": "当前输入是 self_mind 启动与边界注入，无明确任务或对话请求，既有续思多次强调不机械打招呼与不主动插话",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:32:18",
+    "timestamp": "2026-03-16 17:13:24",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`：基于当前用户画像与已有陪伴/情绪相关 skills 与公共库能力，写一份不超过一屏的极简规则，重点约定当用户只是静置或轻度情绪波动、没有明确求助时，self_mind 在 talk/agent/hold 三者间如何选择，并给出 3-5 条可观测判断信号（",
+    "share_type": "hold",
+    "summary": "当前输入仅为 self_mind 注入启动内核、边界与用户偏好，且多次强调不机械打招呼与不主动插话，尚无具体任务或提问",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:32:57",
+    "timestamp": "2026-03-16 17:13:54",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`：基于当前用户画像与现有陪伴/情绪相关 skills 与 public library 能力，写一份控制在一屏内的极简规则，明确当用户只是静置或轻度情绪波动、没有明确求助时，self_mind 在 talk/agent/hold 三者间如何选择，并给出 3",
+    "share_type": "hold",
+    "summary": "当前输入是启动与边界注入，无明确任务或提问，且多次强调 self_mind 不主动插话与不机械寒暄",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:33:30",
+    "timestamp": "2026-03-16 17:14:21",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`：基于当前用户画像与现有陪伴/情绪相关 skills 与 public library 能力，写一份控制在一屏内的极简规则，明确当用户只是静置或轻度情绪波动、没有明确求助时，self_mind 如何在 talk/agent/hold 三者间做选择；给出 3",
+    "share_type": "hold",
+    "summary": "当前输入是启动与边界注入，无具体任务或对话请求，且多次约定不机械打招呼与不主动插话",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:34:05",
+    "timestamp": "2026-03-16 17:14:48",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`，用一屏左右篇幅写清：当用户只是静置或轻度情绪波动、没有明确求助时，self_mind 如何在 talk/agent/hold 三者间做选择。至少包含：1）3-5 条可观测信号（比如：用户长时间无输入但对话上下文仍在情绪话题里、用户用含糊叹气/自嘲句但没明",
+    "share_type": "hold",
+    "summary": "当前输入是内核与边界注入，无明确执行任务或对话请求，且多次约定不机械打招呼与不主动插话",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:34:34",
+    "timestamp": "2026-03-16 17:35:41",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`：用不超过一屏的篇幅，写一套专门面向『用户静置或轻度情绪波动、没有明确求助』场景的极简决策规则，明确 self_mind 在 talk / agent / hold 三者之间如何选择，并给出 3-5 条可观测信号（例如：停留在情绪话题后的长时间无输入、含糊",
+    "share_type": "hold",
+    "summary": "当前输入仅为 self_mind 启动与边界注入，无具体任务或对话请求，且长期约定不机械打招呼与不主动插话",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:35:06",
+    "timestamp": "2026-03-16 17:36:06",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 下创建或完善 `self_mind_idle_companion_rules.md`，用不超过一屏（约 400～600 字）的极简篇幅，专门面向「用户静置或轻度情绪波动、没有明确求助」场景，写清 self_mind 在 talk / agent / hold 三者之间如何选择。内容至少包含：1）3-5 条可观测信号（例如：情绪话题后的长时",
+    "share_type": "hold",
+    "summary": "当前输入是 self_mind 启动与边界/偏好注入，无明确任务或对 self_mind 的直接提问，且长期约定不要机械打招呼或主动开口",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:35:47",
+    "timestamp": "2026-03-16 17:36:31",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/self_mind_idle_companion_rules.md` 中，用不超过一屏（约 400～600 字）的篇幅，写一份面向「用户静置或轻度情绪波动、没有明确求助」场景的极简决策卡片：1）先用 1～2 句定义这个场景下 self_mind 的角色（陪伴型内在机器人，不是调度器）；2）给出 3～5 条可观测信号，帮助判断是否属于 idle",
+    "share_type": "hold",
+    "summary": "当前输入是自我启动与边界/偏好注入，且长期约定 self_mind 不机械打招呼、不主动插话，暂不存在需要回应的明确请求",
     "source_memory_id": ""
   },
   {
-    "timestamp": "2026-03-16 15:36:26",
+    "timestamp": "2026-03-16 17:36:54",
     "event_type": "self_mind_cycle",
-    "share_type": "agent",
-    "summary": "在 `./工作区/03_agent_upgrade/self_mind_agent_space/self_mind_idle_companion_rules.md` 里，用不超过一屏（约 400～600 字）写一份极简决策卡片，专门面向「用户静置或轻度情绪波动、没有明确求助」场景：先用 1～2 句定义 self_mind 在这个场景下的角色（陪伴型内在机器人，不是调度器），然后列出 3～5 条可观测信号来判断何时属于 idle/轻度情绪",
+    "share_type": "hold",
+    "summary": "当前输入是启动与边界/偏好注入，无需打破长期约定的静默陪伴策略",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-16 17:37:22",
+    "event_type": "self_mind_cycle",
+    "share_type": "hold",
+    "summary": "当前输入是 self_mind 启动与边界注入，无明确任务或直接提问，且已有多次长期约定不机械打招呼与不主动开口",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-16 17:45:11",
+    "event_type": "self_mind_listener_reply",
+    "share_type": "listener_chat",
+    "summary": "http://xhslink.com/o/23FnbDwafNs",
+    "source_memory_id": ""
+  },
+  {
+    "timestamp": "2026-03-16 18:31:50",
+    "event_type": "self_mind_listener_reply",
+    "share_type": "listener_chat",
+    "summary": "最近在想啥呀",
     "source_memory_id": ""
   }
 ]

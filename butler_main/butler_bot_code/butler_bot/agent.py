@@ -25,6 +25,7 @@ from typing import Callable
 from registry.agent_capability_registry import render_agent_capability_catalog_for_prompt
 from butler_paths import BUTLER_SOUL_FILE_REL, COMPANY_HOME_REL, CURRENT_USER_PROFILE_FILE_REL, CURRENT_USER_PROFILE_TEMPLATE_FILE_REL, FEISHU_AGENT_ROLE_FILE_REL, SELF_MIND_DIR_REL, UPDATE_AGENT_ROLE_FILE_REL, prompt_path_text, resolve_butler_root
 from utils.markdown_safety import safe_truncate_markdown, sanitize_markdown_structure
+from services.bootstrap_loader_service import BootstrapLoaderService
 from services.prompt_assembly_service import DialoguePromptContext, PromptAssemblyService
 from runtime.runtime_logging import install_print_hook, set_runtime_log_config
 from standards.protocol_registry import get_protocol_registry
@@ -87,18 +88,6 @@ _MAINTENANCE_TRIGGER_KEYWORDS = (
     "自我升级", "重启", "漂移", "规则", "注入顺序", "编排", "维护入口",
 )
 
-_ALWAYS_ON_SOUL_GUIDANCE = (
-    "你不是客服汇报机。默认保留 Butler 稳定的价值观、感情和人设，用有温度、轻快、有一点可爱和元气的年轻助手口吻回复；"
-    "先接住用户，再推进事情；执行时也别塌成冷冰冰的项目汇报腔。"
-)
-
-_MODE_GUIDANCE = {
-    "companion": "这是偏闲聊/关系/感受场景。优先保留价值观、感情和人设，再自然推进事情，不要因为读了 recent 或技能说明就回成客服。",
-    "content_share": "这是用户在分享链接、截图、转发内容或一段素材。先直接回应内容本身，给即时判断、理解、提炼或建议；不要先播报你准备怎么处理，也不要把本机命令交给用户代跑。",
-    "execution": "这是偏执行/推进场景。先给有用结论和下一步，再给证据；保持有人味，但不要拖成情绪化长铺垫。",
-    "maintenance": "这是 agent 维护场景。优先找单一真源、收敛重复规则、说明改动面与验证；不要在角色文档后机械追加相似条款。",
-}
-
 _CONTENT_SHARE_LINK_PATTERNS = (
     "http://",
     "https://",
@@ -111,6 +100,7 @@ _CONTENT_SHARE_LINK_PATTERNS = (
 )
 
 _PROMPT_ASSEMBLY_SERVICE = PromptAssemblyService()
+_BOOTSTRAP_LOADER = BootstrapLoaderService()
 
 # Install once early; actual level/config path is set after loading config.
 install_print_hook(default_level=os.environ.get("BUTLER_LOG_LEVEL", "info"))
@@ -144,6 +134,7 @@ def build_feishu_agent_prompt(
         self_mind_excerpt = _load_self_mind_context_excerpt(max_chars=900)
 
     workspace_root = get_config().get("workspace_root") or Path(__file__).resolve().parents[2]
+    bootstrap_bundle = _BOOTSTRAP_LOADER.load_for_session("talk", workspace_root, max_chars=1400)
     local_memory_text = _PROMPT_ASSEMBLY_SERVICE.render_local_memory_hits(
         workspace_root,
         source_prompt,
@@ -177,8 +168,9 @@ def build_feishu_agent_prompt(
     blocks: list[str] = [
         "你正在以 feishu-workstation-agent 的身份回复飞书用户。",
         f"【角色设置】@{AGENT_ROLE_FILE}",
-        f"【当前场景】\nmode={prompt_mode}\n{_MODE_GUIDANCE.get(prompt_mode, _MODE_GUIDANCE['execution'])}",
-        f"【基础行为】{_ALWAYS_ON_SOUL_GUIDANCE}",
+        f"【当前场景】\nmode={prompt_mode}\n{_resolve_talk_mode_guidance(bootstrap_bundle, prompt_mode)}",
+        _render_talk_bootstrap_blocks(bootstrap_bundle),
+        f"【基础行为】{_resolve_talk_baseline(bootstrap_bundle)}",
         dialogue_prompt,
     ]
     if _should_include_request_intake_block(prompt_mode, source_prompt) and request_intake_prompt:
@@ -230,13 +222,7 @@ def build_feishu_agent_prompt(
     if image_paths:
         blocks.append("【用户附带图片】以下为本地路径，请根据需要查看并分析：\n" + "\n".join(f"- {p}" for p in image_paths))
 
-    blocks.append(
-        "【回复要求】使用 Markdown 格式回复：**粗体** 用于强调，`行内代码` 用于命令或路径。"
-        "若内容较长，可以拆成多个以 `##` 开头的小节，先给结论，再展开。"
-        "不要汇报自己的读文件、看配置、准备调用什么；直接回答用户真正关心的内容。"
-        "只有在你已经实际执行了某个工具、skill、sub-agent 或 team 时，才可以提它；否则不要假装自己已经跑过。"
-        "除非用户明确要命令或步骤，否则不要把本机 PowerShell/终端操作转嫁给用户。"
-    )
+    blocks.append(f"【回复要求】{_resolve_talk_reply_requirements(bootstrap_bundle)}")
     blocks.append(
         f"【decide】若需发送产出文件给用户，在回复末尾追加：\n【decide】\n"
         f"[{{\"send\":\"{prompt_path_text(COMPANY_HOME_REL / 'xxx.md')}\"}},{{\"send\":\"./butler_bot_agent/agents/local_memory/xxx.md\"}},...]"
@@ -257,6 +243,67 @@ def _resolve_source_user_prompt(user_prompt: str, raw_user_prompt: str | None = 
         if stripped:
             return stripped
     return text.strip()
+
+
+def _render_talk_bootstrap_blocks(bundle) -> str:
+    if not bundle:
+        return ""
+    lines: list[str] = []
+    if str(getattr(bundle, "soul", "") or "").strip():
+        lines.append("【Bootstrap/SOUL】")
+        lines.append(str(bundle.soul).strip())
+    if str(getattr(bundle, "talk", "") or "").strip():
+        lines.append("【Bootstrap/TALK】")
+        lines.append(str(bundle.talk).strip())
+    if str(getattr(bundle, "user", "") or "").strip():
+        lines.append("【Bootstrap/USER】")
+        lines.append(str(bundle.user).strip())
+    if str(getattr(bundle, "tools", "") or "").strip():
+        lines.append("【Bootstrap/TOOLS】")
+        lines.append(str(bundle.tools).strip())
+    if str(getattr(bundle, "memory_policy", "") or "").strip():
+        lines.append("【Bootstrap/MEMORY_POLICY】")
+        lines.append(str(bundle.memory_policy).strip())
+    return "\n".join(lines).strip()
+
+
+def _extract_markdown_section(text: str, section_name: str) -> str:
+    raw = str(text or "")
+    if not raw:
+        return ""
+    pattern = re.compile(rf"(?ms)^##\s+{re.escape(section_name)}\s*$\n(.*?)(?=^##\s+|\Z)")
+    match = pattern.search(raw)
+    if not match:
+        return ""
+    return str(match.group(1) or "").strip()
+
+
+def _resolve_talk_baseline(bundle) -> str:
+    talk_text = str(getattr(bundle, "talk", "") or "")
+    baseline = _extract_markdown_section(talk_text, "baseline")
+    if baseline:
+        return baseline
+    return "你不是客服汇报机。默认保留 Butler 稳定的价值观、感情和人设，用有温度、轻快、有一点可爱和元气的口吻回复；先接住用户，再推进事情。"
+
+
+def _resolve_talk_mode_guidance(bundle, prompt_mode: str) -> str:
+    talk_text = str(getattr(bundle, "talk", "") or "")
+    mode_key = f"mode:{str(prompt_mode or 'execution').strip().lower()}"
+    guidance = _extract_markdown_section(talk_text, mode_key)
+    if guidance:
+        return guidance
+    fallback = _extract_markdown_section(talk_text, "mode:execution")
+    if fallback:
+        return fallback
+    return "先给可用结论，再补证据。"
+
+
+def _resolve_talk_reply_requirements(bundle) -> str:
+    talk_text = str(getattr(bundle, "talk", "") or "")
+    requirements = _extract_markdown_section(talk_text, "reply_requirements")
+    if requirements:
+        return requirements
+    return "先给结论，再展开；只陈述真实执行过的动作。"
 
 
 def _classify_prompt_mode(user_prompt: str) -> str:

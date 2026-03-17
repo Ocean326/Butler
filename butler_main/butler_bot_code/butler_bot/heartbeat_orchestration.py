@@ -12,6 +12,7 @@ import uuid
 from registry.agent_capability_registry import load_team_catalog, load_team_definition
 from execution.agent_team_executor import AgentTeamExecutor
 from butler_paths import SKILLS_HOME_REL, prompt_path_text, resolve_butler_root
+from services.bootstrap_loader_service import BootstrapLoaderService
 from services.prompt_assembly_service import PlannerPromptContext, PromptAssemblyService
 from runtime.runtime_router import RuntimeRouter
 from services.task_ledger_service import TaskLedgerService
@@ -61,8 +62,13 @@ class HeartbeatOrchestrator:
         self._manager = manager
         self._team_executor = AgentTeamExecutor(manager._run_model_fn)
         self._prompt_assembly_service = PromptAssemblyService()
+        self._bootstrap_loader = BootstrapLoaderService()
         self._runtime_router = RuntimeRouter()
         self._protocol_registry = get_protocol_registry()
+
+    def _bootstrap_text(self, session_type: str, workspace: str, max_chars: int = 900) -> str:
+        bundle = self._bootstrap_loader.load_for_session(session_type, workspace, max_chars=max_chars)
+        return bundle.render()
 
     def _extract_tell_user_markdown(self, text: str) -> str:
         raw = str(text or "")
@@ -777,7 +783,10 @@ class HeartbeatOrchestrator:
             return payload
 
         role_excerpt = self._manager._load_subagent_role_excerpt(workspace, role_name)
+        bootstrap_text = self._bootstrap_text("heartbeat_executor", workspace, max_chars=700)
         prompt_parts = [self._manager._load_heartbeat_workspace_hint(workspace)]
+        if bootstrap_text:
+            prompt_parts.append(f"【Bootstrap】\n{bootstrap_text}\n\n")
         if role_excerpt:
             prompt_parts.append(f"【执行角色】\n{role_excerpt}\n\n")
         prompt_parts.append(self._build_process_role_block(process_role))
@@ -1013,9 +1022,13 @@ class HeartbeatOrchestrator:
 
     def build_planning_prompt(self, cfg: dict, heartbeat_cfg: dict, workspace: str) -> str:
         context = self.build_planning_context(heartbeat_cfg, workspace)
+        bootstrap_text = self._bootstrap_text("heartbeat_planner", workspace)
         template = self._manager._load_heartbeat_prompt_template(workspace)
         if "{json_schema}" not in template:
             template = template.rstrip() + "\n\n## JSON Schema\n\n{json_schema}\n"
+        # 兼容历史模板里把“长期记忆候选”写成字面量占位符的旧写法。
+        if "{local_memory_text}" not in template and "{长期记忆候选}" in template:
+            template = template.replace("{长期记忆候选}", "{长期记忆候选}\n\n{local_memory_text}")
         if "{tasks_context}" not in template and "{short_tasks_json}" not in template and "{long_tasks_json}" not in template:
             template = template.rstrip() + "\n\n## 任务与上下文（heartbeat_tasks.md）\n\n{tasks_context}\n"
         if "{context_text}" not in template and "{agent_prompt}" not in template:
@@ -1038,7 +1051,7 @@ class HeartbeatOrchestrator:
             "并尽量使用 `execution_kind=maintenance` 或 `capability_type=agent_maintenance`。\n"
             "经理型 planner 负责拆出 `process_role`，例如 executor / test / acceptance；update-agent 负责先找单一真源、收敛重复规则、生成 patch plan、说明验证与风险；若需要身体目录改动或重启，走统一 upgrade_request 入口。"
         )
-        return self._prompt_assembly_service.assemble_planner_prompt(
+        assembled = self._prompt_assembly_service.assemble_planner_prompt(
             PlannerPromptContext(
                 base_prompt_text=template,
                 json_schema=json_schema,
@@ -1062,6 +1075,9 @@ class HeartbeatOrchestrator:
                 runtime_context_text=context.context_text,
             )
         )
+        if not bootstrap_text:
+            return assembled
+        return f"【Bootstrap】\n{bootstrap_text}\n\n{assembled}".strip()
 
     def default_plan(self, workspace: str) -> dict:
         return self.build_status_only_plan(

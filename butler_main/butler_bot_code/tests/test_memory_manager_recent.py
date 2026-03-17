@@ -538,7 +538,7 @@ class MemoryManagerRecentTests(unittest.TestCase):
             self.assertIn("【最近在想什么】", prompt)
             self.assertIn("【关系与情绪信号】", prompt)
 
-    def test_prepare_user_prompt_with_recent_uses_lightweight_context_for_content_share(self):
+    def test_prepare_user_prompt_with_recent_still_injects_context_for_content_share(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
             manager = MemoryManager(config_provider=lambda: {"workspace_root": str(workspace)}, run_model_fn=lambda *_: ("", False))
@@ -564,12 +564,10 @@ class MemoryManagerRecentTests(unittest.TestCase):
                 "Ocean:\n一个文件让 Claude Code 战斗力翻倍 http://xhslink.com/o/AirylJSxpim",
                 recent_mode="content_share",
             )
-            self.assertEqual(
-                prompt,
-                "Ocean:\n一个文件让 Claude Code 战斗力翻倍 http://xhslink.com/o/AirylJSxpim",
-            )
-            self.assertNotIn("【recent_memory", prompt)
-            self.assertNotIn("【使用规则】", prompt)
+            self.assertIn("【recent_memory", prompt)
+            self.assertIn("之前讨论过如何抓取小红书", prompt)
+            self.assertIn("【使用规则】默认沿用 recent_memory 做上下文续接。", prompt)
+            self.assertIn("Ocean:\n一个文件让 Claude Code 战斗力翻倍 http://xhslink.com/o/AirylJSxpim", prompt)
 
     def test_recent_summary_pool_is_generated_and_injected_by_relevance(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -4,10 +4,19 @@
 
 ---
 
+## 0317
+
+- [0317_仓库现状与manager边界报告.md](0317/0317_仓库现状与manager边界报告.md)
+- [0317_recent到local_memory机制现状.md](0317/0317_recent到local_memory机制现状.md)
+
 ## 0316
 
+- [0316_bootstrap升级方案和计划.md](0316/0316_bootstrap升级方案和计划.md)
+- [0316_prompt组成说明_talk_heartbeat_self_mind.md](0316/0316_prompt组成说明_talk_heartbeat_self_mind.md)
 - [0316现状分析与升级计划.md](0316/0316现状分析与升级计划.md)
 - [0316执行结果_解耦与心跳治理.md](0316/0316执行结果_解耦与心跳治理.md)
+- [0316执行结果_bootstrap升级落地.md](0316/0316执行结果_bootstrap升级落地.md)
+- [deep-research-report.md](0316/deep-research-report.md)
 
 ## 0315
 

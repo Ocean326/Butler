@@ -27,14 +27,15 @@
 ## 目录
 
 - `agents/`：主 Agent。当前包含：
-	- 对外表达层：`feishu-workstation-agent`、`butler-continuation-agent`
-	- 内在主层：`heartbeat-planner-agent`、`subconscious-agent`（记忆分层巩固 / 再巩固）
+	- 入口与运行层：`feishu-workstation-agent`、`heartbeat-planner-agent`
 - `agents/sub-agents/`：场景执行层与专业执行者（orchestrator、secretary、literature、heartbeat-executor 等）
+- `bootstrap/`：当前 prompt 真源（SOUL/TALK/HEARTBEAT/EXECUTOR/SELF_MIND/USER/TOOLS/MEMORY_POLICY）
 - `agents/docs/`：架构、规范、流程、交接模板
 - `工作区/`：实际工作文件夹与模板
 
 ## 当前运行真源速记
 
+- talk/self_mind/heartbeat bootstrap 真源：`bootstrap/*.md`
 - planner 角色真源：`agents/heartbeat-planner-agent.md`
 - planner context 真源：`agents/heartbeat-planner-context.md`
 - heartbeat prompt 模板真源：`agents/heartbeat-planner-prompt.md`
@@ -43,6 +44,14 @@
 - 心跳任务变更日志：`agents/local_memory/heartbeat_tasks/task_change_log.jsonl`
 - 长期记忆实现层：`agents/local_memory/`
 - 工作区 `local_memory`：治理镜像、说明与草稿层，不等于单一运行真源
+
+## 角色迁移
+
+以下历史 role 已迁移到 `过时/roles_legacy_20260316/`，不再作为运行时 prompt 真源：
+
+1. `butler-agent.md`
+2. `butler-continuation-agent.md`
+3. `subconscious-agent.md`
 
 ---
 维护者：`feishu_workstation_agent`（飞书工作站）

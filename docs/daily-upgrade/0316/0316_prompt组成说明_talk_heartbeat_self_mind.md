@@ -1,400 +1,474 @@
-# 0316 Prompt 组成说明：Talk / Heartbeat / Self-Mind
+# 当前 Prompt 注入限制说明（Talk / Heartbeat / Self-Mind）
 
-## 1. 这轮调整后的总原则
+## 1. 目的
 
-这轮 prompt 治理参考了 `工作区/学习项目/research-claw` 的 bootstrap 思路，核心不是继续给主 prompt 叠规则，而是把 prompt 拆成几层：
+这份文档描述 **当前代码真实生效** 的 prompt 注入规则，而不是历史设计稿。
 
-1. 稳定层
-   - 人格、角色、长期边界、固定协议。
-   - 这类内容应尽量稳定，来自少数真源文件。
-2. 动态层
-   - 当前输入、少量相关 recent、命中的长期记忆、任务上下文。
-   - 只在当前轮真的相关时加载。
-3. 能力层
-   - skills、sub-agent、team、公用能力目录。
-   - 只在用户明确提到，或当前任务确实需要时加载。
+关注点只有三类：
 
-这次的明确收敛点：
+1. 哪些内容会被注入
+2. 在什么条件下会被注入或跳过
+3. 现在仍有哪些限制会影响效果
 
-1. `talk` 不再默认把 `request_intake + skills 目录 + agent capabilities + self_mind 上下文` 一起塞进主 prompt。
-2. `talk` 不再在 prompt 中重复注入 `当前输入` / `原始输入` / `用户消息` 三份同义内容。
-3. `heartbeat planner` 改成模板真源优先，不再因为模板里没写某个块，就自动把一堆能力目录补进去。
+主要实现位置：
+
+- `butler_main/butler_bot_code/butler_bot/butler_bot.py`
+- `butler_main/butler_bot_code/butler_bot/agent.py`
+- `butler_main/butler_bot_code/butler_bot/memory_manager.py`
+- `butler_main/butler_bot_code/butler_bot/services/prompt_assembly_service.py`
+- `butler_main/butler_bot_code/butler_bot/services/self_mind_prompt_service.py`
+- `butler_main/butler_bot_code/butler_bot/heartbeat_orchestration.py`
+- `butler_main/butler_bot_code/butler_bot/services/bootstrap_loader_service.py`
 
 ---
 
-## 2. Talk Prompt 组成
+## 2. 总体原则
 
-### 2.1 入口链路
+当前 Butler 的 prompt 由 4 层组成：
 
-主入口在：
+1. bootstrap 层
+   - 来自 `bootstrap/` 目录的稳定真源
+2. 角色/协议层
+   - 来自 role 文档和 protocol registry
+3. 动态上下文层
+   - recent、local memory、self_mind、任务上下文等
+4. 能力层
+   - skills、sub-agent、team、公用能力目录
 
-- `butler_main/butler_bot_code/butler_bot/butler_bot.py`
+当前限制的核心思路是：
 
-执行顺序：
+1. bootstrap 默认加载，但有字数截断
+2. 动态上下文按链路分别装载，不再所有链路共用一锅炖
+3. 能力层按条件注入，不默认全开
+4. Talk 仍然是限制最多、最容易被裁剪的一条链
 
-1. 先处理运行时控制指令。
-2. 再处理显式 heartbeat 任务命令。
-3. 若命中 `self-mind:` / `@self-mind:` 这类前缀，则改走 self_mind 独立聊天链，不走主 talk。
-4. 普通消息进入主 talk。
+---
 
-### 2.2 recent 处理
+## 3. Bootstrap 装载限制
 
-recent 由这里注入：
+由 `BootstrapLoaderService.load_for_session()` 决定。
 
-- `butler_main/butler_bot_code/butler_bot/memory_manager.py`
-- 方法：`prepare_user_prompt_with_recent()`
+### 3.1 Talk
 
-当前规则：
+Talk 会装载：
 
-1. 普通执行类消息：
-   - 仍会注入 `recent_memory`、recent summary、显式约束、续接提示。
-2. 素材分享 / 链接转发类消息：
-   - `RequestIntakeService.classify()` 识别为 `content_share`。
-   - 这类消息改走轻量模式，不再默认注入整段 `recent_memory` 和那套“默认续接协议”。
+1. `SOUL.md`
+2. `TALK.md`
+3. `USER.md`
+4. `TOOLS.md`
+5. `MEMORY_POLICY.md`
 
-对应入口：
+### 3.2 Heartbeat Planner
 
-- `butler_main/butler_bot_code/butler_bot/services/request_intake_service.py`
-- `butler_main/butler_bot_code/butler_bot/butler_bot.py`
+Heartbeat planner 会装载：
 
-### 2.3 主 prompt 组装
+1. `HEARTBEAT.md`
+2. `TOOLS.md`
+3. `MEMORY_POLICY.md`
 
-主组装函数在：
+### 3.3 Heartbeat Executor
 
-- `butler_main/butler_bot_code/butler_bot/agent.py`
-- 方法：`build_feishu_agent_prompt()`
+Heartbeat executor 会装载：
 
-当前由 5 层组成。
+1. `EXECUTOR.md`
+2. `TOOLS.md`
+3. `MEMORY_POLICY.md`
 
-#### A. 角色入口层
+### 3.4 Self-Mind
 
-固定写入：
+`self_mind_cycle` 和 `self_mind_chat` 会装载：
 
-1. `你正在以 feishu-workstation-agent 的身份回复飞书用户。`
-2. `【角色设置】@./butler_main/butler_bot_agent/agents/feishu-workstation-agent.md`
-3. `【当前场景】mode=...`
-4. `【基础行为】...`
+1. `SOUL.md`
+2. `SELF_MIND.md`
+3. `USER.md`
+4. `MEMORY_POLICY.md`
 
-这里的 `mode` 由 `_classify_prompt_mode()` 决定，当前有：
+### 3.5 当前限制
+
+1. bootstrap 不是全文注入，而是 excerpt；默认有 `max_chars` 截断
+2. 不同 session type 只能读自己那组 bootstrap，不会跨会话自动补全
+3. 如果 bootstrap 文件存在重复规则，当前代码不会去重，只是照读
+
+---
+
+## 4. Talk Prompt 注入限制
+
+Talk 主入口：`butler_bot.py`
+
+普通消息链路顺序：
+
+1. `begin_pending_turn()`
+2. `prepare_user_prompt_with_recent()`
+3. `build_feishu_agent_prompt()`
+4. 调模型
+5. `on_reply_sent_async()` 回写 recent/local memory
+
+### 4.1 recent 注入
+
+由 `MemoryManager.prepare_user_prompt_with_recent()` 决定。
+
+当前会尝试注入：
+
+1. `recent_memory`
+2. `recent_summary`
+3. `recent_summary_archive`
+4. `最近显式要求与未完约束`
+5. `pending followup`
+6. `continuation hint`
+
+当前已经生效的变化：
+
+1. 不再因为“全新任务/全新情景”直接跳过 recent 注入
+2. 不再因为 `content_share` 直接跳过 recent 注入
+3. 现在的默认规则是：`默认沿用 recent_memory 做上下文续接`
+
+当前仍存在的限制：
+
+1. 如果 `recent_text + summary_text + summary_history_text` 都为空，就不会造一个空的 recent block
+2. recent 仍是“直接拼进用户消息前面”的文本拼接，不是独立结构化对象
+3. recent 是否足够强，仍受 recent 提炼质量影响
+
+### 4.2 prompt mode 分类限制
+
+由 `agent.py::_classify_prompt_mode()` 决定，当前只有四类：
+
+1. `maintenance`
+2. `content_share`
+3. `companion`
+4. `execution`
+
+判定顺序有硬优先级：
+
+1. 先看 maintenance 关键词
+2. 再看 content_share
+3. 再看 companion
+4. 否则 execution
+
+这意味着：
+
+1. 一条消息只会进一个 mode
+2. 若同时包含“维护信号”和“分享链接”，优先命中 maintenance
+3. `content_share` 不是用户显式声明，而是按启发式规则判定
+
+### 4.3 Talk 上下文层注入限制
+
+由 `build_feishu_agent_prompt()` + `PromptAssemblyService.assemble_dialogue_prompt()` 决定。
+
+固定会进入的块：
+
+1. `feishu-workstation-agent` 角色入口
+2. `Bootstrap/TALK` 等 talk bootstrap
+3. `基础行为`
+4. `dialogue_prompt`
+5. `回复要求`
+6. `decide`
+7. `用户消息`
+
+#### 4.3.1 Soul 注入限制
+
+由 `_should_inject_butler_soul()` 决定。
+
+会注入 soul 的情况：
+
+1. `prompt_mode` 是 `companion`
+2. `prompt_mode` 是 `maintenance`
+3. 用户消息长度 >= 160
+4. 用户消息命中 `_SOUL_TRIGGER_KEYWORDS`
+
+不会注入 soul 的情况：
+
+1. 短执行消息
+2. 短分享消息，且未命中 soul 关键词
+
+这意味着：
+
+1. 不是每轮对话都看得到 soul
+2. 简短的执行/分享消息，经常拿不到 soul 层
+
+#### 4.3.2 用户画像注入限制
+
+当前会读取用户画像 excerpt，并放进 `【当前用户画像】`。
+
+限制：
+
+1. 只读 private 文件或 template 的 excerpt
+2. 有字符截断
+3. 不是命中式检索，而是固定 excerpt
+
+#### 4.3.3 local memory 注入限制
+
+由 `PromptAssemblyService.render_local_memory_hits()` 决定。
+
+特点：
+
+1. 不是整库注入，只注入 query 命中片段
+2. `limit` 默认最多 4 条
+3. `max_chars` 在 talk 中较小
+4. `memory_types` 会按 mode 收窄
+
+当前限制：
+
+1. `content_share` 和 `companion` 只查 `personal`
+2. `execution` 才会带上 `task`
+3. 命中依赖 query_text，本轮表述偏、缩写多、没提关键词时，可能查不到
+
+#### 4.3.4 self_mind 上下文注入限制
+
+只有满足下列条件才会注入 self_mind：
+
+1. `prompt_mode` 是 `companion`
+2. `prompt_mode` 是 `maintenance`
+3. 用户文本明确提到 `self_mind / self-mind / 小我 / 内心`
+
+当前限制：
+
+1. 普通 execution 不带 self_mind
+2. 普通 content_share 也不带 self_mind
+3. self_mind 注入的是 excerpt，不是完整状态
+
+### 4.4 Request Intake 注入限制
+
+由 `_should_include_request_intake_block()` 决定。
+
+会注入的情况：
+
+1. `maintenance`
+2. 文本长度 >= 180
+
+不会注入的情况：
+
+1. 多数短消息
+2. 多数短分享消息
+
+这意味着：
+
+1. 前台分诊说明现在不会在每轮都出现
+2. 短消息更轻，但也更少显式约束
+
+### 4.5 Skills 注入限制
+
+有两层限制：
+
+1. `butler_bot.py` 先决定是否把 `skills_prompt` 传进 `build_feishu_agent_prompt()`
+2. `agent.py::_should_include_skills_catalog()` 再决定是否真正拼进去
+
+当前第一层限制：
+
+- `skills_prompt = "" if recent_mode == "content_share" else _render_available_skills_prompt(workspace)`
+
+也就是说：
+
+1. 只要 `RequestIntakeService.classify()` 把这轮认成 `content_share`
+2. 当前轮 `skills_prompt` 会在入口被直接清空
+3. 后面的 `_should_include_skills_catalog()` 即使想放，也没东西可放
+
+当前第二层限制：
+
+即使不是 `content_share`，也只有文本命中这些词才会真的注入 skills：
+
+1. `skill`
+2. `技能`
+3. `mcp`
+4. `调用`
+5. `抓取`
+6. `ocr`
+7. `检索`
+
+当前影响：
+
+1. 这正是“小红书分享场景效果不稳”的关键限制之一
+2. recent 里虽然可能写着“应该走 web-note-capture-cn + web-image-ocr-cn”
+3. 但当轮如果被判成 `content_share`，技能目录本身仍可能拿不到
+
+### 4.6 Agent Capabilities 注入限制
+
+也有两层限制。
+
+当前第一层限制：
+
+- `capabilities_prompt = "" if recent_mode == "content_share" else _render_available_agent_capabilities_prompt(workspace)`
+
+因此：
+
+1. `content_share` 默认直接失去 sub-agent / team 能力目录
+
+当前第二层限制：
+
+即使不是 `content_share`，还要满足：
+
+1. `prompt_mode` 必须属于 `execution` 或 `maintenance`
+2. 文本命中以下关键词之一：
+   - `sub-agent`
+   - `subagent`
+   - `agent team`
+   - `team`
+   - `并行`
+   - `分工`
+   - `协作`
+
+当前影响：
+
+1. companion 和 content_share 默认看不到 agent capability 目录
+2. execution 里如果用户没写这些词，也不会注入
+
+### 4.7 协议层注入限制
+
+#### task_collaboration
+
+只在以下 mode 注入：
+
+1. `execution`
+2. `maintenance`
+
+#### self_mind_collaboration
+
+只在以下情况注入：
 
 1. `companion`
-2. `content_share`
-3. `execution`
-4. `maintenance`
+2. `maintenance`
+3. 已注入 soul 且用户明确提到 `self_mind / self-mind / 小我 / 内心`
 
-#### B. 对话上下文层
+#### self_update
 
-由 `PromptAssemblyService.assemble_dialogue_prompt()` 负责，文件：
+只在 `maintenance` 注入。
 
-- `butler_main/butler_bot_code/butler_bot/services/prompt_assembly_service.py`
+当前影响：
 
-当前会按需拼这些块：
-
-1. `你是 Butler...` 基础角色块
-2. `【灵魂摘录】`
-3. `【当前用户画像】`
-4. `【长期记忆命中】`
-5. `【self_mind 当前上下文】`
-6. `【self_mind 认知体系】`
-
-这轮已移除：
-
-1. `【当前输入】`
-2. `【原始用户输入】`
-
-原因是主 prompt 末尾本来就有 `【用户消息】`，重复注入会放大“解释流程、复述任务、套规则”的倾向。
-
-#### C. 协议层
-
-按模式条件性注入：
-
-1. `maintenance`：
-   - `update-agent` 维护入口
-   - `self_update` 协议
-2. `execution / maintenance`：
-   - `task_collaboration` 协议
-3. `companion / maintenance / 明确提到 self_mind`：
-   - `self_mind_collaboration` 协议
-
-真源来自：
-
-- `butler_main/butler_bot_code/butler_bot/standards/protocol_registry.py`
-
-#### D. 能力层
-
-这轮改成按需加载，不再默认全开。
-
-1. Skills 目录
-   - 仅在用户文本明确出现 `skill / 技能 / mcp / 调用 / 抓取 / ocr / 检索` 这类信号时注入。
-2. Sub-agent / Team 目录
-   - 仅在用户文本明确出现 `sub-agent / team / 并行 / 分工 / 协作` 这类信号时注入。
-3. `content_share` 默认不再带这两层。
-
-#### E. 输出约束层
-
-主 talk 结尾固定保留：
-
-1. `【回复要求】`
-2. `【decide】`
-3. `【用户消息】`
-
-当前约束已经简化为四个核心点：
-
-1. 用 Markdown，长内容先结论后展开。
-2. 不要汇报自己“读了什么、准备调用什么”。
-3. 只有真的执行过某个工具 / skill / sub-agent / team，才允许提它。
-4. 除非用户明确要命令或步骤，否则不要把本机操作甩给用户。
-
-### 2.4 当前默认不会再注入的内容
-
-对于普通主 talk：
-
-1. 不再因为“有灵魂”就顺手注入 `self_mind` 上下文。
-2. 不再因为“可能要执行”就顺手注入 skills 全目录。
-3. 不再因为“可能要协作”就顺手注入 sub-agent / team 全目录。
-4. 短消息和素材分享，默认不再带 `前台分诊` 大段说明。
+1. 普通分享消息通常拿不到 task 协议和 self_update 协议
+2. 短执行消息如果没到 maintenance，也不会被强制拉进维护协议
 
 ---
 
-## 3. Heartbeat Prompt 组成
+## 5. Heartbeat Prompt 注入限制
 
-Heartbeat 分两层：
+### 5.1 Planner
 
-1. planner prompt
-2. executor / branch prompt
+由 `HeartbeatOrchestrator.build_planning_prompt()` 构造。
 
-### 3.1 Heartbeat Planner Prompt
+Planner 动态上下文会准备：
 
-入口文件：
-
-- `butler_main/butler_bot_code/butler_bot/heartbeat_orchestration.py`
-- 方法：`build_planning_context()`
-- 方法：`build_planning_prompt()`
-
-模板真源：
-
-- `butler_main/butler_bot_agent/agents/heartbeat-planner-prompt.md`
-
-#### A. Planner 动态上下文
-
-`build_planning_context()` 当前会准备这些数据：
-
-1. `tasks_md_text`
-   - 来自 `heartbeat_tasks.md`
+1. `tasks_context`
 2. `recent_text`
-   - unified heartbeat recent
 3. `context_text`
-   - 运行时额外上下文
 4. `local_memory_text`
-   - heartbeat 查询命中的长期记忆 + baseline
 5. `soul_text`
-   - Butler soul 摘录
 6. `role_text`
-   - heartbeat planner role 摘录
 7. `task_workspace_text`
-   - 当前任务工作区视图
 8. `skills_text`
 9. `subagents_text`
 10. `teams_text`
 11. `public_library_text`
+12. `maintenance_entry_text`
 
-#### B. Planner 模板填充原则
+当前限制：
 
-这轮之前的问题：
-
-1. 如果模板里没写某个占位符，代码会自动补 `skills / teams / public library / maintenance` 等整块。
-2. 这使得 planner prompt 很容易越补越厚，模板不再是真源。
-
-这轮之后的原则：
-
-1. 模板文件优先。
-2. 代码只补三个硬必需项：
-   - `json_schema`
+1. planner 侧是“先供数，再看模板占位符是否引用”
+2. `assemble_planner_prompt()` 只做字符串替换，不做智能裁剪
+3. 如果模板没引用某块，就算上下文准备了，也不会进最终 prompt
+4. 代码仍会兜底补两个块：
    - `tasks_context`
    - `context_text`
-3. 其他内容如果模板没引用，就尊重模板不注入。
+5. bootstrap 也仍然是 excerpt，不是完整文件
 
-这点更接近 OpenClaw 的 bootstrap 方式：模板决定行为边界，代码只负责供数。
+### 5.2 Executor / Branch
 
-### 3.2 Heartbeat Executor / Branch Prompt
+Heartbeat branch prompt 不是全量大 prompt，而是按 branch 契约拼。
 
-branch 执行入口：
-
-- `butler_main/butler_bot_code/butler_bot/heartbeat_orchestration.py`
-- 方法：`run_branch()`
-
-当前顺序如下：
-
-1. `heartbeat-executor-workspace-hint.md`
-2. `【执行角色】`
-   - 对应具体 `agent_role` 的 role 摘录
-3. `【流程角色】`
-   - executor / test / acceptance / manager 的阶段约束
-4. `【本分支指定 skill】`
-   - 仅在 `requires_skill_read=true` 时注入
-5. `【任务协作协议】`
-6. 若 `role_name == update-agent`
-   - 再加 `统一维护入口协议`
-   - 再加 `自我更新协作协议`
-7. `【heartbeat 执行协议】`
-8. `【运行时路由】`
-   - 当前 branch 的 runtime profile
-9. `【heartbeat 回执约定】`
-10. branch 自身的 `prompt`
-
-所以 heartbeat executor 现在本质上是：
-
-1. 工作区约定
-2. 分支角色约束
-3. 协议
-4. 当前 branch 任务
-
-而不是一个全局大杂烩 prompt。
-
-### 3.3 Heartbeat Team / Sub-Agent
-
-若 branch 落到 team / sub-agent：
-
-- `butler_main/butler_bot_code/butler_bot/execution/agent_team_executor.py`
-
-`sub-agent` prompt 由这些块组成：
+当前固定链路：
 
 1. workspace hint
-2. `【子Agent角色】`
-3. `【运行约束】`
-4. `【调用原因】`
-5. `【前序团队上下文】`
-6. `【输出契约】`
-7. `【本轮任务】`
+2. 执行角色/流程角色
+3. 协议块
+4. 运行时路由
+5. branch 自身 prompt
 
-这条链已经比较接近 OpenClaw 的做法：任务 prompt 明显比主对话 prompt 更窄、更契约化。
+skill 注入限制：
 
----
+1. 只有 branch JSON 里 `requires_skill_read=true` 才会带 `【本分支指定 skill】`
+2. 默认很多 branch 都是 `false`
+3. 即使 skill 已登记，也不会自动全目录注入
 
-## 4. Self-Mind Prompt 组成
+当前影响：
 
-Self-mind 现在分两条独立 prompt：
-
-1. cycle prompt
-2. chat prompt
-
-真源文件：
-
-- `butler_main/butler_bot_code/butler_bot/services/self_mind_prompt_service.py`
-
-### 4.1 Self-Mind Cycle Prompt
-
-入口：
-
-- `MemoryManager._build_self_mind_cycle_prompt()`
-- `SelfMindPromptService.build_cycle_prompt()`
-
-当前组成固定为 3 个输入块：
-
-1. `【1. 当前上下文】`
-   - `self_mind current_context`
-2. `【2. 用户画像与陪伴记忆】`
-   - companion memory
-3. `【3. 自己最近续思】`
-   - raw thoughts / trace
-
-输出要求：
-
-1. 只输出 JSON
-2. 只能在 `talk / agent / hold` 三选一
-
-重要的是它明确不读：
-
-1. 主 talk recent
-2. heartbeat recent
-
-也不允许：
-
-1. 指挥 talk-heartbeat
-2. 通过旧 bridge 写回 heartbeat
-
-### 4.2 Self-Mind Chat Prompt
-
-入口：
-
-- `MemoryManager._build_self_mind_chat_prompt()`
-- `SelfMindPromptService.build_chat_prompt()`
-
-当前输入块：
-
-1. `【self_mind 当前上下文】`
-2. `【用户偏好与陪伴记忆】`
-3. `【self_mind 自己最近聊天】`
-4. `【self_mind 自我认知】`
-5. `【最近续思痕迹】`
-6. `【用户对 self_mind 说的话】`
-
-当前不读：
-
-1. 主 talk recent
-2. heartbeat recent
-
-定位是：
-
-1. 独立聊天
-2. 陪伴
-3. 解释自己观察到的机制问题
-4. 但不把自己说成主执行体或第二个调度器
+1. Heartbeat executor 的能力曝光更严格
+2. planner 如果没把 `requires_skill_read` 规划出来，executor 不会自己补读 skill
 
 ---
 
-## 5. 当前三条链的差异总结
+## 6. Self-Mind Prompt 注入限制
 
-### 5.1 Talk
+### 6.1 self_mind_cycle
 
-目标：
+由 `SelfMindPromptService.build_cycle_prompt()` 生成。
 
-1. 接住用户
-2. 直接回答
-3. 必要时再触发执行能力
+固定只有 3 个输入块：
 
-特点：
+1. `当前上下文`
+2. `用户画像与陪伴记忆`
+3. `自己最近续思`
 
-1. 最容易被历史 recent、人格、人设、技能目录污染
-2. 所以现在重点是减法和按需加载
+当前限制：
 
-### 5.2 Heartbeat
+1. 不读主 talk recent
+2. 不读 heartbeat recent
+3. 不读 skills / sub-agent / team 目录
+4. 输出被限制为 JSON schema，且 `decision` 只能是 `talk|agent|hold`
 
-目标：
+### 6.2 self_mind_chat
 
-1. 自主规划
-2. 分支执行
-3. 状态同步
+由 `SelfMindPromptService.build_chat_prompt()` 生成。
 
-特点：
+固定输入块：
 
-1. planner 适合模板真源
-2. executor 适合契约化任务 prompt
+1. `self_mind 当前上下文`
+2. `用户偏好与陪伴记忆`
+3. `self_mind 自己最近聊天`
+4. `self_mind 自我认知`
+5. `最近续思痕迹`
+6. `用户对 self_mind 说的话`
 
-### 5.3 Self-Mind
+当前限制：
 
-目标：
-
-1. 陪伴
-2. 观察
-3. 续思
-4. 解释自身机制
-
-特点：
-
-1. 应尽量隔离主执行流
-2. 读自己的上下文、陪伴记忆和聊天历史
-3. 不再读取 talk / heartbeat recent
+1. 不读主 talk recent
+2. 不读 heartbeat recent
+3. 不读 talk 的 skills/capabilities
+4. 定位是陪伴型独立聊天，不是第二个主执行器
 
 ---
 
-## 6. 后续建议
+## 7. 当前最关键的限制汇总
 
-如果继续沿 OpenClaw 的方向做，下一步最值得落的不是继续加 mode，而是这三件事：
+### 7.1 已经放开的限制
 
-1. 给 `talk` 也建立真正的 bootstrap 真源
-   - 例如把稳定层收口成固定的 `SOUL / ROLE / USER / RULES` 四个文件。
-2. 把 `recent_memory` 从“直接拼进用户消息”改成“结构化 context block”
-   - 不再在 `user_prompt` 字符串里混入解释性说明。
-3. 给 `skills / capabilities` 做显式引用制
-   - 没命中就不进 prompt，而不是先塞进去再靠模型自觉忽略。
+1. Talk 现在默认注入 recent，不再因为“新任务”跳过
+2. Talk 现在默认注入 recent，不再因为 `content_share` 跳过
+
+### 7.2 仍然最影响效果的限制
+
+1. `content_share` 仍会在入口清空 `skills_prompt`
+2. `content_share` 仍会在入口清空 `agent_capabilities_prompt`
+3. skills/capabilities 还有第二层关键词门槛
+4. local memory 是命中式检索，不保证每轮都召回到关键长期约束
+5. recent 仍是文本拼接，不是结构化上下文对象
+6. self_mind 与主 talk / heartbeat 是隔离的，不能指望它替主链补行为约束
+
+### 7.3 对“小红书分享 + skill解析 + 计入头脑风暴”场景的直接影响
+
+当前真实情况是：
+
+1. 这类消息现在能拿到 recent
+2. recent 里也可能已经写了“应走 web-note-capture-cn / web-image-ocr-cn / BrainStorm”
+3. 但如果这轮被判成 `content_share`，skills 和 capability 目录仍可能直接缺席
+4. 所以模型更容易回成“理解内容、总结内容、承诺后续”，而不是稳定进入执行链
+
+---
+
+## 8. 建议作为后续修正入口的点
+
+如果后续还要继续收口，优先级建议如下：
+
+1. 先处理 `content_share` 对 `skills_prompt` / `agent_capabilities_prompt` 的硬清空
+2. 再决定是否要把“网页分享 + 抓取/OCR/BrainStorm”做成更强的 execution-like 模式
+3. 最后再考虑把 recent 从文本拼接升级为结构化 context block
+
+这样改动最小，但能直接改善当前最明显的行为落差。

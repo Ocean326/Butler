@@ -1,3 +1,15 @@
+---
+
+## 16. 当前认知小结：Bootstrap 与三条链（2026-03-16）
+
+- **Bootstrap 真源分层已经落地**：以 `SOUL/TALK/HEARTBEAT/EXECUTOR/SELF_MIND/USER/TOOLS/MEMORY_POLICY` 八个真源文件为稳定层，talk / heartbeat / self_mind 的 prompt 组装统一改为「bootstrap 稳定层 + 最小动态上下文」，能力目录与技能说明不再直接写死在代码字符串里，而是通过 TOOLS/MEMORY_POLICY 约束装载。
+- **Talk / Heartbeat / Self-Mind 三条链的边界被重新划清**：talk 负责对外回答与按需触发执行，重点做减法与按需加载；heartbeat 负责后台规划、分支执行与状态同步，planner 强调模板真源与瘦身，executor 强调执行契约与 `role/output_dir` 约束；self_mind 收敛为陪伴/观察/续思与自我解释层，不再读取 talk/heartbeat recent，不再承担调度职责。
+- **Heartbeat planner / executor 的 prompt 组成改为模板真源优先**：planner 由 `heartbeat-planner-prompt.md` + bootstrap HEARTBEAT/TOOLS/MEMORY_POLICY 驱动，代码只硬性补 `json_schema`、`tasks_context`、`context_text` 三块，不再因为模板缺 slot 就自动把 skills/teams/public library 补进去；executor/branch prompt 固定由 workspace hint、执行角色、流程角色、协作协议、自我更新协议、heartbeat 执行协议、运行时路由、回执约定与当前 branch 任务组成。
+- **memory_manager 的目标从“总黑洞”转向“轻量 orchestrator”**：近期文档明确提出继续外提四块重职责（HeartbeatPlanningFacade、TellUserFlowService、SelfMindCognitionService、RuntimeStateAuditService），并优先统一 `tell_user/message delivery` 真源，由单一发送服务负责 interactive/post/text fallback 与发送审计，planner 只产候选意图与心跳窗口说明。
+- **Self-Mind 与 Heartbeat 在执行层彻底解耦**：self_mind 对 talk/heartbeat 只读，旧 `mind_body_bridge.json` 写通路已关闭，重动作默认沉淀在 `./工作区/03_agent_upgrade/self_mind_agent_space/` 一类私有空间，由 heartbeat / task_ledger 再决定是否接入正式执行链；self_mind 的决策空间从 `talk|heartbeat|hold` 收敛为 `talk|agent|hold`，目录规划为 state/streams/views 三层以控制 `current_context.md` 噪音。
+- **任务真源与主动汇报链路的单一来源被再次强调**：统一执行状态真源为 `agents/state/task_ledger.json`，`heartbeat_tasks.md` 只是 planner 的文本看板读口；planner 主动汇报被定义为「user_message + tell_user_candidate + intention + 下一轮 continue + 统一发送服务」的完整闭环，后续会通过 run_id/audit trace 与回归测试保证“谁决定了这句话、为什么发、从哪条链发出”都可追踪。
+- **记忆与 prompt 装载从“文本堆叠”升级为“结构化 context policy”**：recent 注入的目标形态是作为独立的结构化 context block 由 compose service 控制是否装载，而不是继续在 `user_prompt` 字符串尾部拼长段解释性文本；MEMORY_POLICY 明确不同会话允许读哪些记忆、哪些视为噪音，防止 talk/heartbeat/self_mind 互相污染。
+- **能力与 skills 管理改为显式引用制**：skills、sub-agent、team、公用能力库不再视为默认背景，只有在用户文本、当前任务或 runtime 明确命中时才注入；同时通过 TOOLS 协议约束「只有真实执行过的工具/技能才允许在回复中说已经用了」，减少能力目录幻觉与“播报自己要去干什么”的退化倾向。
 # Butler Bot 自我认知笔记
 
 > **用途**：本 AI（管家 bot / 飞书工作站侧）对自身代码库的职责、入口、记忆与调用链、与 Cursor/飞书衔接的认知，供自我进化与后续改进参考。  
@@ -125,6 +137,12 @@
 - **调用链小结**  
   飞书消息 → handle_message_async → run_agent_fn(prompt) → Cursor CLI 子进程 → 回复 → on_reply_sent → MemoryManager.on_reply_sent_async → 后台线程写 unified recent / local memory，并按需要合并 heartbeat 任务。  
   心跳：独立子进程 `_heartbeat_loop` → `_run_heartbeat_once` → `HeartbeatOrchestrator.build_planning_context` / `plan_action` → `execute_plan`（受控并行）→ `persist_snapshot_to_recent`（经 subconscious 整理）→ `_apply_heartbeat_plan`（task ledger 与兼容镜像回写）→ `_send_private_message`。
+
+### 3.1 外部内容 → web-note-capture-cn → OCR → BrainStorm → 模板/作战手册流水线
+
+- 现版本 Butler 已经有一条标准的「外部内容 → `web-note-capture-cn` / 网页截取 → `web-image-ocr-cn` / OCR → BrainStorm 草稿 → 模板与协作作战手册」流水线，用于把网页、截图与零散灵感整理成结构化的 BrainStorm 草稿，再固化为可复用的操作模板与协作说明。  
+- heartbeat 在看到「研究/整理/规范类任务」或「需要把一批外部资料转成统一模板、协作手册」的任务时，会优先安排走这条链路：先由 capture/OCR skill 把原始素材落到 `./工作区` 对应 BrainStorm/研究目录，再调用 BrainStorm 约定收敛主题与结构。  
+- self_mind 与长期记忆把这些模板/作战手册视为「程序性知识与自我成长素材」：只读其结果，不直接插入执行细节；后续心跳与对话在规划与协作时，可以把它们当作统一的知识与流程真源来复用。
 
 ---
 
