@@ -11,6 +11,7 @@ from .scheduler import OrchestratorScheduler
 from .service import OrchestratorService
 from .templates import build_agent_harness_brainstorm_inputs, build_mission_payload_from_template
 from .workflow_ir import WorkflowIR
+from .workflow_vm import OrchestratorWorkflowVM, WorkflowVMExecutionOutcome
 from .workspace import build_orchestrator_service_for_workspace, resolve_orchestrator_root
 
 __all__ = [
@@ -31,8 +32,10 @@ __all__ = [
     "OrchestratorResearchBridge",
     "OrchestratorScheduler",
     "OrchestratorService",
+    "OrchestratorWorkflowVM",
     "ResearchBranchExecutionOutcome",
     "WorkflowIR",
+    "WorkflowVMExecutionOutcome",
     "build_agent_harness_brainstorm_inputs",
     "build_mission_payload_from_template",
     "build_orchestrator_service_for_workspace",
