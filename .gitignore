@@ -8,9 +8,11 @@ __pycache__/
 .firecrawl/
 .tmp_unittest_focus.txt
 .tmp_unittest_result.json
+/.tmp_*
 _cursor_env/
 _tmp_task_debug/
 _tmp/
+/_tmp_*
 _tmp_test/
 _tmp_test_manual/
 _tmp_test_harness/
@@ -37,6 +39,19 @@ logs/
 *.tmp
 *.temp
 ~$*
+.DS_Store
+._*
+docs/Untitled.md
+.claude/
+_tmp_frameworks/
+_tmp_openfang/
+_tmp_runtime_probe/
+_tmp_task_ledger_probe/
+_tmp_verify_research_hb2/
+_tmp_xhs_*.html
+_openclaw_pkg/
+_openclaw_plugin_pkg/
+_openclaw_probe_*/
 
 ########################
 # 环境配置 & 本地密钥
@@ -56,6 +71,11 @@ logs/
 工作区/
 工作区/temp/single_parallel_*.txt
 工作区/temp/*regression*.txt
+
+########################
+# 本机私有配置 / 密钥（不进仓库）
+########################
+butler_private/
 
 
 ########################
@@ -86,3 +106,21 @@ butler_main/butler_bot_agent/agents/local_memory/heartbeat_long_tasks.json
 butler_main/butler_bot_agent/agents/local_memory/heartbeat_planner_state.json
 butler_main/butler_bot_agent/agents/local_memory/local_memory_write_journal.jsonl
 butler_main/butler_bot_code/.cursor/
+
+########################
+# 本地个人空间与归档（不纳入版本库）
+########################
+MyWorkSpace/
+过时/
+
+########################
+# 工具与模型缓存目录
+########################
+.hf_home/
+.venv-paddle/
+
+########################
+# agents_os 运行时（本机会话、路径与密钥）
+########################
+butler_main/agents_os/run/
+.collaborator

@@ -9,7 +9,7 @@ import uuid
 
 TESTS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = TESTS_DIR.parents[2]
-TMP_ROOT = PROJECT_ROOT / ".tmp_pytest_runtime"
+TMP_ROOT = PROJECT_ROOT / "工作区" / "temp" / "pytest_runtime"
 FALLBACK_TMP_ROOT = Path(tempfile.gettempdir()) / "butler_pytest_runtime"
 
 TMP_ROOT.mkdir(parents=True, exist_ok=True)
