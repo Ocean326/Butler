@@ -626,6 +626,13 @@ class ButlerFlowTests(unittest.TestCase):
                         "promotion_candidates": ["creator"],
                         "manager_notes": "Use extra specialists only when a real bottleneck appears.",
                     },
+                    "doctor_policy": {
+                        "enabled": True,
+                        "activation_rules": ["repeated_service_fault", "same_resume_failure"],
+                        "repair_scope": "runtime_assets_first",
+                        "framework_bug_action": "pause",
+                        "max_rounds_per_episode": 1,
+                    },
                     "bundle_manifest": {
                         "bundle_root": "bundle",
                         "supervisor_ref": "bundle/supervisor.md",
@@ -650,11 +657,13 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(compiled["flow_board"]["source_asset_version"], "2026.04.02")
             self.assertIn("check static fields", compiled["flow_board"]["review_checklist"])
             self.assertEqual(compiled["flow_board"]["role_guidance"]["promotion_candidates"], ["creator"])
+            self.assertTrue(compiled["flow_board"]["doctor_policy"]["enabled"])
             self.assertIn("Know the flow author's intent", compiled["supervisor_knowledge"]["knowledge_text"])
             self.assertIn("Compiled checklist", compiled["supervisor_knowledge"]["knowledge_text"])
             self.assertIn("template:manage_center_v2", compiled["rendered_prompt"])
             self.assertIn("Compiled checklist", compiled["rendered_prompt"])
             self.assertIn("advisory only", compiled["rendered_prompt"])
+            self.assertIn("doctor", compiled["rendered_prompt"])
             self.assertIn("creator", compiled["rendered_prompt"])
 
     def test_llm_supervisor_invalid_json_falls_back_to_heuristic(self) -> None:
@@ -2291,7 +2300,8 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(state.get("phase_plan")[0]["phase_id"], "scan")
             self.assertEqual(state.get("source_asset_key"), "template:template_demo")
             self.assertEqual(state.get("source_asset_kind"), "template")
-            self.assertEqual(state.get("bundle_manifest", {}).get("supervisor_ref"), str((root / "butler_main" / "butler_bot_code" / "assets" / "flows" / "bundles" / "templates" / "template_demo" / "supervisor.md").resolve()))
+            self.assertEqual(state.get("bundle_manifest", {}).get("supervisor_ref"), str((self._flow_dirs(root)[0] / "bundle" / "supervisor.md").resolve()))
+            self.assertEqual(state.get("bundle_manifest", {}).get("doctor_ref"), str((self._flow_dirs(root)[0] / "bundle" / "doctor.md").resolve()))
             self.assertEqual(state.get("phase_plan")[1]["phase_id"], "synthesize")
             self.assertEqual(state.get("execution_mode"), "medium")
             self.assertEqual(state.get("role_pack_id"), "research_flow")
@@ -2299,11 +2309,204 @@ class ButlerFlowTests(unittest.TestCase):
 
     def test_current_role_prompt_covers_lightweight_specialists(self) -> None:
         creator_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="creator", flow_state={"role_sessions": {}})
+        doctor_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="doctor", flow_state={"role_sessions": {}})
         product_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="product-manager", flow_state={"role_sessions": {}})
         user_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="user-simulator", flow_state={"role_sessions": {}})
         self.assertIn("Role: creator", creator_prompt)
+        self.assertIn("Role: doctor", doctor_prompt)
         self.assertIn("Role: product-manager", product_prompt)
         self.assertIn("Role: user-simulator", user_prompt)
+
+    def test_run_new_materializes_instance_bundle_with_doctor_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="implemented",
+                        metadata={"external_session": {"provider": "codex", "thread_id": "thread-bundle", "resume_capable": True}},
+                        agent_id="butler_flow.codex_executor",
+                    ),
+                    _receipt(
+                        text=json.dumps(
+                            {
+                                "decision": "COMPLETE",
+                                "reason": "done",
+                                "next_codex_prompt": "",
+                                "completion_summary": "done",
+                            },
+                            ensure_ascii=False,
+                        ),
+                        agent_id="butler_flow.cursor_judge",
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            args = self._new_args(config=config, kind=SINGLE_GOAL_KIND, execution_level="medium")
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                rc = app.run_new(args)
+            self.assertEqual(rc, 0)
+            flow_dir = self._flow_dirs(root)[0]
+            definition = self._read_json(flow_dir / "flow_definition.json")
+            self.assertTrue((flow_dir / "bundle" / "doctor.md").exists())
+            self.assertTrue((flow_dir / "bundle" / "skills" / "doctor" / "SKILL.md").exists())
+            self.assertEqual(definition["bundle_manifest"]["doctor_ref"], str((flow_dir / "bundle" / "doctor.md").resolve()))
+            self.assertEqual(definition["bundle_manifest"]["doctor_skill_ref"], str((flow_dir / "bundle" / "skills" / "doctor" / "SKILL.md").resolve()))
+
+    def test_heuristic_supervisor_spawns_doctor_for_resume_no_rollout_failure(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None or _BUILD_FLOW_ROOT is None:
+            raise AssertionError("butler_flow must expose build/new/write helpers for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_dir = _BUILD_FLOW_ROOT(root) / "flow_doctor_resume"
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id="flow_doctor_resume",
+                workflow_kind=SINGLE_GOAL_KIND,
+                workspace_root=str(root),
+                goal="repair the flow and continue",
+                guard_condition="blocked task resumes safely",
+                max_attempts=2,
+                max_phase_attempts=0,
+            )
+            flow_state["execution_mode"] = "medium"
+            flow_state["session_strategy"] = "role_bound"
+            flow_state["active_role_id"] = "implementer"
+            flow_state["pending_codex_prompt"] = "continue the blocked task"
+            flow_state["doctor_policy"] = {
+                "enabled": True,
+                "activation_rules": ["same_resume_failure", "session_binding_invalid"],
+                "repair_scope": "runtime_assets_first",
+                "framework_bug_action": "pause",
+                "max_rounds_per_episode": 1,
+            }
+            flow_state["role_sessions"] = {
+                "implementer": {
+                    "role_id": "implementer",
+                    "session_id": "thread-stale",
+                    "status": "ready",
+                    "updated_at": "2026-04-02 19:29:08",
+                }
+            }
+            flow_state["last_codex_receipt"] = {
+                "status": "failed",
+                "summary": "Error: thread/resume: thread/resume failed: no rollout found for thread id thread-stale",
+                "output_text": "Error: thread/resume: thread/resume failed: no rollout found for thread id thread-stale",
+                "metadata": {
+                    "runtime_request": {"codex_mode": "resume"},
+                    "external_session": {
+                        "provider": "codex",
+                        "thread_id": "",
+                        "requested_session_id": "thread-stale",
+                        "resume_capable": False,
+                    },
+                },
+            }
+            ensure_flow_sidecars(flow_dir, flow_state)
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="doctor repaired the stale runtime binding and prepared the flow to continue",
+                        metadata={"external_session": {"provider": "codex", "thread_id": "thread-doctor", "resume_capable": True}},
+                        agent_id="butler_flow.codex_executor",
+                    ),
+                    _receipt(
+                        text=json.dumps(
+                            {
+                                "decision": "COMPLETE",
+                                "reason": "recovery verified",
+                                "next_codex_prompt": "",
+                                "completion_summary": "recovery done",
+                            },
+                            ensure_ascii=False,
+                        ),
+                        agent_id="butler_flow.cursor_judge",
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                rc = app._runtime.run_flow_loop({"workspace_root": str(root)}, flow_dir, flow_state, stream_enabled=False)
+            self.assertEqual(rc, 0)
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_mode"], "exec")
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_session_id"], "")
+            state = self._flow_state(flow_dir)
+            self.assertEqual(state["role_sessions"]["implementer"]["status"], "resume_failed")
+            self.assertEqual(state["role_sessions"]["doctor"]["session_id"], "thread-doctor")
+            turns = self._read_jsonl(flow_dir / "turns.jsonl")
+            self.assertTrue(any(row.get("role_id") == "doctor" and row.get("turn_kind") == "recover" for row in turns))
+
+    def test_doctor_framework_bug_output_pauses_flow_for_operator(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None or _BUILD_FLOW_ROOT is None:
+            raise AssertionError("butler_flow must expose build/new/write helpers for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_dir = _BUILD_FLOW_ROOT(root) / "flow_doctor_pause"
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id="flow_doctor_pause",
+                workflow_kind=SINGLE_GOAL_KIND,
+                workspace_root=str(root),
+                goal="repair the flow and continue",
+                guard_condition="blocked task resumes safely",
+                max_attempts=2,
+                max_phase_attempts=0,
+            )
+            flow_state["execution_mode"] = "medium"
+            flow_state["session_strategy"] = "role_bound"
+            flow_state["active_role_id"] = "implementer"
+            flow_state["pending_codex_prompt"] = "continue the blocked task"
+            flow_state["doctor_policy"] = {
+                "enabled": True,
+                "activation_rules": ["same_resume_failure"],
+                "repair_scope": "runtime_assets_first",
+                "framework_bug_action": "pause",
+                "max_rounds_per_episode": 1,
+            }
+            flow_state["role_sessions"] = {
+                "implementer": {
+                    "role_id": "implementer",
+                    "session_id": "thread-stale",
+                    "status": "ready",
+                    "updated_at": "2026-04-02 19:29:08",
+                }
+            }
+            flow_state["last_codex_receipt"] = {
+                "status": "failed",
+                "summary": "Error: thread/resume: thread/resume failed: no rollout found for thread id thread-stale",
+                "output_text": "Error: thread/resume: thread/resume failed: no rollout found for thread id thread-stale",
+                "metadata": {
+                    "runtime_request": {"codex_mode": "resume"},
+                    "external_session": {
+                        "provider": "codex",
+                        "thread_id": "",
+                        "requested_session_id": "thread-stale",
+                        "resume_capable": False,
+                    },
+                },
+            }
+            ensure_flow_sidecars(flow_dir, flow_state)
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="DOCTOR_FRAMEWORK_BUG:\nProblem: runtime keeps requesting stale rollout.\nEvidence: repeated resume/no-rollout failures.\nFix plan: patch the supervisor/runtime session quarantine path.",
+                        metadata={"external_session": {"provider": "codex", "thread_id": "thread-doctor", "resume_capable": True}},
+                        agent_id="butler_flow.codex_executor",
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                rc = app._runtime.run_flow_loop({"workspace_root": str(root)}, flow_dir, flow_state, stream_enabled=False)
+            self.assertEqual(rc, 0)
+            self.assertEqual(len(runner.calls), 1)
+            state = self._flow_state(flow_dir)
+            self.assertEqual(state["status"], "paused")
+            self.assertEqual(state["approval_state"], "operator_required")
+            self.assertEqual(state["latest_supervisor_decision"]["decision"], "ask_operator")
+            self.assertIn("Problem:", state["pending_codex_prompt"])
+            self.assertIn("Fix plan:", state["pending_codex_prompt"])
 
     def test_parser_defaults_new_kind_to_single_goal_and_allows_resume_priority_args(self) -> None:
         parser = flow_shell.build_arg_parser()

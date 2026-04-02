@@ -1,0 +1,413 @@
+{
+  "plan_id": "runtime_plan_729b02f515",
+  "flow_id": "flow_20260402111642_01929624",
+  "workflow_kind": "managed_flow",
+  "phase": "execute",
+  "attempt_no": 64,
+  "phase_attempt_no": 1,
+  "plan_stage": "judge_compiled",
+  "active_role_id": "implementer",
+  "execution_mode": "medium",
+  "session_strategy": "role_bound",
+  "goal": "登录 `jianghy@10.254.73.179` 并进入 `Transfer_Recovery`，先基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，产出分类矩阵、阅读摘要与参考文献库；最终完成一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+  "guard_condition": "仅在以下条件全部满足时可结束：已确认并记录最终研究主题；文献样本不少于 100 且相关性可说明；分类矩阵、阅读摘要、参考文献库三类产物齐备并可追溯到证据来源；质量审查通过后方可进入 finalize。",
+  "risk_level": "normal",
+  "autonomy_profile": "guarded",
+  "summary": "Judge the latest executor attempt and return a structured verdict.",
+  "flow_board": {
+    "flow_id": "flow_20260402111642_01929624",
+    "workflow_kind": "managed_flow",
+    "goal": "登录 `jianghy@10.254.73.179` 并进入 `Transfer_Recovery`，先基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，产出分类矩阵、阅读摘要与参考文献库；最终完成一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+    "guard_condition": "仅在以下条件全部满足时可结束：已确认并记录最终研究主题；文献样本不少于 100 且相关性可说明；分类矩阵、阅读摘要、参考文献库三类产物齐备并可追溯到证据来源；质量审查通过后方可进入 finalize。",
+    "current_phase": "execute",
+    "phase_plan": [
+      {
+        "phase_id": "clarify",
+        "title": "Clarify",
+        "objective": "明确任务边界与验收口径：确认 179 已配置 SSH 免密、必须先确认主题再检索、且交付物需证据可追溯并经质量审查通过后才能 finalize。",
+        "done_when": "形成书面化执行约束、主题确认流程与验收标准，且各方无歧义。",
+        "retry_phase_id": "clarify",
+        "fallback_phase_id": "clarify",
+        "next_phase_id": "discover"
+      },
+      {
+        "phase_id": "discover",
+        "title": "Discover",
+        "objective": "在 `Transfer_Recovery` 中盘点现有材料并确认研究主题，随后制定检索式、数据库范围、纳入排除标准与证据记录规范。",
+        "done_when": "研究主题已确认，检索与筛选策略可执行，证据记录模板已就绪。",
+        "retry_phase_id": "discover",
+        "fallback_phase_id": "clarify",
+        "next_phase_id": "structure"
+      },
+      {
+        "phase_id": "structure",
+        "title": "Structure",
+        "objective": "设计综述结构与分类矩阵维度，确定摘要模板、引用字段、标签体系和文献库组织方式。",
+        "done_when": "分类框架与数据结构定稿，可稳定承载 100+ 文献整理。",
+        "retry_phase_id": "structure",
+        "fallback_phase_id": "discover",
+        "next_phase_id": "execute"
+      },
+      {
+        "phase_id": "execute",
+        "title": "Execute",
+        "objective": "执行检索、筛选与阅读，沉淀不少于 100 篇高相关文献的分类矩阵、阅读摘要与参考文献库。",
+        "done_when": "达到数量与相关性门槛，三类核心产物完整并与证据源可追溯关联。",
+        "retry_phase_id": "execute",
+        "fallback_phase_id": "structure",
+        "next_phase_id": "synthesize"
+      },
+      {
+        "phase_id": "synthesize",
+        "title": "Synthesize",
+        "objective": "基于结构化证据撰写 KDD 风格“研究背景与现状”初稿，系统呈现问题定义、方法演进、不足与切入点。",
+        "done_when": "形成逻辑闭环完整、论据可追溯的第一版章节稿。",
+        "retry_phase_id": "synthesize",
+        "fallback_phase_id": "execute",
+        "next_phase_id": "quality_review"
+      },
+      {
+        "phase_id": "quality_review",
+        "title": "Quality Review",
+        "objective": "对证据链、覆盖度、论证一致性、引用规范与写作质量做审查并修正缺陷。",
+        "done_when": "质量审查通过，剩余风险已记录且不阻塞交付。",
+        "retry_phase_id": "quality_review",
+        "fallback_phase_id": "synthesize",
+        "next_phase_id": "finalize"
+      },
+      {
+        "phase_id": "finalize",
+        "title": "Finalize",
+        "objective": "冻结交付版本并输出最终说明，确保可复核、可复用、可继续迭代。",
+        "done_when": "最终产物与过程记录齐备并完成正式交接。",
+        "retry_phase_id": "finalize",
+        "fallback_phase_id": "quality_review",
+        "next_phase_id": ""
+      }
+    ],
+    "current_phase_context": {
+      "phase_id": "execute",
+      "title": "Execute",
+      "objective": "执行检索、筛选与阅读，沉淀不少于 100 篇高相关文献的分类矩阵、阅读摘要与参考文献库。",
+      "done_when": "达到数量与相关性门槛，三类核心产物完整并与证据源可追溯关联。",
+      "retry_phase_id": "execute",
+      "fallback_phase_id": "structure",
+      "next_phase_id": "synthesize",
+      "available_next_phases": [
+        "clarify",
+        "discover",
+        "structure",
+        "synthesize",
+        "quality_review",
+        "finalize"
+      ]
+    },
+    "status": "running",
+    "approval_state": "not_required",
+    "active_role_id": "implementer",
+    "execution_mode": "medium",
+    "session_strategy": "role_bound",
+    "role_pack_id": "coding_flow",
+    "recent_phase_history": [
+      {
+        "at": "2026-04-02 19:27:28",
+        "attempt_no": 58,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "第58轮执行器仍为 codex resume 失败（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout）；与上轮裁定要求的冷 exec 不符，本轮无有效仓库产物，execute 的 done_when 与排队修正均未满足。",
+          "next_codex_prompt": "强制 codex_mode=exec（全新冷会话），禁止对任何旧 thread/session 使用 resume。最小交付：在 flow 约定产出路径创建或更新单文件英文 KDD Section1.md，四级标题：Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末用括号标注证据锚点→既有分类矩阵/阅读摘要/bib 路径。文末附：Overleaf 友好说明、LaTeX→PDF 占位；100 篇文献的编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。学术英语 KDD 口吻，主张与证据表可追溯。服务不稳时仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
+          "completion_summary": "执行失败：resume/rollout 缺失；无增量产物；仍处于 execute，需用冷 exec 落盘最小英文 Section1 与证据锚点/占位清单。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:27:49",
+        "attempt_no": 59,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "第59轮 Codex 仍以 resume 调用且报错（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout），与要求的冷 exec 不符；无有效仓库产物，execute 的 done_when 与排队修正均未达成。",
+          "next_codex_prompt": "强制 codex_mode=exec（全新会话），禁止对任何 thread/session 使用 resume。最小交付：在 flow 约定产出路径写入或更新单文件英文 KDD Section1.md，四级标题：Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵/阅读摘要/bib 的路径。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。学术英语 KDD 口吻，主张与证据表可追溯。仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
+          "completion_summary": "执行失败：resume/rollout 缺失；无增量产物；仍处于 execute，需冷 exec 落盘英文 Section1 与证据锚点/占位清单。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:28:10",
+        "attempt_no": 60,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "第60轮 Codex 仍为 resume 且报错（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout），与要求的冷启动 exec 不符；execute 的 done_when、排队修正与英文 KDD Section1 均未达成。",
+          "next_codex_prompt": "强制 codex_mode=exec（禁止 resume/任何 thread 恢复）。最小交付：在 flow 约定产出路径更新单文件英文 KDD Section1.md，四节四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵、阅读摘要、bib 的相对路径。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
+          "completion_summary": "本轮执行失败：无有效 codex 产出；仍未落盘英文 Section1 与证据锚点；阶段仍为 execute，需下一轮冷 exec 纠正调用并完成最小文件交付。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:28:29",
+        "attempt_no": 61,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "本轮 Codex 以 resume 调用失败（thread 无 rollout），无有效产出；execute 的 done_when 与排队英文 KDD Section1/证据锚点仍未满足。",
+          "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread 恢复）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径指向既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+          "completion_summary": "第61轮执行失败：仅得 Codex resume 错误，未写入 Section1 或更新证据映射；仍停留在 execute。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:28:47",
+        "attempt_no": 62,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "Codex 仍以 resume 启动且 thread 无 rollout，执行器无有效产出；execute 阶段的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+          "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+          "completion_summary": "第62轮：resume 失败，无 Section1 落盘与证据映射更新；仍处 execute。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:29:05",
+        "attempt_no": 63,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+          "next_codex_prompt": "按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+          "completion_summary": "第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      }
+    ],
+    "latest_supervisor_decision": {
+      "decision": "execute",
+      "turn_kind": "execute",
+      "reason": "follow pending instruction from previous judge/recovery via role=implementer",
+      "confidence": 0.78,
+      "next_action": "run_executor",
+      "attempt_no": 64,
+      "phase": "execute",
+      "instruction": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\nService instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\n按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+      "issue_kind": "service_fault",
+      "followup_kind": "retry",
+      "fix_round_no": 0,
+      "active_role_id": "implementer",
+      "execution_mode": "simple",
+      "session_strategy": "shared"
+    },
+    "latest_judge_decision": {
+      "decision": "RETRY",
+      "next_phase": "execute",
+      "reason": "本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+      "next_codex_prompt": "按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+      "completion_summary": "第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。",
+      "issue_kind": "service_fault",
+      "followup_kind": "retry"
+    },
+    "latest_operator_action": {
+      "action_id": "action_20260402191040_23c62e47",
+      "flow_id": "flow_20260402111642_01929624",
+      "action_type": "append_instruction",
+      "operator_id": "local_user",
+      "policy_source": "cli",
+      "before_state": {
+        "status": "running",
+        "current_phase": "synthesize",
+        "pending_codex_prompt": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\n在 Transfer_Recovery 的 docs/0402（与 evidence 表及 v2 映射同目录）：向 20260402_KDD_Section1_en.md 仅追加「Limitations of prior work」与「This paper's entry point」两小节，各 3–6 句 KDD 学术英语，句末括号标注 evidence id/表行列或 mapping 键；同步更新 readiness.md（已完成小节清单、本节引用键、余下待填项）。仅对这两文件 git add+commit 并回报 commit hash；风格与 14e6684 中 Evolution 段落对齐；禁止全文重写与长推理。"
+      },
+      "after_state": {
+        "status": "running",
+        "current_phase": "synthesize",
+        "pending_codex_prompt": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\n在 Transfer_Recovery 的 docs/0402（与 evidence 表及 v2 映射同目录）：向 20260402_KDD_Section1_en.md 仅追加「Limitations of prior work」与「This paper's entry point」两小节，各 3–6 句 KDD 学术英语，句末括号标注 evidence id/表行列或 mapping 键；同步更新 readiness.md（已完成小节清单、本节引用键、余下待填项）。仅对这两文件 git add+commit 并回报 commit hash；风格与 14e6684 中 Evolution 段落对齐；禁止全文重写与长推理。",
+        "queued_operator_updates": [
+          {
+            "update_id": "manual_resume_fix_20260402_kdd_section1_en",
+            "source": "manual_resume_fix",
+            "instruction": "Resume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.",
+            "status": "queued",
+            "created_at": "2026-04-02 19:12:00",
+            "planned_attempt_no": 0,
+            "executed_attempt_no": 0
+          },
+          {
+            "update_id": "action_20260402191040_23c62e47",
+            "source": "operator:append_instruction",
+            "instruction": "注意一下，最后的交付kdd稿要有pdf和能输入overleaf当中的md，长度、篇幅、格式要符合kdd要求。另外，还要有100篇文献的pdf+对他们的系统性整理",
+            "status": "queued",
+            "created_at": "2026-04-02 19:10:40",
+            "planned_attempt_no": 0,
+            "executed_attempt_no": 0
+          }
+        ]
+      },
+      "trace_id": "trace_20260402191040_1fb15651",
+      "receipt_id": "action_20260402191040_23c62e47",
+      "result_summary": "instruction queued for the next executor turn (action_20260402191040_23c62e47)",
+      "created_at": "2026-04-02 19:10:40"
+    },
+    "latest_handoff_summary": {},
+    "risk_level": "normal",
+    "autonomy_profile": "guarded",
+    "pending_codex_prompt": "Service instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\n按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+    "queued_operator_updates": [
+      {
+        "update_id": "manual_resume_fix_20260402_kdd_section1_en",
+        "source": "manual_resume_fix",
+        "instruction": "Resume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.",
+        "status": "queued",
+        "created_at": "2026-04-02 19:12:00",
+        "planned_attempt_no": 0,
+        "executed_attempt_no": 0
+      },
+      {
+        "update_id": "action_20260402191040_23c62e47",
+        "source": "operator:append_instruction",
+        "instruction": "注意一下，最后的交付kdd稿要有pdf和能输入overleaf当中的md，长度、篇幅、格式要符合kdd要求。另外，还要有100篇文献的pdf+对他们的系统性整理",
+        "status": "queued",
+        "created_at": "2026-04-02 19:10:40",
+        "planned_attempt_no": 0,
+        "executed_attempt_no": 0
+      }
+    ],
+    "max_runtime_seconds": 43200,
+    "runtime_elapsed_seconds": 1821,
+    "context_governor": {
+      "mode": "reset",
+      "reasons": [
+        "late_attempt_window",
+        "repeated_service_fault"
+      ],
+      "input_tokens": 0,
+      "service_fault_streak": 31,
+      "session_epoch": 1,
+      "updated_at": "2026-04-02 19:29:06"
+    },
+    "latest_token_usage": {},
+    "source_asset_key": "",
+    "source_asset_kind": "",
+    "source_asset_version": "",
+    "review_checklist": [],
+    "role_guidance": {
+      "suggested_roles": [
+        "planner",
+        "implementer",
+        "reviewer"
+      ],
+      "suggested_specialists": [
+        "creator",
+        "doctor"
+      ],
+      "activation_hints": [
+        "when environment, knowledge, or formatting gaps block KDD-style delivery",
+        "when repeated runtime/session faults block forward progress"
+      ],
+      "promotion_candidates": [
+        "creator"
+      ],
+      "manager_notes": "Keep role guidance lightweight: creator helps capability gaps, doctor helps runtime repair."
+    },
+    "bundle_manifest": {
+      "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle",
+      "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/manager.md",
+      "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/supervisor.md",
+      "doctor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/doctor.md",
+      "doctor_skill_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/skills/doctor/SKILL.md",
+      "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/sources.json",
+      "manager_prompt": "manager.md",
+      "supervisor_prompt": "supervisor.md",
+      "doctor_prompt": "doctor.md",
+      "sources_path": "sources.json",
+      "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references",
+      "doctor_references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references/doctor",
+      "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/assets",
+      "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived",
+      "derived_supervisor_prompt": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_compiled.md",
+      "derived_supervisor_knowledge": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json",
+      "derived": {
+        "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json"
+      }
+    },
+    "doctor_policy": {
+      "enabled": true,
+      "activation_rules": [
+        "repeated_service_fault",
+        "same_resume_failure",
+        "session_binding_invalid"
+      ],
+      "repair_scope": "runtime_assets_first",
+      "framework_bug_action": "pause",
+      "max_rounds_per_episode": 1
+    }
+  },
+  "active_turn_task": {
+    "turn_kind": "review",
+    "task_brief": "Judge the latest executor attempt and return a structured verdict.",
+    "attempt_no": 64,
+    "phase_attempt_no": 1,
+    "success_criteria": [
+      "Return a bounded output that the next runtime step can consume without reinterpretation."
+    ],
+    "input_refs": [],
+    "output_contract": [
+      "Keep the output concrete and operational."
+    ],
+    "next_instruction": "Use the latest executor output and artifacts to decide whether the flow should complete, retry, advance, or abort.",
+    "constraints": [
+      "Respect the current flow boundary and do not rewrite global templates.",
+      "Prefer concise, structured outputs over long narrative.",
+      "Incorporate the pending operator/judge instruction if it still applies."
+    ]
+  },
+  "latest_mutation": {},
+  "context_governor": {
+    "mode": "reset",
+    "reasons": [
+      "late_attempt_window",
+      "repeated_service_fault"
+    ],
+    "input_tokens": 0,
+    "service_fault_streak": 31,
+    "session_epoch": 1,
+    "updated_at": "2026-04-02 19:29:06"
+  },
+  "updated_at": "2026-04-02 19:29:09"
+}

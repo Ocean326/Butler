@@ -15,6 +15,7 @@ from .constants import (
     DEFAULT_CATALOG_FLOW_ID,
     DEFAULT_LAUNCH_MODE,
     DEFAULT_PROJECT_MAX_RUNTIME_SECONDS,
+    DOCTOR_ROLE_ID,
     EXECUTION_MODE_COMPLEX,
     EXECUTION_MODE_MEDIUM,
     EXECUTION_MODE_SIMPLE,
@@ -45,6 +46,37 @@ def safe_int(value: Any, default: int = 0) -> int:
         return int(value)
     except Exception:
         return int(default)
+
+
+def normalize_doctor_policy_payload(raw: Any, *, current: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = dict(raw or {}) if isinstance(raw, dict) else {}
+    existing = dict(current or {})
+    merged = {**existing, **payload}
+    enabled = merged.get("enabled")
+    if enabled is None:
+        return {}
+    activation_rules = [
+        str(item or "").strip()
+        for item in list(merged.get("activation_rules") or [])
+        if str(item or "").strip()
+    ]
+    if not activation_rules:
+        activation_rules = [
+            "repeated_service_fault",
+            "same_resume_failure",
+            "session_binding_invalid",
+            "supervisor_manual",
+        ]
+    repair_scope = str(merged.get("repair_scope") or "runtime_assets_first").strip() or "runtime_assets_first"
+    framework_bug_action = str(merged.get("framework_bug_action") or "pause").strip() or "pause"
+    max_rounds = max(1, safe_int(merged.get("max_rounds_per_episode"), 1))
+    return {
+        "enabled": bool(enabled),
+        "activation_rules": activation_rules,
+        "repair_scope": repair_scope,
+        "framework_bug_action": framework_bug_action,
+        "max_rounds_per_episode": max_rounds,
+    }
 
 
 def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
@@ -103,24 +135,33 @@ def asset_bundle_root(workspace: str | Path, *, asset_kind: str, asset_id: str) 
         return builtin_bundle_root(workspace) / normalized_id
     if normalized_kind == "template":
         return template_bundle_root(workspace) / normalized_id
+    if normalized_kind == "instance":
+        return instance_asset_root(workspace) / normalized_id / "bundle"
     return Path("")
 
 
 def asset_bundle_manifest(*, asset_kind: str, asset_id: str) -> dict[str, Any]:
     normalized_kind = str(asset_kind or "").strip().lower()
     normalized_id = str(asset_id or "").strip()
-    if normalized_kind not in {"builtin", "template"} or not normalized_id:
+    if normalized_kind not in {"builtin", "template", "instance"} or not normalized_id:
         return {}
-    bundle_root = Path("bundles") / ("builtin" if normalized_kind == "builtin" else "templates") / normalized_id
+    if normalized_kind == "instance":
+        bundle_root = Path("bundle")
+    else:
+        bundle_root = Path("bundles") / ("builtin" if normalized_kind == "builtin" else "templates") / normalized_id
     return {
         "bundle_root": str(bundle_root),
         "manager_ref": str(bundle_root / "manager.md"),
         "supervisor_ref": str(bundle_root / "supervisor.md"),
+        "doctor_ref": str(bundle_root / "doctor.md"),
+        "doctor_skill_ref": str(bundle_root / "skills" / DOCTOR_ROLE_ID / "SKILL.md"),
         "sources_ref": str(bundle_root / "sources.json"),
         "manager_prompt": "manager.md",
         "supervisor_prompt": "supervisor.md",
+        "doctor_prompt": "doctor.md",
         "sources_path": "sources.json",
         "references_root": "references",
+        "doctor_references_root": str(Path("references") / DOCTOR_ROLE_ID),
         "assets_root": "assets",
         "derived_root": "derived",
         "derived_supervisor_prompt": str(Path("derived") / "supervisor_compiled.md"),
@@ -137,14 +178,18 @@ def ensure_asset_bundle_files(workspace: str | Path, *, asset_kind: str, asset_i
         return {}
     root.mkdir(parents=True, exist_ok=True)
     (root / "references").mkdir(parents=True, exist_ok=True)
+    (root / "references" / DOCTOR_ROLE_ID).mkdir(parents=True, exist_ok=True)
     (root / "assets").mkdir(parents=True, exist_ok=True)
     (root / "derived").mkdir(parents=True, exist_ok=True)
+    (root / "skills" / DOCTOR_ROLE_ID).mkdir(parents=True, exist_ok=True)
     payload = dict(definition or {})
     label = str(payload.get("label") or asset_id).strip() or asset_id
     goal = str(payload.get("goal") or "").strip()
     guard_condition = str(payload.get("guard_condition") or "").strip()
     manager_path = root / "manager.md"
     supervisor_path = root / "supervisor.md"
+    doctor_path = root / "doctor.md"
+    doctor_skill_path = root / "skills" / DOCTOR_ROLE_ID / "SKILL.md"
     sources_path = root / "sources.json"
     derived_path = root / "derived" / "supervisor_knowledge.json"
     if not manager_path.exists():
@@ -174,6 +219,40 @@ def ensure_asset_bundle_files(workspace: str | Path, *, asset_kind: str, asset_i
                 ]
             )
             + "\n",
+            encoding="utf-8",
+        )
+    if not doctor_path.exists():
+        doctor_path.write_text(
+            "\n".join(
+                [
+                    f"# Doctor Notes · {label}",
+                    "",
+                    "- You are a temporary recovery specialist for this single flow instance.",
+                    "- Repair runtime/session/instance-asset issues before anything else.",
+                    "- If you conclude the blocker is a `butler-flow` framework/code bug, do not patch global code from inside the flow.",
+                    "- In that case, begin the final reply with `DOCTOR_FRAMEWORK_BUG:` and include `Problem:`, `Evidence:`, and `Fix plan:` sections.",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    if not doctor_skill_path.exists():
+        doctor_skill_path.write_text(
+            "---\n"
+            "name: flow-doctor\n"
+            "description: Repair the current flow's runtime assets first; if the fault is in butler-flow code, emit diagnosis + fix plan and request pause.\n"
+            "---\n\n"
+            "# Flow Doctor\n\n"
+            "## Recovery order\n\n"
+            "1. Validate current flow runtime bindings and local sidecars.\n"
+            "2. Repair instance-local assets before suggesting broader action.\n"
+            "3. If the fault is a framework bug, do not fake recovery; output `DOCTOR_FRAMEWORK_BUG:` with diagnosis and fix plan.\n\n"
+            "## Allowed repairs\n\n"
+            "- Clear or reseed invalid role/session bindings.\n"
+            "- Repair missing `flow_definition.json` or instance bundle files for the current flow.\n"
+            "- Normalize execution/session mode for the current flow when required for safe recovery.\n\n"
+            "## Forbidden\n\n"
+            "- Do not rewrite global templates, role catalogs, or unrelated repo code from inside the flow.\n",
             encoding="utf-8",
         )
     if not sources_path.exists():
@@ -371,6 +450,7 @@ def ensure_flow_state_v1(payload: dict[str, Any]) -> dict[str, Any]:
         state["manage_handoff"] = {}
     if not isinstance(state.get("role_guidance"), dict):
         state["role_guidance"] = {}
+    state["doctor_policy"] = normalize_doctor_policy_payload(state.get("doctor_policy"), current={})
     execution_mode = str(state.get("execution_mode") or "").strip().lower()
     if execution_mode not in {EXECUTION_MODE_SIMPLE, EXECUTION_MODE_MEDIUM, EXECUTION_MODE_COMPLEX}:
         execution_mode = EXECUTION_MODE_SIMPLE
@@ -508,6 +588,7 @@ def new_flow_state(
         "entry_mode": normalized_kind,
         "manage_handoff": {},
         "role_guidance": {},
+        "doctor_policy": {},
         "execution_mode": EXECUTION_MODE_SIMPLE,
         "session_strategy": SESSION_STRATEGY_SHARED,
         "active_role_id": "",

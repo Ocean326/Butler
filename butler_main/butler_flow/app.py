@@ -79,6 +79,7 @@ from .state import (
     legacy_flow_root,
     new_flow_id,
     new_flow_state,
+    normalize_doctor_policy_payload,
     now_text,
     read_flow_state,
     read_json,
@@ -296,8 +297,11 @@ class FlowApp:
         manifest["bundle_root"] = str(root.resolve())
         manifest["manager_ref"] = str((root / "manager.md").resolve())
         manifest["supervisor_ref"] = str((root / "supervisor.md").resolve())
+        manifest["doctor_ref"] = str((root / "doctor.md").resolve())
+        manifest["doctor_skill_ref"] = str((root / "skills" / "doctor" / "SKILL.md").resolve())
         manifest["sources_ref"] = str((root / "sources.json").resolve())
         manifest["references_root"] = str((root / "references").resolve())
+        manifest["doctor_references_root"] = str((root / "references" / "doctor").resolve())
         manifest["assets_root"] = str((root / "assets").resolve())
         manifest["derived_root"] = str((root / "derived").resolve())
         manifest["derived"] = {
@@ -334,6 +338,10 @@ class FlowApp:
         role_guidance = normalize_role_guidance_payload(
             raw.get("role_guidance") or manager_handoff.get("role_guidance") or {},
         )
+        doctor_policy = normalize_doctor_policy_payload(
+            raw.get("doctor_policy"),
+            current=dict(manager_handoff.get("doctor_policy") or {}),
+        )
         return {
             "flow_id": flow_id,
             "definition_id": str(raw.get("definition_id") or flow_id).strip() or flow_id,
@@ -366,6 +374,7 @@ class FlowApp:
             "instance_defaults": instance_defaults,
             "review_checklist": review_checklist,
             "role_guidance": role_guidance,
+            "doctor_policy": doctor_policy,
             "bundle_manifest": bundle_manifest,
             "source_asset_key": str(raw.get("source_asset_key") or "").strip(),
             "source_asset_kind": str(raw.get("source_asset_kind") or "").strip(),
@@ -1095,6 +1104,7 @@ class FlowApp:
             workflow_kind=workflow_kind,
         )
         flow_state["role_guidance"] = normalize_role_guidance_payload(flow_state.get("role_guidance") or {})
+        flow_state["doctor_policy"] = normalize_doctor_policy_payload(flow_state.get("doctor_policy"), current={})
         flow_state["flow_version"] = str(flow_state.get("flow_version") or BUTLER_FLOW_VERSION).strip() or BUTLER_FLOW_VERSION
         return flow_state
 
@@ -1117,6 +1127,7 @@ class FlowApp:
             "manager_handoff": dict(flow_state.get("manage_handoff") or {}),
             "review_checklist": list(flow_state.get("review_checklist") or []),
             "role_guidance": dict(flow_state.get("role_guidance") or {}),
+            "doctor_policy": dict(flow_state.get("doctor_policy") or {}),
             "bundle_manifest": dict(flow_state.get("bundle_manifest") or {}),
             "source_asset_key": str(flow_state.get("source_asset_key") or "").strip(),
             "source_asset_kind": str(flow_state.get("source_asset_kind") or "").strip(),
@@ -1130,6 +1141,20 @@ class FlowApp:
 
     def _save_flow_state(self, flow_path: Path, flow_state: dict[str, Any]) -> None:
         self._normalize_flow_state_payload(flow_state)
+        workflow_id = str(flow_state.get("workflow_id") or flow_path.name).strip() or flow_path.name
+        bundle_manifest = self._runtime_bundle_manifest(
+            workspace_root=str(flow_state.get("workspace_root") or "").strip(),
+            asset_kind="instance",
+            asset_id=workflow_id,
+            definition=flow_state,
+        )
+        ensure_asset_bundle_files(
+            str(flow_state.get("workspace_root") or "").strip(),
+            asset_kind="instance",
+            asset_id=workflow_id,
+            definition={**flow_state, "bundle_manifest": bundle_manifest},
+        )
+        flow_state["bundle_manifest"] = bundle_manifest
         flow_state["updated_at"] = now_text()
         write_json_atomic(flow_state_path(flow_path), flow_state)
         self._save_flow_definition(flow_path, flow_state)
@@ -1186,6 +1211,7 @@ class FlowApp:
         flow_state["manage_handoff"] = dict(normalized.get("manager_handoff") or {})
         flow_state["review_checklist"] = list(normalized.get("review_checklist") or [])
         flow_state["role_guidance"] = dict(normalized.get("role_guidance") or {})
+        flow_state["doctor_policy"] = dict(normalized.get("doctor_policy") or {})
         flow_state["bundle_manifest"] = dict(normalized.get("bundle_manifest") or {})
         flow_state["source_asset_key"] = str(normalized.get("source_asset_key") or "").strip()
         flow_state["source_asset_kind"] = str(normalized.get("source_asset_kind") or "").strip()
@@ -1227,8 +1253,12 @@ class FlowApp:
             result.get("role_guidance") or {},
             current=dict(existing.get("role_guidance") or dict(existing.get("manager_handoff") or {}).get("role_guidance") or {}),
         )
+        doctor_policy = normalize_doctor_policy_payload(
+            result.get("doctor_policy"),
+            current=dict(existing.get("doctor_policy") or dict(existing.get("manager_handoff") or {}).get("doctor_policy") or {}),
+        )
         bundle_manifest = dict(existing.get("bundle_manifest") or {})
-        if asset_kind in {"builtin", "template"}:
+        if asset_kind in {"builtin", "template", "instance"}:
             bundle_manifest = self._runtime_bundle_manifest(
                 workspace_root=workspace_root,
                 asset_kind=asset_kind,
@@ -1275,6 +1305,7 @@ class FlowApp:
                     "instance_defaults": instance_defaults,
                     "review_checklist": review_checklist,
                     "role_guidance": role_guidance,
+                    "doctor_policy": doctor_policy,
                     "bundle_manifest": bundle_manifest,
                     "source_asset_key": str((flow_state or {}).get("source_asset_key") or existing.get("source_asset_key") or "").strip(),
                     "source_asset_kind": str((flow_state or {}).get("source_asset_kind") or existing.get("source_asset_kind") or "").strip(),
@@ -1288,7 +1319,7 @@ class FlowApp:
             asset_id=asset_id,
         )
         write_json_atomic(path, payload)
-        if asset_kind in {"builtin", "template"}:
+        if asset_kind in {"builtin", "template", "instance"}:
             ensure_asset_bundle_files(
                 workspace_root,
                 asset_kind=asset_kind,

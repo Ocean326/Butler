@@ -29,12 +29,14 @@
   - `butler_main/chat/`
   - `butler_main/orchestrator/interfaces/`
   - `butler_main/agents_os/execution/cli_runner.py`
+  - `butler_main/chat/frontdoor_cli_router.py`
 - 默认测试：
   - `test_chat_campaign_negotiation.py`
   - `test_chat_long_task_frontdoor_regression.py`
   - `test_request_intake_service.py`
   - `test_talk_mainline_service.py`
   - `test_chat_router_frontdoor.py`
+  - `test_chat_engine_model_controls.py`
   - `test_talk_runtime_service.py`
   - `test_chat_recent_memory_runtime.py`
   - `test_conversation_turn_engine.py`
@@ -45,11 +47,12 @@
   - 回归优先补 `test_chat_router_frontdoor.py`、`test_talk_mainline_service.py`、`test_agent_soul_prompt.py`
   - 模式收口附加检查：
   - 先看 `butler_main/chat/frontdoor_modes.py` 的 slash 契约
-  - 再看 `butler_main/chat/router_plan.py` 与 `butler_main/chat/routing.py` 的 `RouterCompilePlan`，确认当前 `main_mode / role_id / injection_tier / capability_policy` 是否仍是前台唯一编译真源
+  - 再看 `butler_main/chat/frontdoor_cli_router.py`、`butler_main/chat/router_plan.py` 与 `butler_main/chat/routing.py` 的 unified compile，确认当前 `route / frontdoor_action / main_mode / role_id / injection_tier / capability_policy / runtime_lane` 是否仍由单次前门编译产出
   - 若涉及“续接当前主线还是重开新题”，先看 `butler_main/chat/session_selection.py`、`butler_main/chat/mainline.py` 与 `butler_main/chat/memory_runtime/recent_turn_store.py`，确认 `chat_session_id` 是否已在当前 `session_scope_id` 内正确 bootstrap、写回、过滤 recent
   - 再看 `butler_main/chat/session_modes.py` 的 sticky state、recent 配额与 `project_artifact`
   - 再看 `butler_main/chat/mainline.py` 和 `butler_main/chat/prompting.py` 是否仍把 `/pure` 当成功能路由，而不是厚度 overlay
   - 改默认厚 prompt 块顺序、门控或 session selection 指示块时，对照 [0330 Chat 默认厚 Prompt 分层治理真源](../daily-upgrade/0330/04_Chat默认厚Prompt分层治理真源.md) 与 [0402 Chat Router 选会话能力升级回写](../daily-upgrade/0402/01_chat_router选会话能力升级回写.md) 同步更新文档
+  - 若涉及 chat/frontdoor 默认 CLI，先看 `frontdoor_cli_router.py` 的 lane map 与 `butler_main/chat/data/hot/frontdoor_cli_router/governance_state.json`，不要直接改全局 `cli_runtime.active`
   - 若涉及 `codex/claude cli` session 连续性，先核对 `session_scope_id` 是否仍是 Butler 主键，再看 `cli_runner` 的 `external_session/recovery_state/vendor_capabilities`，最后检查 `chat/light_memory.py` 是否把 vendor thread 仅作为可丢的外部 binding 持久化
 
 ## `campaign-control-plane`
@@ -109,8 +112,11 @@
   - [真源矩阵](./03_truth_matrix.md)
   - [0401 当日总纲](../daily-upgrade/0401/00_当日总纲.md)
   - [0402 当日总纲](../daily-upgrade/0402/00_当日总纲.md)
+  - [0402 Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）](../daily-upgrade/0402/20260402_Butler-flow%20Desktop%20V2.1%20PRD_main%E5%88%86%E6%94%AF%E5%AF%B9%E9%BD%90_flow%20CLI%E5%85%A5%E5%8F%A3%E4%B8%8E%E5%8F%8C%E8%BD%A8%E5%AE%9E%E6%96%BD_%E6%9B%B4%E6%96%B0%E7%89%88.md)
+  - [0402 Butler-flow-Desktop 开发计划（butler-flow 执行版）](../daily-upgrade/0402/20260402_Butler-flow-Desktop%E5%BC%80%E5%8F%91%E8%AE%A1%E5%88%92_butlerflow%E6%89%A7%E8%A1%8C%E7%89%88.md)
   - [0402 Butler Flow Manage Center 资产中心升级与会话式交互落地](../daily-upgrade/0402/02_butler-flow_manage-center资产中心升级与会话式交互落地.md)
   - [0402 Butler Flow 长流治理与 supervisor 可观测性升级](../daily-upgrade/0402/11_butler-flow_长流治理与supervisor可观测性升级.md)
+  - [0402 Butler Flow Doctor 恢复角色与实例级静态资产修复](../daily-upgrade/0402/12_butler-flow_doctor恢复角色与实例级静态资产修复.md)
   - [0401 前台 Butler Flow 入口收口与 New 向导 V1](../daily-upgrade/0401/01_前台ButlerFlow入口收口与New向导V1.md)
   - [0401 Claude Code 对 Butler Flow 工作台化升级与 TUI 信息架构计划](../daily-upgrade/0401/02_ClaudeCode对ButlerFlow工作台化升级与TUI信息架构计划.md)
   - [系统分层与事件契约](../runtime/System_Layering_and_Event_Contracts.md)
@@ -161,6 +167,8 @@
   - 若改 `/manage`，优先检查 `build_manage_payload()`、`manage_flow()`、`tui/app.py` 的 transcript-first shell 与 `$asset` suggester，而不是回退到 `flows-list + flows-detail` 的卡片心智
   - `free` 设计链路固定是“setup -> /manage template:new -> template:<id> -> launch instance”，不要再把它写回 `/flows` 设计页
   - 若涉及角色运行时，先确认 `execution_mode` 与 `session_strategy`；当前口径是 `simple=shared`、`medium=role_bound`、`complex=per_activation(预留合同)`；再确认 `role_guidance` 是否仍只是 manager/supervisor 的轻量参考，而不是硬 team contract
+  - 若涉及长流恢复或 `/resume` 异常，补看 `doctor_policy`、实例 `bundle/doctor.md`、`bundle/skills/doctor/SKILL.md`，以及 `runtime.py` 是否会在重复 `resume/no-rollout`、session 绑定异常、重复 service fault 时自动拉起 `doctor`
+  - 若涉及 flow 静态资产修复，先确认当前实例是否已经物化 `flow_definition.json + bundle/*`；不要把这类实例级修复重新退回模板或全局角色目录
   - 再看 `role_packs/<pack>/<role>.md` 与 `sources.json`；当前 role pack 只是前台 L1 prompt 资产，不是 L3 协议真源
   - 若排查 role handoff，优先看 `role_sessions.json`、`handoffs.jsonl`、`artifacts.json` 的 role visibility 字段，不要直接假设共享 thread 历史
   - 若改 supervisor/retry 语义，先核对当前是否已经有显式 `fix` turn、`issue_kind / followup_kind` 和 auto-fix 上限；当前只有 `issue_kind=agent_cli_fault + followup_kind=fix` 才能进入 `fix`，不要再把 supervisor 改成直接执行 repo 修复
@@ -176,6 +184,7 @@
   - 当前还新增 `exec`：最后一行固定 `flow_exec_receipt`，退出码按 flow 终态收口
   - TTY 下优先核对是否正确进入 Textual launcher / attached run screen；若未进入，再检查 `requirements-cli.txt`、终端宽度与 `--plain`
   - 若排查 TUI，优先看 `butler_main/butler_flow/tui/`、`events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
+  - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
   - 最后补跑 `tools/butler-flow ... --help`、`butler-flow --help` 与 `python -m butler_main --help`
   - 若目标是系统级 CLI，再补跑 `./tools/install-butler-flow` 并确认 `command -v butler-flow`

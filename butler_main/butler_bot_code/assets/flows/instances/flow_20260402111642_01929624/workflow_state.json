@@ -1,0 +1,2490 @@
+{
+  "workflow_id": "flow_20260402111642_01929624",
+  "workflow_kind": "managed_flow",
+  "launch_mode": "flow",
+  "catalog_flow_id": "free",
+  "workspace_root": "/home/ocean/Desktop/SuperButler",
+  "goal": "登录 `jianghy@10.254.73.179` 并进入 `Transfer_Recovery`，先基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，产出分类矩阵、阅读摘要与参考文献库；最终完成一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+  "guard_condition": "仅在以下条件全部满足时可结束：已确认并记录最终研究主题；文献样本不少于 100 且相关性可说明；分类矩阵、阅读摘要、参考文献库三类产物齐备并可追溯到证据来源；质量审查通过后方可进入 finalize。",
+  "status": "running",
+  "current_phase": "execute",
+  "attempt_count": 64,
+  "phase_attempt_count": 0,
+  "max_attempts": 0,
+  "max_phase_attempts": 0,
+  "codex_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+  "pending_codex_prompt": "Service instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\n按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+  "last_cursor_decision": {
+    "decision": "RETRY",
+    "next_phase": "execute",
+    "reason": "本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+    "next_codex_prompt": "按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+    "completion_summary": "第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。",
+    "issue_kind": "service_fault",
+    "followup_kind": "retry"
+  },
+  "last_completion_summary": "第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。",
+  "last_codex_receipt": {
+    "execution_id": "execution_18c3ab154d21",
+    "workflow_id": "flow_20260402111642_01929624",
+    "agent_id": "butler_flow.codex_executor",
+    "status": "failed",
+    "summary": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+    "output_text": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+    "metadata": {
+      "workspace": "/home/ocean/Desktop/SuperButler",
+      "provider": "codex",
+      "provider_returncode": 1,
+      "returncode": 1,
+      "failure_class": "",
+      "runtime_request": {
+        "model": "auto",
+        "profile": "",
+        "speed": "",
+        "config_overrides": [
+          "mcp_servers.stripe={enabled=false,transport=\"streamable_http\",url=\"https://mcp.stripe.com\"}",
+          "mcp_servers.supabase={enabled=false,transport=\"streamable_http\",url=\"https://mcp.supabase.com/mcp\"}",
+          "mcp_servers.vercel={enabled=false,transport=\"streamable_http\",url=\"https://mcp.vercel.com\"}"
+        ],
+        "extra_args": [],
+        "cli": "codex",
+        "_disable_runtime_fallback": true,
+        "workflow_id": "flow_20260402111642_01929624",
+        "agent_id": "butler_flow.codex_executor",
+        "codex_mode": "resume",
+        "codex_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+        "codex_home": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home",
+        "_profile_explicit": false,
+        "_provider_failover_managed": true,
+        "_provider_failover_active_profile": "aixj"
+      },
+      "cli_events": {
+        "usage": {},
+        "command_events": []
+      },
+      "usage": {},
+      "external_session": {
+        "provider": "codex",
+        "thread_id": "",
+        "resume_capable": false,
+        "resume_durable": false,
+        "mode": "resume",
+        "requested_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+        "durable_resume_id": "",
+        "session_persistence": "codex_home",
+        "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home",
+        "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home|1775128794|4096",
+        "cli_binary_path": "/home/ocean/.local/bin/codex",
+        "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+        "vendor_session_state": "resume_requested",
+        "recovery_state": {}
+      },
+      "recovery_state": {},
+      "vendor_capabilities": {
+        "vendor": "codex",
+        "capabilities": {
+          "session": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "resume": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "compact": {
+            "layer": "intrinsic",
+            "ownership": "vendor_native"
+          },
+          "skills": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "collab": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "subagent": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "agent_team": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "recent_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          },
+          "local_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          }
+        }
+      },
+      "command_events": [],
+      "stderr": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+      "stall_abort_reason": ""
+    },
+    "output_bundle": {
+      "status": "failed",
+      "summary": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+      "text_blocks": [
+        {
+          "text": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+          "style": "plain"
+        }
+      ]
+    }
+  },
+  "last_cursor_receipt": {
+    "execution_id": "execution_8f30aeaf37c0",
+    "workflow_id": "flow_20260402111642_01929624",
+    "agent_id": "butler_flow.cursor_judge",
+    "status": "completed",
+    "summary": "{\"decision\":\"RETRY\",\"reason\":\"本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。\",\"next_phase\":\"execute\",\"next_codex_prompt\":\"按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit",
+    "output_text": "{\"decision\":\"RETRY\",\"reason\":\"本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。\",\"next_phase\":\"execute\",\"next_codex_prompt\":\"按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。\",\"completion_summary\":\"第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。\",\"issue_kind\":\"agent_cli_fault\",\"followup_kind\":\"retry\"}",
+    "metadata": {
+      "workspace": "/home/ocean/Desktop/SuperButler",
+      "provider": "cursor",
+      "provider_returncode": 0,
+      "returncode": 0,
+      "failure_class": "",
+      "runtime_request": {
+        "model": "auto",
+        "profile": "aixj",
+        "speed": "",
+        "config_overrides": [],
+        "extra_args": [],
+        "cli": "cursor",
+        "_disable_runtime_fallback": true,
+        "workflow_id": "flow_20260402111642_01929624",
+        "agent_id": "butler_flow.cursor_judge",
+        "_profile_explicit": false
+      },
+      "cli_events": {
+        "usage": {},
+        "command_events": []
+      },
+      "usage": {},
+      "external_session": {},
+      "recovery_state": {},
+      "vendor_capabilities": {
+        "vendor": "cursor",
+        "capabilities": {
+          "session": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "resume": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "compact": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "skills": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "collab": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "subagent": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "agent_team": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "recent_memory": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "local_memory": {
+            "layer": "unknown",
+            "ownership": "butler"
+          }
+        }
+      },
+      "command_events": [],
+      "stderr": "",
+      "timed_out": false
+    },
+    "output_bundle": {
+      "status": "ready",
+      "summary": "{\"decision\":\"RETRY\",\"reason\":\"本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。\",\"next_phase\":\"execute\",\"next_codex_prompt\":\"按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit",
+      "text_blocks": [
+        {
+          "text": "{\"decision\":\"RETRY\",\"reason\":\"本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。\",\"next_phase\":\"execute\",\"next_codex_prompt\":\"按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。\",\"completion_summary\":\"第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。\",\"issue_kind\":\"agent_cli_fault\",\"followup_kind\":\"retry\"}",
+          "style": "plain"
+        }
+      ]
+    }
+  },
+  "current_phase_artifact": {
+    "workflow_id": "flow_20260402111642_01929624",
+    "workflow_kind": "managed_flow",
+    "phase": "execute",
+    "role_id": "implementer",
+    "attempt_no": 63,
+    "phase_attempt_no": 1,
+    "goal": "登录 `jianghy@10.254.73.179` 并进入 `Transfer_Recovery`，先基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，产出分类矩阵、阅读摘要与参考文献库；最终完成一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+    "guard_condition": "仅在以下条件全部满足时可结束：已确认并记录最终研究主题；文献样本不少于 100 且相关性可说明；分类矩阵、阅读摘要、参考文献库三类产物齐备并可追溯到证据来源；质量审查通过后方可进入 finalize。",
+    "codex_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+    "codex_status": "failed",
+    "codex_output": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+    "codex_metadata": {
+      "workspace": "/home/ocean/Desktop/SuperButler",
+      "provider": "codex",
+      "provider_returncode": 1,
+      "returncode": 1,
+      "failure_class": "",
+      "runtime_request": {
+        "model": "auto",
+        "profile": "",
+        "speed": "",
+        "config_overrides": [
+          "mcp_servers.stripe={enabled=false,transport=\"streamable_http\",url=\"https://mcp.stripe.com\"}",
+          "mcp_servers.supabase={enabled=false,transport=\"streamable_http\",url=\"https://mcp.supabase.com/mcp\"}",
+          "mcp_servers.vercel={enabled=false,transport=\"streamable_http\",url=\"https://mcp.vercel.com\"}"
+        ],
+        "extra_args": [],
+        "cli": "codex",
+        "_disable_runtime_fallback": true,
+        "workflow_id": "flow_20260402111642_01929624",
+        "agent_id": "butler_flow.codex_executor",
+        "codex_mode": "resume",
+        "codex_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+        "codex_home": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home",
+        "_profile_explicit": false,
+        "_provider_failover_managed": true,
+        "_provider_failover_active_profile": "aixj"
+      },
+      "cli_events": {
+        "usage": {},
+        "command_events": []
+      },
+      "usage": {},
+      "external_session": {
+        "provider": "codex",
+        "thread_id": "",
+        "resume_capable": false,
+        "resume_durable": false,
+        "mode": "resume",
+        "requested_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+        "durable_resume_id": "",
+        "session_persistence": "codex_home",
+        "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home",
+        "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home|1775128794|4096",
+        "cli_binary_path": "/home/ocean/.local/bin/codex",
+        "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+        "vendor_session_state": "resume_requested",
+        "recovery_state": {}
+      },
+      "recovery_state": {},
+      "vendor_capabilities": {
+        "vendor": "codex",
+        "capabilities": {
+          "session": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "resume": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "compact": {
+            "layer": "intrinsic",
+            "ownership": "vendor_native"
+          },
+          "skills": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "collab": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "subagent": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "agent_team": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "recent_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          },
+          "local_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          }
+        }
+      },
+      "command_events": [],
+      "stderr": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+      "stall_abort_reason": ""
+    },
+    "pending_codex_prompt": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\nService instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\n使用 codex_mode=exec 冷启动（禁止 resume/thread）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+    "last_cursor_decision": {
+      "decision": "RETRY",
+      "next_phase": "execute",
+      "reason": "Codex 仍以 resume 启动且 thread 无 rollout，执行器无有效产出；execute 阶段的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+      "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+      "completion_summary": "第62轮：resume 失败，无 Section1 落盘与证据映射更新；仍处 execute。",
+      "issue_kind": "service_fault",
+      "followup_kind": "retry"
+    }
+  },
+  "phase_history": [
+    {
+      "at": "2026-04-02 11:27:18",
+      "attempt_no": 1,
+      "phase": "clarify",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "clarify",
+        "reason": "执行器本轮超时失败（returncode=-9），且未产出可验收的 Clarify 阶段书面约束与主题确认结论。",
+        "next_codex_prompt": "继续在 clarify 阶段执行：基于已读取文档，直接产出一份可落地的《执行约束与验收口径》清单，至少包含：1) 179 免密 SSH 前置确认项与验证方式；2) “先确认研究主题再检索”的步骤与完成定义；3) 文献证据可追溯记录规范（字段、来源、命名）；4) 进入 discover 的准入条件。输出需结构化、可直接用于后续阶段，不要只写计划。",
+        "completion_summary": "本次未完成阶段目标；仅完成部分文档读取并在执行中超时。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 11:28:02",
+      "attempt_no": 2,
+      "phase": "clarify",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "clarify",
+        "reason": "执行器本轮超时失败（returncode=-9），未提交可验收的 Clarify 阶段产物。",
+        "next_codex_prompt": "继续在 clarify 阶段执行：基于已读取文档，直接产出一份可落地的《执行约束与验收口径》清单，至少包含：1) 179 免密 SSH 前置确认项与验证方式；2) “先确认研究主题再检索”的步骤与完成定义；3) 文献证据可追溯记录规范（字段、来源、命名）；4) 进入 discover 的准入条件。输出需结构化、可直接用于后续阶段，不要只写计划。",
+        "completion_summary": "本次未达成阶段目标；仅有连接与抽样意图性输出，缺少书面化约束清单与主题确认结论。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 11:28:51",
+      "attempt_no": 3,
+      "phase": "clarify",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "clarify",
+        "reason": "执行器本轮超时中断（returncode=-9），未产出可验收的 Clarify 交付物。",
+        "next_codex_prompt": "继续在 clarify 阶段，直接提交可落地的《执行约束与验收口径》清单（一次性完整输出，避免额外检索与行号补抓）：1) 179 免密 SSH 前置确认项与验证方式；2) “先确认研究主题再检索”的步骤、关卡与完成定义；3) 文献证据可追溯记录规范（必填字段、来源标注、命名规则、版本与时间戳）；4) 进入 discover 的准入条件（必须可勾选验收）。要求结构化、可执行、可直接沿用到下一阶段，不要仅给计划。",
+        "completion_summary": "阶段目标仍未达成；当前缺少书面化执行约束清单与可验收的主题确认流程定义。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 11:29:36",
+      "attempt_no": 4,
+      "phase": "clarify",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "clarify",
+        "reason": "执行器本轮超时失败（returncode=-9），未形成Clarify阶段可验收交付物。",
+        "next_codex_prompt": "继续在 clarify 阶段，直接提交可落地的《执行约束与验收口径》清单（一次性完整输出，避免额外检索与行号补抓）：1) 179 免密 SSH 前置确认项与验证方式；2) “先确认研究主题再检索”的步骤、关卡与完成定义；3) 文献证据可追溯记录规范（必填字段、来源标注、命名规则、版本与时间戳）；4) 进入 discover 的准入条件（必须可勾选验收）。要求结构化、可执行、可直接沿用到下一阶段，不要仅给计划。",
+        "completion_summary": "Clarify目标未达成；当前仍缺少书面化执行约束、主题确认流程与可勾选验收口径。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 11:30:55",
+      "attempt_no": 5,
+      "phase": "clarify",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "ADVANCE",
+        "next_phase": "discover",
+        "reason": "最新执行已一次性给出可落地的《执行约束与验收口径》清单，覆盖Clarify要求的四项并具备可勾选验收口径。",
+        "next_codex_prompt": "进入 discover 阶段：在 /home/jianghy/Transfer_Recovery 先完成研究主题最终确认（给出唯一主题表述+证据锚点），再产出可执行检索方案（数据库范围、检索式、时间窗、纳入/排除标准、去重与相关性分级规则），并落地证据记录模板与首批样本填充（不少于10条）以验证流程可运行。",
+        "completion_summary": "Clarify阶段目标已达成：前置环境核验、主题先行关卡、证据可追溯规范与discover准入条件均已结构化并可直接执行。",
+        "issue_kind": "none",
+        "followup_kind": "none"
+      }
+    },
+    {
+      "at": "2026-04-02 11:39:30",
+      "attempt_no": 6,
+      "phase": "discover",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "ADVANCE",
+        "next_phase": "structure",
+        "reason": "discover 阶段验收项已满足：唯一研究主题与证据锚点已确认，检索/筛选规则可执行，证据模板与不少于10条样本已落地并验证可解析。",
+        "next_codex_prompt": "进入 structure 阶段：基于已确认主题与首批样本，定稿综述分类矩阵维度与字段字典（至少覆盖 problem setting、network representation、temporal modeling、recovery granularity、generalization、evidence traceability），同步确定阅读摘要模板、引用字段与标签体系，并将当前10条样本映射进首版分类矩阵以验证结构可稳定承载100+文献。",
+        "completion_summary": "本轮已完成 discover 目标：主题确认、检索方案、纳入排除与分级规则、证据记录模板及10条试运行样本均已就绪。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 11:42:07",
+      "attempt_no": 7,
+      "phase": "structure",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "ADVANCE",
+        "next_phase": "execute",
+        "reason": "structure 阶段目标已达成：分类维度、字段字典、摘要模板与标签体系已定稿，且 10 条样本映射验证通过。",
+        "next_codex_prompt": "进入 execute 阶段：按既定检索与筛选规则扩充高相关文献至不少于 100 篇，持续维护并联动更新分类矩阵、阅读摘要与参考文献库；逐条补齐 evidence_traceability 与 citation_ready，确保三类产物可追溯并满足后续 synthesize 输入要求。",
+        "completion_summary": "已完成结构层定稿并通过样本承载验证，可进入大规模检索与整理执行。",
+        "issue_kind": "none",
+        "followup_kind": "none"
+      }
+    },
+    {
+      "at": "2026-04-02 11:55:54",
+      "attempt_no": 8,
+      "phase": "execute",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "已达100篇与三类产物成形，但citation_ready未逐条闭环（仍有6条needs_pdf_backup），且摘要层级以screening为主，尚不足以稳态支撑synthesize。",
+        "next_codex_prompt": "继续execute收口：1) 对6条needs_pdf_backup逐条补齐可核验PDF/正式题录链并将citation_ready置为ready；2) 对高相关H类优先完成20-30篇深读摘要（方法、数据、结论、局限、与主题关系），替换对应screening条目；3) 更新并对齐papers_master、classification_matrix、reading_summaries与bib四库，提交一致性统计（总数、ready数、H/M/L分布、可追溯率）及抽检证据。",
+        "completion_summary": "本轮已完成100篇规模化检索与四库联动构建，但仍需补齐少量引用闭环并提升关键文献摘要深度后再进入下一阶段。",
+        "issue_kind": "plan_gap",
+        "followup_kind": "replan"
+      }
+    },
+    {
+      "at": "2026-04-02 11:56:41",
+      "attempt_no": 9,
+      "phase": "structure",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮执行超时中断，未提交可验收产物变更。",
+        "next_codex_prompt": "继续 execute 收口并分批落盘：1) 逐条补齐 6 条 needs_pdf_backup 的可核验 PDF/正式题录链并将 citation_ready 置为 ready；2) 对高相关 H 类优先完成 20-30 篇深读摘要（方法、数据、结论、局限、与主题关系），替换 screening 级摘要；3) 对齐 papers_master、classification_matrix、reading_summaries、bib 四库并提交一致性统计（总数、ready 数、H/M/L 分布、可追溯率）及抽检证据。",
+        "completion_summary": "执行器仅返回了计划性一句话并因超时退出，当前阶段目标未新增闭环证据。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 11:57:25",
+      "attempt_no": 10,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "执行器超时中断且未产出可验收增量，execute 阶段目标未达成。",
+        "next_codex_prompt": "继续 execute 收口并分批落盘：1) 逐条补齐 6 条 needs_pdf_backup 的可核验 PDF/正式题录链并将 citation_ready 置为 ready；2) 对高相关 H 类优先完成 20-30 篇深读摘要（方法、数据、结论、局限、与主题关系），替换 screening 级摘要；3) 对齐 papers_master、classification_matrix、reading_summaries、bib 四库并提交一致性统计（总数、ready 数、H/M/L 分布、可追溯率）及抽检证据。",
+        "completion_summary": "本轮仅返回计划性一句话并超时退出，未形成新的闭环证据或产物更新。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 11:58:10",
+      "attempt_no": 11,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "执行器本轮超时失败且无可验收产物增量，execute 阶段目标未满足。",
+        "next_codex_prompt": "继续 execute 收口并分批落盘：1) 逐条补齐 6 条 needs_pdf_backup 的可核验 PDF/正式题录链并将 citation_ready 置为 ready；2) 对高相关 H 类优先完成 20-30 篇深读摘要（方法、数据、结论、局限、与主题关系），替换 screening 级摘要；3) 对齐 papers_master、classification_matrix、reading_summaries、bib 四库并提交一致性统计（总数、ready 数、H/M/L 分布、可追溯率）及抽检证据。",
+        "completion_summary": "仅输出计划性一句话后超时退出，未形成新的闭环证据、文件更新或一致性统计。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 11:58:54",
+      "attempt_no": 12,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "最新执行器回合超时失败，未产出可验收增量。",
+        "next_codex_prompt": "继续 execute 收口并分批落盘：1) 逐条补齐 6 条 needs_pdf_backup 的可核验 PDF/正式题录链并将 citation_ready 置为 ready；2) 对高相关 H 类优先完成 20-30 篇深读摘要（方法、数据、结论、局限、与主题关系），替换 screening 级摘要；3) 对齐 papers_master、classification_matrix、reading_summaries、bib 四库并提交一致性统计（总数、ready 数、H/M/L 分布、可追溯率）及抽检证据。",
+        "completion_summary": "本轮仅给出一句计划性说明后超时退出，未形成文件更新、证据补链或一致性统计。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 11:59:38",
+      "attempt_no": 13,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "执行器本回合超时失败且无可验收产出，当前 execute 目标未达成。",
+        "next_codex_prompt": "继续 execute 收口并分批落盘：先补齐 6 条 needs_pdf_backup 的可核验 PDF/正式题录链并将 citation_ready 置为 ready；再优先完成 H 类 20-30 篇深读摘要（方法、数据、结论、局限、与主题关系）替换 screening 摘要；最后对齐 papers_master、classification_matrix、reading_summaries、bib 四库并提交一致性统计（总数、ready 数、H/M/L 分布、可追溯率）与抽检证据。",
+        "completion_summary": "本轮仅出现超时退出，未新增文件更新、证据补链或一致性统计，需在 execute 继续补齐。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 12:17:44",
+      "attempt_no": 14,
+      "phase": "execute",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "ADVANCE",
+        "next_phase": "synthesize",
+        "reason": "execute 阶段目标已达成且证据闭环完整，可进入下一阶段撰写。",
+        "next_codex_prompt": "进入 synthesize：基于已完成的 100 篇文献结构化证据与分类矩阵，起草 KDD 风格“研究背景与现状”第一版，覆盖问题定义、方法演进、现有不足与本文切入点；所有关键论断需可回溯到现有四库与收口报告中的证据条目。",
+        "completion_summary": "已完成 execute 收口：100 篇样本与四库对齐，citation_ready=100/100，needs_pdf_backup=0，新增 20 条深读结构化摘要并提交一致性统计与抽检证据。",
+        "issue_kind": "none",
+        "followup_kind": "none"
+      }
+    },
+    {
+      "at": "2026-04-02 12:32:30",
+      "attempt_no": 15,
+      "phase": "synthesize",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "已完成首版 synthesize，但新增约束“100篇原文下载并充分参考总结”尚未形成可验收的显式证据闭环。",
+        "next_codex_prompt": "在不改全局模板前提下重做本轮 synthesize 收口：1) 先基于现有文献库输出“100篇原文可用性清单”（逐条含 paper_id、pdf_path/doi_url、可访问性状态、最后校验时间），证明100/100原文已下载或可稳定访问；2) 对100篇补齐“充分参考+总结”证据，至少给出每篇1条核心贡献与1条与本文问题定义的关联标签，并汇总为可检索表；3) 回写并增强《研究背景与现状》v2，使关键论断明确引用上述表中条目；4) 提供缺口清单（若有）与可执行补救步骤。输出仅包含产物路径与通过/未通过统计。",
+        "completion_summary": "本次已产出KDD风格首稿与证据映射初版，但未完成新增“100篇原文下载与充分总结”的可审计交付。",
+        "issue_kind": "plan_gap",
+        "followup_kind": "replan"
+      }
+    },
+    {
+      "at": "2026-04-02 12:33:19",
+      "attempt_no": 16,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "本轮执行因超时失败，未形成任何可验收新产物，且新增约束仍未闭环。",
+        "next_codex_prompt": "继续在 synthesize 阶段补齐收口，严格输出可审计结果：1) 生成100篇文献原文可用性清单（paper_id、pdf_path或doi_url、可访问性状态、最后校验时间），并统计100/100达成情况；2) 为每篇补齐“核心贡献+与本文问题定义关联标签”并汇总为可检索表；3) 回写《研究背景与现状》v2，关键论断逐条映射到上述表项；4) 给出缺口清单与补救步骤。仅输出产物路径与通过/未通过统计，不写长叙述。",
+        "completion_summary": "执行器本轮超时终止，未新增可验证交付，任务需在 synthesize 重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    {
+      "at": "2026-04-02 12:44:22",
+      "attempt_no": 17,
+      "phase": "synthesize",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "ADVANCE",
+        "next_phase": "quality_review",
+        "reason": "本轮已按补充指令产出并核验4项可审计产物，100篇可用性与摘要统计均达100/100，且给出缺口统计为0。",
+        "next_codex_prompt": "进入 quality_review：对4项产物执行一致性与可追溯性抽检（样本覆盖问题定义、方法演进、不足与切入点四类论断），核对“v2正文-证据映射-两张100篇表”逐条可回链；明确是否满足“质量审查通过后方可finalize”。仅输出审查结论、通过/未通过项、必要修复清单与产物路径。",
+        "completion_summary": "synthesize阶段目标已达成：100篇原文入口可用性清单、100篇贡献与关联标签表、KDD风格《研究背景与现状》v2及证据映射文件均已生成并通过基础计数校验。",
+        "issue_kind": "none",
+        "followup_kind": "none"
+      }
+    },
+    {
+      "at": "2026-04-02 12:47:31",
+      "attempt_no": 18,
+      "phase": "quality_review",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "quality_review",
+        "reason": "质量审查已覆盖可追溯性与计数，但未落实最新约束“最终KDD第一节需英文稿”。",
+        "next_codex_prompt": "在不改变既有证据链与100篇映射的前提下，补做语言与体裁合规审查并修复：将《研究背景与现状》第一节产物统一为英文KDD风格正文；核对问题定义、方法演进、现有不足、本文切入点四类论断在英文稿中均有证据回链；更新质量审查报告后仅输出通过/未通过项、修复项与产物路径。",
+        "completion_summary": "本轮已证明四项产物在数量、一致性与可追溯性上基本达标，但英文交付要求尚未闭环，暂不进入finalize。",
+        "issue_kind": "plan_gap",
+        "followup_kind": "replan"
+      }
+    },
+    {
+      "at": "2026-04-02 18:59:36",
+      "attempt_no": 19,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "Codex 执行器超时（returncode -9，failure_class=timeout），未形成英文 KDD Section 1 主稿与 readiness note，synthesize 的 done_when 未满足。",
+        "next_codex_prompt": "从当前证据库与既有 v2/映射文件续写：目标仍为英文、KDD 语气的 Section 1（四块必选：problem definition, method evolution, limitations, this paper’s entry point）。为规避再超时，允许分步写文件再汇总；每句重要论断保留到证据表/映射的回链。落地后更新主 section 草稿与 evidence mapping，并输出简短 readiness note（已修、仍缺、建议下一步复核路径）。",
+        "completion_summary": "本轮执行在启动说明后超时终止，无可用交付物，需在 synthesize 阶段重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:00:20",
+      "attempt_no": 20,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "Codex 执行器超时（returncode -9，failure_class=timeout），仅有一句启动说明，未完成英文 KDD Section 1 主稿、evidence mapping 更新与 readiness note，synthesize 的 done_when 未满足。",
+        "next_codex_prompt": "按排队 operator 指令：在现有 100 篇证据表与 v2/映射上增量修改。分步写文件（避免单次超长）：① 英文 KDD 语气的 Section 1 四块（problem definition; method evolution; limitations; this paper’s entry point）；② 主论断逐条在 evidence mapping/表中保留回链；③ 更新主 section 草稿路径与 mapping；④ 输出简短 readiness note（已修正项、仍缺项、建议下一步复核的 artifact 路径）。单次任务只完成一两步并保存也可。",
+        "completion_summary": "本轮在 synthesize 内因 CLI 超时终止，无合格章节稿与就绪说明，需同阶段重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:01:04",
+      "attempt_no": 21,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "Codex 执行器超时（returncode -9，failure_class=timeout），仅有缩小范围口头说明，未产出英文 KDD Section 1 主稿、evidence mapping 更新与 readiness note，synthesize 的 done_when 未满足。",
+        "next_codex_prompt": "在现有 100 篇证据表与 v2/映射上只做最小一步：先写入或覆盖英文版 Section 1 草稿文件（四段标题固定为 Problem definition; Evolution of methods; Limitations of prior work; This paper’s entry point），每段 2–4 句 KDD 语气英文；每段末用简短括号标注对应 evidence id/表行列或 mapping 键以便回链。保存后立即写 5–10 行 readiness note（路径、已写区块、下步要做的 mapping 补丁）。禁止长对话，超时前务必 git/worktree 内可见落盘。",
+        "completion_summary": "synthesize 阶段因服务超时中断，无合格章节稿与可追溯映射更新，需同阶段缩小包重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:01:48",
+      "attempt_no": 22,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "Codex 执行器超时（returncode -9，failure_class=timeout），仅有一句中文意图说明，未在仓库内落盘英文 KDD Section 1 四段主稿、evidence 回链标注与 readiness note；synthesize 的 done_when 未满足。",
+        "next_codex_prompt": "在既有 100 篇证据表与 v2 映射路径上只做落盘：新建或覆盖单一 Markdown（路径在 readiness note 首行写明），四段标题固定为 Problem definition; Evolution of methods; Limitations of prior work; This paper's entry point；每段 2–4 句英文学术 KDD 语气；每段末括号注明 evidence id/表行列或 mapping 键。另写 5–10 行 readiness note（路径、已写区块、mapping 待补）。禁止长对话；超时前必须 git 可见。",
+        "completion_summary": "synthesize 阶段第 22 轮因执行器超时失败，无合格章节稿与可追溯产物，需同阶段缩小包重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:02:33",
+      "attempt_no": 23,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "Codex 执行器超时（returncode -9，failure_class=timeout），仅有一句意图说明，未见仓库内英文四段 Section 1、逐段 evidence 回链与 readiness note；synthesize 的 done_when 未达成。",
+        "next_codex_prompt": "在既有 100 篇证据表与 v2 映射上只做最小落盘：① 单一 Markdown，四段标题固定 Problem definition; Evolution of methods; Limitations of prior work; This paper's entry point，每段 2–4 句英文学术 KDD 语气，段末括号注明 evidence id/表行列或 mapping 键；② 另写 5–10 行 readiness note，首行为主稿路径，并说明已写区块与 mapping 待补。禁止长对话与扩 scope，保证 git 可见提交或保存。",
+        "completion_summary": "attempt 23 因服务侧超时失败，无合格可追溯章节稿，需在 synthesize 阶段缩小工作包重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:03:31",
+      "attempt_no": 24,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "Codex 于 attempt 24 以 returncode -9（failure_class=timeout）失败，输出仅有一句中文意图；实例目录无 attempt_0024 草案，仓库侧亦未检出符合规范的英文四段 KDD Section 1 与 readiness note 的可验证落盘，synthesize 的 done_when 未满足；context_governor 仍标 repeated_service_fault。",
+        "next_codex_prompt": "Service instability: 只执行最小一步且限时内先写盘再解释。在既有 100 篇证据表与 v2 映射的已知路径上：① 新建或覆盖单一英文 Markdown，四段标题必须为 Problem definition; Evolution of methods; Limitations of prior work; This paper's entry point；每段 2–4 句 KDD 学术英语；每段末括号注明 evidence id/表行列或 mapping 键。② 同目录或邻域写 5–10 行 readiness.txt/md，首行为主稿相对路径；列已写段落与待补 mapping。③ 完成后立即 `git add`+`git commit`（或等价可见保存）。禁止长推理与扩 scope；若时间紧可先只写 Section 1 的 §1 并 commit，再续跑。",
+        "completion_summary": "第 24 轮执行器因超时终止，无合格可追溯英文章节稿与 readiness 产物，需在 synthesize 阶段按缩小工作包重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:04:19",
+      "attempt_no": 25,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "第25轮 Codex 执行器以 returncode -9（failure_class=timeout）结束；可见输出仅一句中文意图；实例 drafts 目录无 attempt_0025 记录，仓库侧亦无可核验的英文四段 KDD Section 1 Markdown、邻域 readiness 与对应提交；synthesize 的 done_when 仍未满足。",
+        "next_codex_prompt": "Service instability: 限时内仅做写盘与 git commit，勿长推理。在既有 100 篇证据表与 v2 映射的已知相对路径上：① 新建或覆盖单一英文 Markdown，四段标题必须为 Problem definition; Evolution of methods; Limitations of prior work; This paper's entry point；每段 2–4 句 KDD 学术英语；每段末括号注明 evidence id/表行列或 mapping 键。② 同目录或紧挨目录写 5–10 行 readiness.md：首行为主稿相对路径；列出已写段落与待补 mapping。③ 完成后立即 git add 与 git commit；若仍易超时，可先只完整写 Problem definition 一段并 commit，再续跑。",
+        "completion_summary": "attempt 25 因服务侧超时失败，无合格落盘产物与草稿记录，维持在 synthesize 阶段并以更小工作包重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:05:07",
+      "attempt_no": 26,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "Attempt 26 仍以 Codex returncode -9（timeout）结束；可见输出仅一句中文意图陈述，无英文四段 KDD 主稿、readiness.md 或可核验提交，synthesize 的 done_when 与排队 operator 指令均未满足。",
+        "next_codex_prompt": "Instability: 不做长推理。在已知 evidence 表与 v2 映射相对路径旁，仅新建/覆盖单一英文 Markdown，先完整写满 Problem definition 段（2–4 句 KDD 学术英语，段末括号注明 evidence id/表行列或 mapping 键）；同目录写 5–10 行 readiness.md（首行主稿相对路径；列已写段与待补 mapping）。立即 git add 与该文件 commit；成功后再续跑其余三段。",
+        "completion_summary": "第 26 轮执行器因超时失败，无合格落盘产物，流程仍停留在 synthesize，需以更小写盘单元重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:05:55",
+      "attempt_no": 27,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "Codex 超时(returncode -9)；synthesize 的 done_when 未满足：仅 Problem definition 就绪，其余三段 TBD，且未在本地 worktree 形成可核验 git commit。",
+        "next_codex_prompt": "在 Transfer_Recovery 内与 evidence 表/v2 映射同目录层级：继续覆盖 20260402_KDD_Section1_en.md，仅补写「Evolution of methods」一小节（3–6 句 KDD 学术英语，每句或段末括号注明 evidence id/表行列或 mapping 键）；同步更新 readiness.md（已完成段、本节引用键、下一段待填）。若在 SuperButler 本地无该仓，则在本地可 git 路径创建等价相对路径副本并 git add+commit；否则在远程仓对该两文件 git add+commit 并给出 commit hash。禁止展开长推理与全文重写。",
+        "completion_summary": "第27轮执行器因超时失败；报告远程已落盘英文 Problem definition 与 readiness，三章仍缺，映射 patch 与提交缺失，流程仍处 synthesize。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {
+        "input_tokens": 17280239,
+        "cached_input_tokens": 16277760,
+        "output_tokens": 112393
+      },
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:06:40",
+      "attempt_no": 28,
+      "phase": "synthesize",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "本轮 Codex 以 timeout（returncode -9）失败，未形成可核验的落盘提交；synthesize 的 done_when（含可追溯英文稿与 readiness）未完成。",
+        "next_codex_prompt": "在 Transfer_Recovery 与 evidence 表/v2 映射同目录：仅向 20260402_KDD_Section1_en.md 追加「Evolution of methods」3–6 句 KDD 学术英语，每句或段末括号标注 evidence id/表行列或 mapping 键；同步更新 readiness.md（已完成小节、本节引用键、下一段待填）。完成后对这两文件 git add+commit 并回报 commit hash。禁止长推理与全文重写；若本轮仍易超时，先写文件再单独 commit。",
+        "completion_summary": "第28轮执行器超时失败，仅见意图说明无交付证明；仍处 synthesize，需最小包重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:09:29",
+      "attempt_no": 29,
+      "phase": "synthesize",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "synthesize",
+        "reason": "执行器本轮已成功落盘并提交（14e6684），完成_bounded 的 Evolution of methods 与 readiness 更新；但 synthesize 的 done_when 未达成，Limitations 与 Entry point 仍为 TBD，章节未形成完整闭环。",
+        "next_codex_prompt": "在 Transfer_Recovery 的 docs/0402（与 evidence 表及 v2 映射同目录）：向 20260402_KDD_Section1_en.md 仅追加「Limitations of prior work」与「This paper's entry point」两小节，各 3–6 句 KDD 学术英语，句末括号标注 evidence id/表行列或 mapping 键；同步更新 readiness.md（已完成小节清单、本节引用键、余下待填项）。仅对这两文件 git add+commit 并回报 commit hash；风格与 14e6684 中 Evolution 段落对齐；禁止全文重写与长推理。",
+        "completion_summary": "最小包交付已核验叙述：英文 Evolution 段落+可追溯标注、readiness 已记键值、远端 main 上 commit 14e6684f9e2edf3365ed35b15cc7419311e27d98；整章初稿与 operator 期望的完整英文化仍未闭合。",
+        "issue_kind": "none",
+        "followup_kind": "retry"
+      },
+      "token_usage": {
+        "input_tokens": 18155646,
+        "cached_input_tokens": 16784384,
+        "output_tokens": 118766
+      },
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:11:45",
+      "attempt_no": 30,
+      "phase": "synthesize",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "ADVANCE",
+        "next_phase": "quality_review",
+        "reason": "执行器本轮按 bounded 指令在远端 main 提交 f6601d9，已补全英文 Section1 的 Limitations 与 Entry point 并更新 readiness；synthesize 初稿四段闭合。句末可追溯标注已有，但段落级 evidence mapping 仍标为待办，更适合进入 quality_review 收敛证据链。",
+        "next_codex_prompt": "在 Transfer_Recovery docs/0402：以 quality_review 为目标补齐/核对「英文段落级 evidence mapping」与现有 evidence 表及 v2 映射一致；通读 20260402_KDD_Section1_en.md 与 readiness.md，修正任何断裂或可反驳表述；另单列 backlog：operator 要求的 KDD 合规篇幅/格式、终稿 PDF、可进 Overleaf 的 MD、以及 100 篇文献 PDF 与系统整理是否已有明确产物路径——若没有则写入待办与建议目录结构。完成后更新 readiness 并 git commit。",
+        "completion_summary": "synthesize _bounded 交付已达成：两小节英文初稿 + readiness 四节完成标记 + f6601d9；剩余为映射补丁与审查/operator 交付项对齐。",
+        "issue_kind": "none",
+        "followup_kind": "none"
+      },
+      "token_usage": {
+        "input_tokens": 18155646,
+        "cached_input_tokens": 16784384,
+        "output_tokens": 118766
+      },
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:14:33",
+      "attempt_no": 31,
+      "phase": "quality_review",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "ADVANCE",
+        "next_phase": "finalize",
+        "reason": "执行器本轮已提交并完成证据映射/质量报告/readiness 对齐，自述英文内容与证据链可通过审查；但 KDD 终稿 PDF、Overleaf 可用 MD、百篇文献 PDF 与版式要求仍处于未交付的打包缺口，符合进入 finalize 消化 operator backlog，而非结束整流。",
+        "next_codex_prompt": "在 Transfer_Recovery 的 docs/0402：以 finalize 为验收目标——(1) 从 20260402_KDD_Section1_en.md 导出/说明 KDD 合规篇幅与版式，并给出可迁入 Overleaf 的终版 MD 与同内容 PDF 的生成路径与文件名；(2) 明确百篇文献是 stable_access_url+摘要可接受还是需本地 PDF 镜像，并落地目录结构+索引（或 manifest）指向现有 evidence 表；(3) 更新 readiness.md 与 quality_review_report.md：将上述列为 finalize 阻塞项清零标准与复核路径。单轮流：add/commit 相关产物与文档，回报 hash。",
+        "completion_summary": "本轮文档侧 quality_review 收敛（映射/报告/readiness）；交付形态与文献 PDF 策略仍未闭环，应移交 finalize。",
+        "issue_kind": "plan_gap",
+        "followup_kind": "replan"
+      },
+      "token_usage": {
+        "input_tokens": 18950563,
+        "cached_input_tokens": 17471488,
+        "output_tokens": 128452
+      },
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:19:51",
+      "attempt_no": 32,
+      "phase": "synthesize",
+      "codex_status": "completed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "ADVANCE",
+        "next_phase": "quality_review",
+        "reason": "执行器本轮已落盘英文章节、Overleaf 用 MD、审查 PDF 及交付/readiness 更新并自述验收；但 guard 与 operator 追加项仍缺：文献 fulltext 本地缓存为 0（百篇 PDF 包未落地）、稿长约 568 词且明言仅为 section 级非 ACM/KDD 终稿版式；不满足 COMPLETE，也不宜在无 formal review 下直接收口。",
+        "next_codex_prompt": "进入 quality_review：1) 抽查 major claims 与现有证据表/分类矩阵/参考文献库的一一映射并记录缺口；2) 将「KDD 合规终稿（篇幅、两栏/引用样式、与全文结构衔接）」与「百篇文献：仅 stable_access_url+系统摘要 vs 必须本地 PDF」定为明确结论，并产出 manifest/目录约定与 finalize 阻塞清零 checklist；3) 更新 quality_review_report.md、readiness.md，给出通过/附条件通过/退回 synthesize 的判定与复核路径。单轮流 git add/commit 并回报 hash。",
+        "completion_summary": "合成侧交付物已生成并提交，但文献 PDF 镜像与 KDD 终稿形态仍为计划缺口，应转入质量审查以闭环证据链与 finalize 验收标准。",
+        "issue_kind": "plan_gap",
+        "followup_kind": "replan"
+      },
+      "token_usage": {
+        "input_tokens": 20154365,
+        "cached_input_tokens": 18644480,
+        "output_tokens": 140592
+      },
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:20:08",
+      "attempt_no": 33,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮执行器 codex resume 失败：thread/resume 报 no rollout，未产生可核验产物，属会话/CLI 侧故障而非阶段性目标达成。",
+        "next_codex_prompt": "放弃对 session 019d4c3a-6784-7d30-88e3-892f32126cc1 的 resume，改用新会话或 attach 仍有效的 rollout；在仓库内接续既有证据目录：按 queued 指令产出英文 KDD 风格 Section 1（problem / method evolution / limitations / entry point）与 Overleaf 友好 MD；维持≥100 篇可追溯引用；并给出 PDF+系统整理与 KDD 篇幅/版式的明确交付约定及 readiness 路径。单轮流 git add/commit 并回报 hash。",
+        "completion_summary": "本轮无有效执行输出；需在修复 CLI/会话绑定后重试同阶段工作。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:20:23",
+      "attempt_no": 34,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮 Codex 以 resume 调用 thread 019d4c3a-6784-7d30-88e3-892f32126cc1 失败（no rollout），无执行产物；execute 阶段 guard 与队列指令均未兑现。",
+        "next_codex_prompt": "禁用该 session 的 resume：新开 Codex 会话或在本地有效 rollout 上 attach。在仓库内沿用既有证据目录与≥100 篇可追溯映射；按队列指令产出抛光英文 KDD Section 1（problem / method evolution / limitations / entry point）及 Overleaf 友好 MD；明确 KDD 篇幅/版式约定、终稿 PDF 路径；并为 100 篇文献补 PDF 与系统整理产物；每句大论断可链回证据表/矩阵。完成后写简短 readiness（已修项/残留风险/下一步应审路径），单轮流 git add/commit 并回报 hash。",
+        "completion_summary": "无有效执行输出，仅会话/CLI 绑定故障，需换会话重试同阶段。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:20:39",
+      "attempt_no": 35,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "Codex 以 resume 恢复线程 019d4c3a-6784-7d30-88e3-892f32126cc1 失败（no rollout），无执行产物；execute 阶段守门与队列指令未兑现。",
+        "next_codex_prompt": "新开 Codex 会话（禁止对该 thread id 再 resume）；若本地有有效 rollout 则 attach。沿用仓库内证据目录与≥100 篇可追溯映射。按队列：产出抛光英文 KDD Section 1（problem definition / method evolution / limitations / entry point），主论断链回证据表/矩阵；补 Overleaf 友好 MD、KDD 篇幅/版式说明、终稿 PDF 路径规划；为 100 篇文献规划/汇总 PDF 与系统整理产物。缩水工作包：先验证最小一步（新开会话+单文件 Section 1 骨架+证据链锚点），再扩展。完成后写 readiness（已修/残留/应审路径），单轮流 git add/commit 回报 hash。",
+        "completion_summary": "本轮无有效执行输出，仅会话/resume 绑定故障；阶段目标未达成。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:20:56",
+      "attempt_no": 36,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "Codex 以 resume 恢复线程失败（no rollout），本轮无有效执行或仓库产物；execute 门槛与队列指令仍未满足。",
+        "next_codex_prompt": "禁止再对该 thread id resume：新开 Codex 会话（若有本地有效 rollout 则 attach）。沿用仓库内证据目录与≥100 篇可追溯映射。最小步：单文件英文 KDD Section 1 骨架（problem definition / method evolution / limitations / entry point）+ 每段链到证据表/矩阵锚点；再补 Overleaf 友好 MD、KDD 篇幅版式说明、终稿 PDF 与 100 篇 PDF 系统整理的路径规划；服务不稳时只扩写已验证的最小一步。完成 readiness（已修/残留/应审路径），git add/commit 回报 hash。",
+        "completion_summary": "本轮仅 Codex resume/rollout 绑定失败，未向 execute 守门前进。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:21:12",
+      "attempt_no": 37,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "Codex resume 失败（no rollout），本轮无有效产出；仍处于 execute，守门条件与队列指令未满足；编排侧 service_fault 偏高。",
+        "next_codex_prompt": "新开 Codex 会话，禁止再 resume 019d4c3a-6784-7d30-88e3-892f32126cc1。沿用仓库内证据目录与≥100 篇映射。最小步：单文件英文 KDD Section 1 骨架（problem definition / method evolution / limitations / entry point），每段注明证据表/矩阵锚点；附 Overleaf 友好 MD、KDD 版式与终稿 PDF、100 篇 PDF 整理的路径说明；输出 readiness（已修/残留/下一步审阅路径）；git add/commit 回报 hash。",
+        "completion_summary": "仅执行器绑定/恢复失败，execute 三类产物与英文 KDD 交付尚未在本轮验证推进。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:21:27",
+      "attempt_no": 38,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "最新执行器尝试为 Codex resume 失败（no rollout），本轮未产生可用交付产物，服务故障/不稳定偏高。",
+        "next_codex_prompt": "新开 Codex 会话（禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1）。沿用仓库内证据目录与既有 ≥100 篇文献映射。最小步交付：在仓库新增/更新“单文件英文 KDD Section 1 骨架”（problem definition / method evolution / limitations / entry point），每段均标注证据表/矩阵锚点（可引用既有 artifacts 路径或文件名）。同时补齐 Overleaf 友好 MD（含 KDD 版式要点）与终稿 PDF 的生成入口/路径说明，以及 100 篇 PDF 整理的路径清单（不必全量生成内容，先提供可追溯清单与目录结构）。输出 readiness（已修/残留/下一步审阅路径）并完成 git add/commit，返回 commit hash。",
+        "completion_summary": "执行器本轮无有效交付推进，execute 阶段产物（分类矩阵/摘要/参考库）与英文 Section 1 仍未在该尝试中被验证或产出。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:21:46",
+      "attempt_no": 39,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "最新执行器尝试以 Codex resume 失败（no rollout），本轮未产生可用交付产物，服务不稳定需缩小工作包并先交付最小可运行骨架。",
+        "next_codex_prompt": "新开 Codex 会话（禁止 resume：019d4c3a-6784-7d30-88e3-892f32126cc1）。最小步交付：在仓库新增/更新“单文件英文 KDD Section 1 骨架”（包含 problem definition / method evolution / limitations / entry point；每段都标注证据锚点，可引用现有证据表/矩阵/文件名或路径）。同时补齐 Overleaf 友好 MD（包含必要版式要点）与终稿 PDF 生成入口/路径说明（说明即可，不必实际全量生成 PDF 内容）。并提供 100 篇文献 PDF 整理的可追溯路径清单与目录结构（可先给清单/结构，不必生成全部内容）。最后输出 readiness（已修/残留/下一步审阅路径），并完成 git add/commit，返回 commit hash。严格避免扩大范围与广泛重试：仅完成上述最小交付并自检可用性。",
+        "completion_summary": "本轮 execute 未产生可验证的交付产物（Codex resume 失败），需在服务故障背景下先交付最小英文 Section 1 骨架与证据锚点。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:22:03",
+      "attempt_no": 40,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "最新执行器尝试以 Codex resume 失败（no rollout），本轮未产生可用的最小交付产物；服务不稳定需缩小工作包并先交付可操作骨架。",
+        "next_codex_prompt": "新开 Codex 会话（禁止 resume：019d4c3a-6784-7d30-88e3-892f32126cc1）。最小步交付：在仓库新增/更新“单文件英文 KDD Section 1 骨架”（problem definition / method evolution / limitations / entry point；每段都标注证据锚点，可引用现有证据表/矩阵/文件路径）。同时补齐 Overleaf 友好 MD（必要版式要点）与终稿 PDF 生成入口/路径说明（说明即可，不必全量生成 PDF）。并提供 100 篇文献 PDF 整理的可追溯路径清单与目录结构（可先给清单/结构，不必生成全部内容）。最后输出 readiness（已修/残留/下一步审阅路径）并完成 git add/commit，返回 commit hash。避免扩大范围与广泛重试。",
+        "completion_summary": "本轮 execute 因服务故障/调用失败未产出可被下一步直接消费的最小交付。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:22:23",
+      "attempt_no": 41,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮执行器 Codex resume 失败（no rollout for thread 019d4c3a-6784-7d30-88e3-892f32126cc1），未产生可消费产物；execute 阶段数量/三类产物/质量门槛均未达成。",
+        "next_codex_prompt": "新开 Codex 会话，禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1。最小包：在仓库新增或更新单文件英文 KDD Section 1 骨架（problem definition / method evolution / limitations / entry point），每段用证据锚点指回现有证据表、矩阵或文件路径；另附 Overleaf 友好 MD 的版式要点与终稿 PDF 生成路径说明（说明即可，勿强求全量构建）；给出 100 篇文献 PDF 的可追溯清单与目录结构（清单+结构即可）；写简短 readiness（已修/残留/下一步应审阅路径）；git add/commit 并返回 commit hash。遵守已排队 operator 要求：主交付为英文学术语气 KDD Section 1、终稿需可导出 PDF 与可导入 Overleaf 的 MD，文献侧保持 100 篇证据链与系统性整理的路径约定，控制在最小步、避免大范围重试。",
+        "completion_summary": "执行器失败，无有效交付；维持 execute，按缩小工作包与新会话重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:22:38",
+      "attempt_no": 42,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮 Codex 以 resume 调用失败（thread 无 rollout），未产生可验收产物；execute 阶段的数量门槛、三类产物与可追溯性均未满足，guard 与排队 operator 要求仍未兑现。",
+        "next_codex_prompt": "新开 Codex 会话，禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1。最小包：在仓库内新增或更新单文件英文 KDD 风格 Section 1 骨架（problem definition / method evolution / limitations / entry point），每段给出可点击验证的证据锚点（指向现有证据表、分类矩阵、参考文献库路径）；附 Overleaf 友好 Markdown 版式要点与终稿 PDF 导出说明（说明即可）；给出 100 篇文献 PDF 的可追溯清单与建议目录结构（清单+结构）；写 readiness（已修正/残留/下一步应审路径）；git add/commit 并返回 commit hash。遵守排队指令：主交付为英文学术语气、终稿需可 PDF 与可导入 Overleaf 的 MD、文献侧保持 100 篇证据链与整理路径约定；服务不稳时只做最小前进步、勿大范围尝试 resume。",
+        "completion_summary": "执行器失败，无有效交付；仍处 execute，须换新会话按缩小工作包重做。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:23:00",
+      "attempt_no": 43,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "Codex 以 resume 调用失败（无 rollout），本轮无可验收产物；execute 阶段 100 篇与三类可追溯产物及排队英文化/KDD/Overleaf/PDF 要求均未兑现。",
+        "next_codex_prompt": "新开 Codex 会话，禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1。最小包：在仓库内新增或更新单文件英文 KDD 风格 Section 1（problem definition / method evolution / limitations / entry point），每段附证据锚点（现有证据表、分类矩阵、参考文献库路径）；附 Overleaf 友好 Markdown 版式要点与终稿 PDF 导出说明；给出 100 篇文献 PDF 的可追溯清单与建议目录结构；写 readiness（已修正/残留/下一步应审路径）；git add/commit 并返回 commit hash。服务不稳时仅验证此最小步，勿再大范围 resume。",
+        "completion_summary": "本轮执行器失败、无交付；仍处于 execute，须换新会话按缩小工作包重做。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:23:19",
+      "attempt_no": 44,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "执行器以 resume 调用 Codex 失败（no rollout for thread），本轮无有效产出；execute 阶段目标与排队指令（英文化 KDD Section 1、证据链、Overleaf/PDF/文献整理等）均未达成。",
+        "next_codex_prompt": "禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1；新开 Codex 会话。最小包：在仓库内单文件产出英文 KDD 风格 Section 1（problem definition / method evolution / limitations of prior work / this paper's entry point），每段注明证据锚点（现有分类矩阵、阅读摘要、参考文献库路径）；文末附 Overleaf 友好 Markdown 版式要点与 PDF 导出说明；给出 100 篇文献 PDF 的可追溯清单与建议目录结构；写 readiness（已修正/残留/下一步应审路径）。git add/commit 并返回 commit hash。服务不稳时不要大范围检索或再次 resume。",
+        "completion_summary": "第 44 轮执行失败，无可验收制品；仍处于 execute，需换新会话按缩小工作包重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:23:38",
+      "attempt_no": 45,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮 Codex 以 resume 失败（no rollout for thread），无有效产出；execute 的 done_when 与排队指令均未达成；governor 已因 repeated_service_fault 收紧，应缩小工作包并以新会话推进。",
+        "next_codex_prompt": "禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1；新开 Codex 会话（非 resume）。最小包：在仓库内新增或更新单个交付文件——英文学术口吻 KDD Section 1，显式四块（problem definition / method evolution / limitations / this paper's entry point），每段末用括号给出证据锚点（相对路径指向现有分类矩阵、阅读摘要、参考文献库）；文末：Overleaf 友好 Markdown 片段 + 简要 PDF 导出步骤；100 篇 PDF 的建议目录树 + 按 bib key 或编号的可追溯清单（不要求本轮下载 PDF）。附 10 行内 readiness（已改/残留/建议下一步审阅路径）。git add 该文件与必要索引，单 commit，在 handoff 中给出 commit hash。禁止大范围检索与再次 resume。",
+        "completion_summary": "第 45 轮执行器因 thread resume 失败无制品；仍处于 execute，需换新 Codex 会话按最小包重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:23:56",
+      "attempt_no": 46,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本回合 Codex 以 resume 调用失败（no rollout for thread），无代码/文稿产出；execute 的 done_when 与排队指令（英文化 KDD 第一节、Overleaf/PDF、100 篇可追溯整理）均未在本回合达成；governor 已因 repeated_service_fault 收紧，应继续缩小工作包并以全新非 resume 会话推进。",
+        "next_codex_prompt": "禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1；新开 Codex 会话（非 resume）。最小包：在仓库内只改一个交付文件（或新增单文件）——英文学术口吻 KDD Section 1，显式四小节：problem definition / method evolution / limitations of prior work / this paper's entry point；每节末用括号标注证据锚点（相对路径指向现有分类矩阵、阅读摘要、参考文献库）。文末补充：Overleaf 友好 Markdown 片段、简要 LaTeX/PDF 导出步骤占位；100 篇 PDF 的建议目录树 + 按 bib key 或编号的可追溯清单（本轮不下载 PDF）。附 ≤10 行 readiness（已修正项、残留风险、建议下一步审阅路径）。git add 该文件及必要索引，单 commit，handoff 给出 commit hash。禁止大范围检索与再次 resume。",
+        "completion_summary": "第 46 轮执行器因 thread resume 失败无制品；仍处于 execute，需换新 Codex 会话按最小包与排队交付要求重试。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:24:12",
+      "attempt_no": 47,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本回合 Codex 仍以 resume 失败（no rollout for thread 019d4c3a-6784-7d30-88e3-892f32126cc1），无文稿或仓库制品；execute 的 done_when 与排队指令（英文化 KDD 第一节、可追溯证据、Overleaf/PDF/100 篇整理等）均未达成；governor 已因 repeated_service_fault 收紧，须换新会话、最小包前移。",
+        "next_codex_prompt": "禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1；新开 Codex 会话（非 resume）。最小包：仓库内仅新增或修改单一交付 Markdown——英文学术口吻 KDD Section 1，四小节标题显式为 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径指向现有分类矩阵、阅读摘要、参考文献库）。文末含：Overleaf 友好 md 片段、简要 LaTeX→PDF 导出步骤占位；100 篇 PDF 建议目录树 + 按 bib key 或编号可追溯清单（本轮不下载 PDF）。文末 ≤10 行 readiness（已修正、残留风险、建议下一步审阅路径）。git add 该文件及必要索引，单 commit，handoff 给出 commit SHA。禁止大范围检索与再次 resume。",
+        "completion_summary": "第 47 轮执行器因 thread resume 无产出，仍处 execute，未完成文献与三节稿门槛。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:24:29",
+      "attempt_no": 48,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "第48轮执行器 Codex resume 失败（no rollout for thread 019d4c3a），无代码或交付物；execute 阶段门槛与排队指令均未满足；governor 已收紧，须换新会话、最小包前移而非 resume。",
+        "next_codex_prompt": "禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1；新开 Codex 会话（非 resume）。最小包：仓库内仅新增或修改单一交付 Markdown——英文学术口吻 KDD Section 1，四小节显式标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径指向现有分类矩阵、阅读摘要、参考文献库）。文末含：Overleaf 友好 md 片段、简要 LaTeX→PDF 导出步骤占位；100 篇 PDF 建议目录树 + 按 bib key 或编号可追溯清单（本轮不下载 PDF）。文末 ≤10 行 readiness（已修正、残留风险、建议下一步审阅路径）。git add 该文件及必要索引，单 commit，handoff 给出 commit SHA。禁止大范围检索与再次 resume。",
+        "completion_summary": "执行器因 thread resume 失败无产出；仍处 execute，未完成文献与 KDD 第一节可追溯交付。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:24:45",
+      "attempt_no": 49,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮执行器 Codex resume 失败（no rollout for thread），零产出；execute 阶段门槛与排队指令均未满足，不可前推或收尾。",
+        "next_codex_prompt": "禁止 resume 019d4c3a-6784-7d30-88e3-892f32126cc1；新开 Codex 非 resume 会话。最小包：仓库内仅此一轮新增或修改单一交付 Markdown——英文学术口吻 KDD Section 1，显式四节标为 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径指向现有分类矩阵、阅读摘要、参考文献库）。文末含：Overleaf 友好 md 片段、LaTeX→PDF 导出步骤占位；100 篇 PDF 建议目录树 + 按 bib key/编号可追溯清单（本轮不下载 PDF）。operator 要求：最终需 PDF 与可导入 Overleaf 的 md、篇幅格式贴合 KDD、100 篇文献 PDF 与系统整理——本轮在文末以可执行清单与目录约定承接，不 breadth 检索。文末 ≤10 行 readiness。对该文件及必要索引 git add，单 commit，handoff 给出 commit SHA。",
+        "completion_summary": "第49轮无有效执行产出；resume 基础设施错误阻断，文献/KDD 可追溯交付仍未达标。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:25:02",
+      "attempt_no": 50,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "执行器本轮 Codex resume 失败（no rollout for thread），零产物；execute 阶段完成条件与排队指令仍未满足，不可 ADVANCE/COMPLETE。",
+        "next_codex_prompt": "禁止 resume 会话 019d4c3a-6784-7d30-88e3-892f32126cc1；以全新非 resume Codex 会话执行上一轮最小包：仅新增或修改单一交付 Markdown，英文学术口吻 KDD Section 1，四节标题须为 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径指向现有分类矩阵、阅读摘要、参考文献库）。文末含：Overleaf 友好 md 片段、LaTeX→PDF 导出步骤占位；100 篇 PDF 建议目录树 + 按 bib key/编号可追溯清单（本轮不下载 PDF）。operator 要求以可执行清单与目录约定承接。文末 ≤10 行 readiness。git add 该文件与必要索引，单 commit，handoff 给出 commit SHA。服务不稳定：仅此一轮、禁止再 resume、失败则回报最小阻塞信息。",
+        "completion_summary": "第50轮执行失败：基础设施性 resume 错误，未推进文献沉淀或 KDD 可追溯交付；仍需在 execute 内用新会话完成最小 Markdown 交付与提交。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:25:20",
+      "attempt_no": 51,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮执行器 Codex resume 报 “no rollout found for thread”，属基础设施/会话侧故障，零交付物；execute 阶段的数量门槛、三类产物与排队 operator 指令均未满足，不能 ADVANCE 或 COMPLETE。",
+        "next_codex_prompt": "禁止 resume 线程 019d4c3a-6784-7d30-88e3-892f32126cc1；新开非 resume Codex 会话，单轮最小包：只新增或改一份交付用 Markdown（英文学术语气、KDD Section 1；四节标题须为 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点，相对路径指向现有分类矩阵、阅读摘要、参考文献库）。文末含：Overleaf 友好 md 片段、LaTeX→PDF 导出步骤占位；100 篇 PDF 建议目录树 + 按 bib key/编号可追溯清单（本轮不下载 PDF）。service_fault_streak 高：仅此一包、避免宽范围重试；成功则 git add 该文件与必要索引、单 commit，handoff 给 commit SHA；失败则只回报最小阻塞信息（错误原文 + 已尝试动作）。",
+        "completion_summary": "第51轮：resume 失败，无 rollout，未产生仓库内实现物；仍在 execute，需用全新会话重试最小 Markdown 交付。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:25:39",
+      "attempt_no": 52,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "第52轮执行器 Codex 仍以 resume 调用失败（no rollout found for thread 019d4c3a-6784-7d30-88e3-892f32126cc1），无仓库交付物；execute 阶段百篇门槛与三类产物及排队 operator 要求均未满足，不能 ADVANCE 或 COMPLETE。",
+        "next_codex_prompt": "禁止 resume 线程 019d4c3a-6784-7d30-88e3-892f32126cc1。新开非 resume 会话，单轮唯一目标：新增或仅改一份交付用英文 Markdown（KDD Section 1 语气；四级标题固定为 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点，相对路径指向现有分类矩阵、阅读摘要、参考文献库）。文末必须含：(1) Overleaf 友好 md 片段与 LaTeX→PDF 导出步骤占位；(2) 100 篇 PDF 的建议目录树 + 按 bib key/编号可追溯清单（本轮不下载 PDF）。对齐排队指令：终稿方向为英文学术 KDD 第一节而非中文综述。service_fault_streak 高：仅此一包、勿宽扫；成功则 git add 该文件及必要索引、单 commit 并 handoff commit SHA；失败则仅回报错误原文 + 已尝试动作。",
+        "completion_summary": "第52轮：Codex resume/rollout 缺失导致零产出；仍处于 execute，需全新非 resume 会话完成最小英文 Section 1 md 与索引占位。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:25:57",
+      "attempt_no": 53,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮执行器仍以 codex_mode=resume 调用，报错 no rollout for thread 019d4c3a-6784-7d30-88e3-892f32126cc1，零仓库产出；execute 阶段（≥100 篇与三类产物）与排队 operator 要求均未满足，不能 ADVANCE/COMPLETE。",
+        "next_codex_prompt": "强制冷启动：workflow/agent 侧禁止对 019d4c3a-6784-7d30-88e3-892f32126cc1 使用 resume/new-thread-resume；用全新非 resume 会话单轮落地。唯一交付物：一份英文 KDD 语气 Section 1 Markdown，四级标题固定为 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径指向现有分类矩阵、阅读摘要、参考文献库）。文末含：(1) Overleaf 友好 md 与 LaTeX→PDF 步骤占位；(2) 100 篇 PDF 建议目录树 + 按 bib key/编号可追溯清单（本轮不下载 PDF）。对齐排队指令：终稿为英文学术 KDD 第一节；service_fault_streak 高：仅此一包、勿宽扫；成功则 git add 该文件及必要索引、单 commit 并回报 SHA；失败则仅回报错误原文与已尝试动作。",
+        "completion_summary": "第53轮：Codex resume/rollout 缺失再次导致失败，无增量产物；仍处于 execute，需运行时改为非 resume 冷启动并完成最小英文 Section 1 md 与占位清单。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:26:14",
+      "attempt_no": 54,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "第54轮 Codex 仍以 resume 调用，报错无 rollout（019d4c3a-6784-7d30-88e3-892f32126cc1），零产出；execute 门槛与排队指令均未达成，不能 ADVANCE/COMPLETE。",
+        "next_codex_prompt": "运行时强制 codex_mode=exec（或等价非 resume 冷会话），禁止 resume/new-thread-resume 对该 thread id。仅此一包：单文件英文 KDD 语气 Section 1 Markdown，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内证据锚点（相对路径→现有分类矩阵、阅读摘要、参考文献库）。文末：(1) Overleaf 友好 md + LaTeX→PDF 占位步骤；(2) 100 篇 PDF 建议目录树 + bib key/编号可追溯清单（不下载）。对齐排队：英文学术第一节、KDD 篇幅预期；成功后 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报错误原文与已尝试动作。",
+        "completion_summary": "第54轮：resume/rollout 缺失再次失败，无仓库增量；仍处于 execute，需改为非 resume 冷启动并完成最小英文 Section 1 md 与占位清单。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:26:31",
+      "attempt_no": 55,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "第55轮执行器 Codex 仍以 resume 调用，报错 thread/resume 无 rollout（019d4c3a-6784-7d30-88e3-892f32126cc1），本回合零 artifacts；execute 阶段门槛与排队修正指令均未达成，不能 ADVANCE/COMPLETE。",
+        "next_codex_prompt": "运行时强制 codex_mode=exec（或等价全新冷会话），禁止对该 thread id 使用 resume/new-thread-resume。仅此一包产出：单文件英文 KDD 风格 Section 1，Markdown，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末用括号写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末必须含：(1) Overleaf 友好 md 说明 + LaTeX→PDF 占位步骤；(2) 100 篇 PDF 建议目录树 + bib key/编号可追溯清单（不下载实际 PDF）。对齐排队指令：最终目标为英文学术稿与 KDD 篇幅预期；成功后仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报错误原文与已尝试动作。服务不稳：先做最小一步验证冷 exec 可写文件再扩展。",
+        "completion_summary": "第55轮：resume/rollout 缺失再次失败，仓库无增量；仍在 execute，需冷启动 exec 完成最小英文 Section 1 md 与占位清单。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:26:48",
+      "attempt_no": 56,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "第56轮 Codex 仍以 resume 调用，报 thread/resume 无 rollout（019d4c3a-6784-7d30-88e3-892f32126cc1）；与上轮同类失败，零有效 artifacts，execute 门槛与排队修正均未满足。",
+        "next_codex_prompt": "强制 codex_mode=exec（全新冷会话），严禁对该 thread id 使用 resume。先做最小验证：在约定路径写入/更新单文件英文 KDD Section1.md（四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵/摘要/bib）。文末含 Overleaf 友好说明+LaTeX→PDF 占位；100 篇 PDF 建议目录树与编号/bib key 清单（不下载 PDF）。服务不稳：仅 git add 该文件及必要索引、单 commit 报 SHA；失败只回报原始错误与已尝试动作。",
+        "completion_summary": "执行器失败：resume/rollout 缺失重复；仓库无增量；仍在 execute，需冷 exec 落盘最小英文 Section1 与占位清单。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:27:05",
+      "attempt_no": 57,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "第57轮执行器仍以 resume 失败：thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout；零有效产物，execute 的 done_when 与排队修正均未满足。",
+        "next_codex_prompt": "codex_mode 必须为 exec（全新冷会话），禁止对 019d4c3a-6784-7d30-88e3-892f32126cc1 及任意旧 thread 使用 resume。最小步：在 flow 约定产出路径写入或更新单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵/摘要/bib。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇文献的编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。同步满足排队指令：学术英语 KDD 口吻、主张可追溯证据表。服务不稳：仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只贴原始错误与已尝试动作。",
+        "completion_summary": "执行失败重复：resume/rollout 缺失；仓库无增量；仍在 execute，需冷 exec 落盘最小英文 Section1 与证据锚点/占位清单。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:27:28",
+      "attempt_no": 58,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "第58轮执行器仍为 codex resume 失败（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout）；与上轮裁定要求的冷 exec 不符，本轮无有效仓库产物，execute 的 done_when 与排队修正均未满足。",
+        "next_codex_prompt": "强制 codex_mode=exec（全新冷会话），禁止对任何旧 thread/session 使用 resume。最小交付：在 flow 约定产出路径创建或更新单文件英文 KDD Section1.md，四级标题：Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末用括号标注证据锚点→既有分类矩阵/阅读摘要/bib 路径。文末附：Overleaf 友好说明、LaTeX→PDF 占位；100 篇文献的编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。学术英语 KDD 口吻，主张与证据表可追溯。服务不稳时仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
+        "completion_summary": "执行失败：resume/rollout 缺失；无增量产物；仍处于 execute，需用冷 exec 落盘最小英文 Section1 与证据锚点/占位清单。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:27:49",
+      "attempt_no": 59,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "第59轮 Codex 仍以 resume 调用且报错（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout），与要求的冷 exec 不符；无有效仓库产物，execute 的 done_when 与排队修正均未达成。",
+        "next_codex_prompt": "强制 codex_mode=exec（全新会话），禁止对任何 thread/session 使用 resume。最小交付：在 flow 约定产出路径写入或更新单文件英文 KDD Section1.md，四级标题：Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵/阅读摘要/bib 的路径。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。学术英语 KDD 口吻，主张与证据表可追溯。仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
+        "completion_summary": "执行失败：resume/rollout 缺失；无增量产物；仍处于 execute，需冷 exec 落盘英文 Section1 与证据锚点/占位清单。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:28:10",
+      "attempt_no": 60,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "第60轮 Codex 仍为 resume 且报错（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout），与要求的冷启动 exec 不符；execute 的 done_when、排队修正与英文 KDD Section1 均未达成。",
+        "next_codex_prompt": "强制 codex_mode=exec（禁止 resume/任何 thread 恢复）。最小交付：在 flow 约定产出路径更新单文件英文 KDD Section1.md，四节四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵、阅读摘要、bib 的相对路径。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
+        "completion_summary": "本轮执行失败：无有效 codex 产出；仍未落盘英文 Section1 与证据锚点；阶段仍为 execute，需下一轮冷 exec 纠正调用并完成最小文件交付。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:28:29",
+      "attempt_no": 61,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮 Codex 以 resume 调用失败（thread 无 rollout），无有效产出；execute 的 done_when 与排队英文 KDD Section1/证据锚点仍未满足。",
+        "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread 恢复）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径指向既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+        "completion_summary": "第61轮执行失败：仅得 Codex resume 错误，未写入 Section1 或更新证据映射；仍停留在 execute。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:28:47",
+      "attempt_no": 62,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "Codex 仍以 resume 启动且 thread 无 rollout，执行器无有效产出；execute 阶段的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+        "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+        "completion_summary": "第62轮：resume 失败，无 Section1 落盘与证据映射更新；仍处 execute。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    },
+    {
+      "at": "2026-04-02 19:29:05",
+      "attempt_no": 63,
+      "phase": "execute",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+        "next_codex_prompt": "按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+        "completion_summary": "第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      },
+      "token_usage": {},
+      "executed_operator_update_id": ""
+    }
+  ],
+  "auto_fix_round_count": 0,
+  "resume_source": "",
+  "trace_run_id": "flow_20260402111642_01929624",
+  "phase_plan": [
+    {
+      "phase_id": "clarify",
+      "title": "Clarify",
+      "objective": "明确任务边界与验收口径：确认 179 已配置 SSH 免密、必须先确认主题再检索、且交付物需证据可追溯并经质量审查通过后才能 finalize。",
+      "done_when": "形成书面化执行约束、主题确认流程与验收标准，且各方无歧义。",
+      "retry_phase_id": "clarify",
+      "fallback_phase_id": "clarify",
+      "next_phase_id": "discover"
+    },
+    {
+      "phase_id": "discover",
+      "title": "Discover",
+      "objective": "在 `Transfer_Recovery` 中盘点现有材料并确认研究主题，随后制定检索式、数据库范围、纳入排除标准与证据记录规范。",
+      "done_when": "研究主题已确认，检索与筛选策略可执行，证据记录模板已就绪。",
+      "retry_phase_id": "discover",
+      "fallback_phase_id": "clarify",
+      "next_phase_id": "structure"
+    },
+    {
+      "phase_id": "structure",
+      "title": "Structure",
+      "objective": "设计综述结构与分类矩阵维度，确定摘要模板、引用字段、标签体系和文献库组织方式。",
+      "done_when": "分类框架与数据结构定稿，可稳定承载 100+ 文献整理。",
+      "retry_phase_id": "structure",
+      "fallback_phase_id": "discover",
+      "next_phase_id": "execute"
+    },
+    {
+      "phase_id": "execute",
+      "title": "Execute",
+      "objective": "执行检索、筛选与阅读，沉淀不少于 100 篇高相关文献的分类矩阵、阅读摘要与参考文献库。",
+      "done_when": "达到数量与相关性门槛，三类核心产物完整并与证据源可追溯关联。",
+      "retry_phase_id": "execute",
+      "fallback_phase_id": "structure",
+      "next_phase_id": "synthesize"
+    },
+    {
+      "phase_id": "synthesize",
+      "title": "Synthesize",
+      "objective": "基于结构化证据撰写 KDD 风格“研究背景与现状”初稿，系统呈现问题定义、方法演进、不足与切入点。",
+      "done_when": "形成逻辑闭环完整、论据可追溯的第一版章节稿。",
+      "retry_phase_id": "synthesize",
+      "fallback_phase_id": "execute",
+      "next_phase_id": "quality_review"
+    },
+    {
+      "phase_id": "quality_review",
+      "title": "Quality Review",
+      "objective": "对证据链、覆盖度、论证一致性、引用规范与写作质量做审查并修正缺陷。",
+      "done_when": "质量审查通过，剩余风险已记录且不阻塞交付。",
+      "retry_phase_id": "quality_review",
+      "fallback_phase_id": "synthesize",
+      "next_phase_id": "finalize"
+    },
+    {
+      "phase_id": "finalize",
+      "title": "Finalize",
+      "objective": "冻结交付版本并输出最终说明，确保可复核、可复用、可继续迭代。",
+      "done_when": "最终产物与过程记录齐备并完成正式交接。",
+      "retry_phase_id": "finalize",
+      "fallback_phase_id": "quality_review",
+      "next_phase_id": ""
+    }
+  ],
+  "entry_mode": "manage",
+  "manage_handoff": {
+    "summary": "已按模板生成本次 179 文献综述的可执行 managed flow 实例定义：先在 179 环境确认主题，再完成高相关文献系统梳理与 KDD 风格“研究背景与现状”初稿。",
+    "label": "lit_review_179_kdd_bg",
+    "description": "179 服务器主题确认 + 100+ 高相关文献综述 + KDD 风格背景与现状写作实例",
+    "goal": "登录 `jianghy@10.254.73.179` 并进入 `Transfer_Recovery`，先基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，产出分类矩阵、阅读摘要与参考文献库；最终完成一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+    "guard_condition": "仅在以下条件全部满足时可结束：已确认并记录最终研究主题；文献样本不少于 100 且相关性可说明；分类矩阵、阅读摘要、参考文献库三类产物齐备并可追溯到证据来源；质量审查通过后方可进入 finalize。",
+    "workflow_kind": "managed_flow",
+    "asset_kind": "instance",
+    "mutation": "create",
+    "risk_level": "normal",
+    "autonomy_profile": "guarded",
+    "phase_plan": [
+      {
+        "phase_id": "clarify",
+        "title": "Clarify",
+        "objective": "明确任务边界与验收口径：确认 179 已配置 SSH 免密、必须先确认主题再检索、且交付物需证据可追溯并经质量审查通过后才能 finalize。",
+        "done_when": "形成书面化执行约束、主题确认流程与验收标准，且各方无歧义。",
+        "retry_phase_id": "clarify",
+        "fallback_phase_id": "clarify",
+        "next_phase_id": "discover"
+      },
+      {
+        "phase_id": "discover",
+        "title": "Discover",
+        "objective": "在 `Transfer_Recovery` 中盘点现有材料并确认研究主题，随后制定检索式、数据库范围、纳入排除标准与证据记录规范。",
+        "done_when": "研究主题已确认，检索与筛选策略可执行，证据记录模板已就绪。",
+        "retry_phase_id": "discover",
+        "fallback_phase_id": "clarify",
+        "next_phase_id": "structure"
+      },
+      {
+        "phase_id": "structure",
+        "title": "Structure",
+        "objective": "设计综述结构与分类矩阵维度，确定摘要模板、引用字段、标签体系和文献库组织方式。",
+        "done_when": "分类框架与数据结构定稿，可稳定承载 100+ 文献整理。",
+        "retry_phase_id": "structure",
+        "fallback_phase_id": "discover",
+        "next_phase_id": "execute"
+      },
+      {
+        "phase_id": "execute",
+        "title": "Execute",
+        "objective": "执行检索、筛选与阅读，沉淀不少于 100 篇高相关文献的分类矩阵、阅读摘要与参考文献库。",
+        "done_when": "达到数量与相关性门槛，三类核心产物完整并与证据源可追溯关联。",
+        "retry_phase_id": "execute",
+        "fallback_phase_id": "structure",
+        "next_phase_id": "synthesize"
+      },
+      {
+        "phase_id": "synthesize",
+        "title": "Synthesize",
+        "objective": "基于结构化证据撰写 KDD 风格“研究背景与现状”初稿，系统呈现问题定义、方法演进、不足与切入点。",
+        "done_when": "形成逻辑闭环完整、论据可追溯的第一版章节稿。",
+        "retry_phase_id": "synthesize",
+        "fallback_phase_id": "execute",
+        "next_phase_id": "quality_review"
+      },
+      {
+        "phase_id": "quality_review",
+        "title": "Quality Review",
+        "objective": "对证据链、覆盖度、论证一致性、引用规范与写作质量做审查并修正缺陷。",
+        "done_when": "质量审查通过，剩余风险已记录且不阻塞交付。",
+        "retry_phase_id": "quality_review",
+        "fallback_phase_id": "synthesize",
+        "next_phase_id": "finalize"
+      },
+      {
+        "phase_id": "finalize",
+        "title": "Finalize",
+        "objective": "冻结交付版本并输出最终说明，确保可复核、可复用、可继续迭代。",
+        "done_when": "最终产物与过程记录齐备并完成正式交接。",
+        "retry_phase_id": "finalize",
+        "fallback_phase_id": "quality_review",
+        "next_phase_id": ""
+      }
+    ],
+    "review_checklist": [],
+    "instance_defaults": {},
+    "lineage": {},
+    "asset_state": {},
+    "bundle_manifest": {
+      "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle",
+      "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/manager.md",
+      "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/supervisor.md",
+      "doctor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/doctor.md",
+      "doctor_skill_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/skills/doctor/SKILL.md",
+      "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/sources.json",
+      "manager_prompt": "manager.md",
+      "supervisor_prompt": "supervisor.md",
+      "doctor_prompt": "doctor.md",
+      "sources_path": "sources.json",
+      "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references",
+      "doctor_references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references/doctor",
+      "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/assets",
+      "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived",
+      "derived_supervisor_prompt": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_compiled.md",
+      "derived_supervisor_knowledge": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json",
+      "derived": {
+        "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json"
+      }
+    },
+    "operator_guidance": "先确认 clarify 产物中三项硬约束已显式落地（免密 SSH、先定主题、质量审查门槛）；再放行 discover/execute。执行期重点盯住文献数量与相关性阈值、证据追溯完整性和阶段性抽检；若 quality_review 未通过，必须回退修订后再进入 finalize。",
+    "confirmation_prompt": "请确认按上述七阶段创建该 pending managed flow 实例并立即进入 clarify。",
+    "managed_at": "2026-04-02 11:17:16",
+    "manage_stage": "commit",
+    "manager_session_id": "",
+    "role_guidance": {
+      "suggested_roles": [
+        "planner",
+        "implementer",
+        "reviewer"
+      ],
+      "suggested_specialists": [
+        "creator",
+        "doctor"
+      ],
+      "activation_hints": [
+        "when environment, knowledge, or formatting gaps block KDD-style delivery",
+        "when repeated runtime/session faults block forward progress"
+      ],
+      "promotion_candidates": [
+        "creator"
+      ],
+      "manager_notes": "Keep role guidance lightweight: creator helps capability gaps, doctor helps runtime repair."
+    },
+    "doctor_policy": {
+      "enabled": true,
+      "activation_rules": [
+        "repeated_service_fault",
+        "same_resume_failure",
+        "session_binding_invalid"
+      ],
+      "repair_scope": "runtime_assets_first",
+      "framework_bug_action": "pause",
+      "max_rounds_per_episode": 1
+    }
+  },
+  "execution_mode": "medium",
+  "session_strategy": "role_bound",
+  "active_role_id": "implementer",
+  "active_role_turn_no": 64,
+  "role_pack_id": "coding_flow",
+  "role_sessions": {
+    "implementer": {
+      "role_id": "implementer",
+      "session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+      "status": "ready",
+      "updated_at": "2026-04-02 19:29:08"
+    }
+  },
+  "latest_role_handoffs": {},
+  "role_turn_counts": {
+    "implementer": 64
+  },
+  "latest_mutation": {},
+  "flow_version": "1.3.0",
+  "created_at": "2026-04-02 11:16:42",
+  "updated_at": "2026-04-02 18:58:45",
+  "trace_refs": [
+    "trace_20260402112628_0fbd45b5",
+    "trace_20260402112719_36b8b5a1",
+    "trace_20260402112803_50a87831",
+    "trace_20260402112852_b4cf1ae8",
+    "trace_20260402112937_3f9d1f6a",
+    "trace_20260402113056_1c757ce9",
+    "trace_20260402113932_c64d036a",
+    "trace_20260402114209_2743a24c",
+    "trace_20260402115556_63146c02",
+    "trace_20260402115643_ea703bd1",
+    "trace_20260402115727_a945834d",
+    "trace_20260402115811_4875be11",
+    "trace_20260402115855_360153af",
+    "trace_20260402115939_56abb768",
+    "trace_20260402122654_1d1cda05",
+    "trace_20260402121745_27338b81",
+    "trace_20260402123232_9da54c1f",
+    "trace_20260402123320_ad28f9b6",
+    "trace_20260402124524_a1455050",
+    "trace_20260402124424_5bdc6ce2",
+    "trace_20260402185847_24d7dfe8",
+    "trace_20260402185938_b241db39",
+    "trace_20260402190022_e8955714",
+    "trace_20260402190107_d008909e",
+    "trace_20260402190150_9f1b8956",
+    "trace_20260402190235_1a87d0ab",
+    "trace_20260402190333_f80b7353",
+    "trace_20260402190423_e340e71c",
+    "trace_20260402190509_90dbfa3e",
+    "trace_20260402190558_577f7fe8",
+    "trace_20260402190643_edd01eb9",
+    "trace_20260402191040_1fb15651",
+    "trace_20260402190932_273f2476",
+    "trace_20260402191149_2833ccb7",
+    "trace_20260402191437_2646ba9e",
+    "trace_20260402191953_bb220e5f",
+    "trace_20260402192009_45e5225c",
+    "trace_20260402192025_245dbbfc",
+    "trace_20260402192040_c5b1e9bc",
+    "trace_20260402192057_181089ef",
+    "trace_20260402192113_a8ec1b32",
+    "trace_20260402192128_638011f1",
+    "trace_20260402192147_4fe368b4",
+    "trace_20260402192205_027536c8",
+    "trace_20260402192224_a02a6dfd",
+    "trace_20260402192239_e430504e",
+    "trace_20260402192301_58ee93f3",
+    "trace_20260402192321_44f31bd7",
+    "trace_20260402192340_c5b71c1b",
+    "trace_20260402192358_7f78cf61",
+    "trace_20260402192414_a916c019",
+    "trace_20260402192431_c490eb28",
+    "trace_20260402192447_bab8e985",
+    "trace_20260402192504_937602d5",
+    "trace_20260402192522_4e607936",
+    "trace_20260402192541_1b561fd2",
+    "trace_20260402192559_4ff2e9c2",
+    "trace_20260402192616_70dea9be",
+    "trace_20260402192633_e699bfea",
+    "trace_20260402192650_526dd344",
+    "trace_20260402192707_04c34e9f",
+    "trace_20260402192731_f0334405",
+    "trace_20260402192751_d064a0d7",
+    "trace_20260402192813_0835e6a8",
+    "trace_20260402192832_cd5bdb1a",
+    "trace_20260402192849_2fb18b1c"
+  ],
+  "receipt_refs": [
+    "receipt_20260402112628_3ffebf36",
+    "receipt_20260402112719_005ae1f0",
+    "receipt_20260402112803_fb68d678",
+    "receipt_20260402112852_766b5c6f",
+    "receipt_20260402112937_fa487202",
+    "receipt_20260402113056_97873c6a",
+    "receipt_20260402113932_c30c595a",
+    "receipt_20260402114209_018fbe47",
+    "receipt_20260402115556_83ee62a2",
+    "receipt_20260402115643_10f99ec3",
+    "receipt_20260402115727_248dff6b",
+    "receipt_20260402115811_eadf7f9b",
+    "receipt_20260402115855_f1d49907",
+    "receipt_20260402115939_8707746c",
+    "action_20260402122654_618a8331",
+    "receipt_20260402121745_c9ea4626",
+    "receipt_20260402123232_c6c19cee",
+    "receipt_20260402123320_abff7889",
+    "action_20260402124524_131de424",
+    "receipt_20260402124424_3d8644cb",
+    "receipt_20260402185847_9c4b5c58",
+    "receipt_20260402185938_903d179f",
+    "receipt_20260402190022_974e8695",
+    "receipt_20260402190107_98300e3f",
+    "receipt_20260402190150_ccf6f485",
+    "receipt_20260402190235_0a801f9e",
+    "receipt_20260402190333_32130e21",
+    "receipt_20260402190423_dee80a30",
+    "receipt_20260402190509_9720b90d",
+    "receipt_20260402190558_f0ad0aee",
+    "receipt_20260402190643_912f3bf8",
+    "action_20260402191040_23c62e47",
+    "receipt_20260402190932_f13d9b44",
+    "receipt_20260402191149_b032dabe",
+    "receipt_20260402191437_98359351",
+    "receipt_20260402191953_fc01929b",
+    "receipt_20260402192009_eb7f3a4d",
+    "receipt_20260402192025_84a76c39",
+    "receipt_20260402192040_0fa82fbc",
+    "receipt_20260402192057_79ce968f",
+    "receipt_20260402192113_4833b852",
+    "receipt_20260402192128_fd52e538",
+    "receipt_20260402192147_35881640",
+    "receipt_20260402192205_6d3978bf",
+    "receipt_20260402192224_2ba6ef01",
+    "receipt_20260402192239_9c204a89",
+    "receipt_20260402192301_fe2f700a",
+    "receipt_20260402192321_eca0f479",
+    "receipt_20260402192340_eccd4c6e",
+    "receipt_20260402192358_6b818abc",
+    "receipt_20260402192414_42287131",
+    "receipt_20260402192431_e0aed1e1",
+    "receipt_20260402192447_caf0d781",
+    "receipt_20260402192504_65d113f4",
+    "receipt_20260402192522_decdac18",
+    "receipt_20260402192541_a064d878",
+    "receipt_20260402192559_e84c62e6",
+    "receipt_20260402192616_2601fc7e",
+    "receipt_20260402192633_b481e988",
+    "receipt_20260402192650_8fc8cd05",
+    "receipt_20260402192707_06bb2a97",
+    "receipt_20260402192731_70252e3b",
+    "receipt_20260402192751_aa48aefa",
+    "receipt_20260402192813_3235dcaf",
+    "receipt_20260402192832_81754d31",
+    "receipt_20260402192849_4635a153"
+  ],
+  "latest_supervisor_decision": {
+    "decision": "execute",
+    "turn_kind": "execute",
+    "reason": "follow pending instruction from previous judge/recovery via role=implementer",
+    "confidence": 0.78,
+    "next_action": "run_executor",
+    "attempt_no": 64,
+    "phase": "execute",
+    "instruction": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\nService instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\n按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+    "issue_kind": "service_fault",
+    "followup_kind": "retry",
+    "fix_round_no": 0,
+    "active_role_id": "implementer",
+    "execution_mode": "medium",
+    "session_strategy": "role_bound"
+  },
+  "latest_judge_decision": {
+    "decision": "RETRY",
+    "next_phase": "execute",
+    "reason": "本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+    "next_codex_prompt": "按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+    "completion_summary": "第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。",
+    "issue_kind": "service_fault",
+    "followup_kind": "retry"
+  },
+  "current_turn_id": "turn_20260402192906_aeae5667",
+  "supervisor_thread_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+  "primary_executor_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+  "approval_state": "not_required",
+  "risk_level": "normal",
+  "autonomy_profile": "guarded",
+  "artifact_index_ref": "artifacts.json",
+  "last_operator_action": {
+    "action_id": "action_20260402191040_23c62e47",
+    "flow_id": "flow_20260402111642_01929624",
+    "action_type": "append_instruction",
+    "operator_id": "local_user",
+    "policy_source": "cli",
+    "before_state": {
+      "status": "running",
+      "current_phase": "synthesize",
+      "pending_codex_prompt": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\n在 Transfer_Recovery 的 docs/0402（与 evidence 表及 v2 映射同目录）：向 20260402_KDD_Section1_en.md 仅追加「Limitations of prior work」与「This paper's entry point」两小节，各 3–6 句 KDD 学术英语，句末括号标注 evidence id/表行列或 mapping 键；同步更新 readiness.md（已完成小节清单、本节引用键、余下待填项）。仅对这两文件 git add+commit 并回报 commit hash；风格与 14e6684 中 Evolution 段落对齐；禁止全文重写与长推理。"
+    },
+    "after_state": {
+      "status": "running",
+      "current_phase": "synthesize",
+      "pending_codex_prompt": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\n在 Transfer_Recovery 的 docs/0402（与 evidence 表及 v2 映射同目录）：向 20260402_KDD_Section1_en.md 仅追加「Limitations of prior work」与「This paper's entry point」两小节，各 3–6 句 KDD 学术英语，句末括号标注 evidence id/表行列或 mapping 键；同步更新 readiness.md（已完成小节清单、本节引用键、余下待填项）。仅对这两文件 git add+commit 并回报 commit hash；风格与 14e6684 中 Evolution 段落对齐；禁止全文重写与长推理。",
+      "queued_operator_updates": [
+        {
+          "update_id": "manual_resume_fix_20260402_kdd_section1_en",
+          "source": "manual_resume_fix",
+          "instruction": "Resume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.",
+          "status": "queued",
+          "created_at": "2026-04-02 19:12:00",
+          "planned_attempt_no": 0,
+          "executed_attempt_no": 0
+        },
+        {
+          "update_id": "action_20260402191040_23c62e47",
+          "source": "operator:append_instruction",
+          "instruction": "注意一下，最后的交付kdd稿要有pdf和能输入overleaf当中的md，长度、篇幅、格式要符合kdd要求。另外，还要有100篇文献的pdf+对他们的系统性整理",
+          "status": "queued",
+          "created_at": "2026-04-02 19:10:40",
+          "planned_attempt_no": 0,
+          "executed_attempt_no": 0
+        }
+      ]
+    },
+    "trace_id": "trace_20260402191040_1fb15651",
+    "receipt_id": "action_20260402191040_23c62e47",
+    "result_summary": "instruction queued for the next executor turn (action_20260402191040_23c62e47)",
+    "created_at": "2026-04-02 19:10:40"
+  },
+  "latest_applied_operator_action_id": "action_20260402191040_23c62e47",
+  "flow_id": "flow_20260402111642_01929624",
+  "review_checklist": [],
+  "bundle_manifest": {
+    "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle",
+    "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/manager.md",
+    "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/supervisor.md",
+    "doctor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/doctor.md",
+    "doctor_skill_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/skills/doctor/SKILL.md",
+    "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/sources.json",
+    "manager_prompt": "manager.md",
+    "supervisor_prompt": "supervisor.md",
+    "doctor_prompt": "doctor.md",
+    "sources_path": "sources.json",
+    "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references",
+    "doctor_references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references/doctor",
+    "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/assets",
+    "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived",
+    "derived_supervisor_prompt": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_compiled.md",
+    "derived_supervisor_knowledge": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json",
+    "derived": {
+      "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json"
+    }
+  },
+  "_asset_runtime_context": {
+    "source_asset_key": "",
+    "source_asset_kind": "",
+    "source_asset_version": "",
+    "review_checklist": [],
+    "role_guidance": {
+      "suggested_roles": [
+        "planner",
+        "implementer",
+        "reviewer"
+      ],
+      "suggested_specialists": [
+        "creator",
+        "doctor"
+      ],
+      "activation_hints": [
+        "when environment, knowledge, or formatting gaps block KDD-style delivery",
+        "when repeated runtime/session faults block forward progress"
+      ],
+      "promotion_candidates": [
+        "creator"
+      ],
+      "manager_notes": "Keep role guidance lightweight: creator helps capability gaps, doctor helps runtime repair."
+    },
+    "doctor_policy": {
+      "enabled": true,
+      "activation_rules": [
+        "repeated_service_fault",
+        "same_resume_failure",
+        "session_binding_invalid"
+      ],
+      "repair_scope": "runtime_assets_first",
+      "framework_bug_action": "pause",
+      "max_rounds_per_episode": 1
+    },
+    "bundle_manifest": {
+      "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle",
+      "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/manager.md",
+      "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/supervisor.md",
+      "doctor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/doctor.md",
+      "doctor_skill_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/skills/doctor/SKILL.md",
+      "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/sources.json",
+      "manager_prompt": "manager.md",
+      "supervisor_prompt": "supervisor.md",
+      "doctor_prompt": "doctor.md",
+      "sources_path": "sources.json",
+      "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references",
+      "doctor_references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references/doctor",
+      "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/assets",
+      "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived",
+      "derived_supervisor_prompt": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_compiled.md",
+      "derived_supervisor_knowledge": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json",
+      "derived": {
+        "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json"
+      }
+    }
+  },
+  "_judge_runtime_context": {
+    "codex_status": "failed",
+    "codex_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+    "codex_output": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+    "codex_metadata": {
+      "workspace": "/home/ocean/Desktop/SuperButler",
+      "provider": "codex",
+      "provider_returncode": 1,
+      "returncode": 1,
+      "failure_class": "",
+      "runtime_request": {
+        "model": "auto",
+        "profile": "",
+        "speed": "",
+        "config_overrides": [
+          "mcp_servers.stripe={enabled=false,transport=\"streamable_http\",url=\"https://mcp.stripe.com\"}",
+          "mcp_servers.supabase={enabled=false,transport=\"streamable_http\",url=\"https://mcp.supabase.com/mcp\"}",
+          "mcp_servers.vercel={enabled=false,transport=\"streamable_http\",url=\"https://mcp.vercel.com\"}"
+        ],
+        "extra_args": [],
+        "cli": "codex",
+        "_disable_runtime_fallback": true,
+        "workflow_id": "flow_20260402111642_01929624",
+        "agent_id": "butler_flow.codex_executor",
+        "codex_mode": "resume",
+        "codex_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+        "codex_home": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home",
+        "_profile_explicit": false,
+        "_provider_failover_managed": true,
+        "_provider_failover_active_profile": "aixj"
+      },
+      "cli_events": {
+        "usage": {},
+        "command_events": []
+      },
+      "usage": {},
+      "external_session": {
+        "provider": "codex",
+        "thread_id": "",
+        "resume_capable": false,
+        "resume_durable": false,
+        "mode": "resume",
+        "requested_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+        "durable_resume_id": "",
+        "session_persistence": "codex_home",
+        "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home",
+        "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home|1775128794|4096",
+        "cli_binary_path": "/home/ocean/.local/bin/codex",
+        "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+        "vendor_session_state": "resume_requested",
+        "recovery_state": {}
+      },
+      "recovery_state": {},
+      "vendor_capabilities": {
+        "vendor": "codex",
+        "capabilities": {
+          "session": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "resume": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "compact": {
+            "layer": "intrinsic",
+            "ownership": "vendor_native"
+          },
+          "skills": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "collab": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "subagent": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "agent_team": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "recent_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          },
+          "local_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          }
+        }
+      },
+      "command_events": [],
+      "stderr": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+      "stall_abort_reason": ""
+    },
+    "phase_history": [
+      {
+        "at": "2026-04-02 19:27:05",
+        "attempt_no": 57,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "第57轮执行器仍以 resume 失败：thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout；零有效产物，execute 的 done_when 与排队修正均未满足。",
+          "next_codex_prompt": "codex_mode 必须为 exec（全新冷会话），禁止对 019d4c3a-6784-7d30-88e3-892f32126cc1 及任意旧 thread 使用 resume。最小步：在 flow 约定产出路径写入或更新单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵/摘要/bib。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇文献的编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。同步满足排队指令：学术英语 KDD 口吻、主张可追溯证据表。服务不稳：仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只贴原始错误与已尝试动作。",
+          "completion_summary": "执行失败重复：resume/rollout 缺失；仓库无增量；仍在 execute，需冷 exec 落盘最小英文 Section1 与证据锚点/占位清单。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:27:28",
+        "attempt_no": 58,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "第58轮执行器仍为 codex resume 失败（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout）；与上轮裁定要求的冷 exec 不符，本轮无有效仓库产物，execute 的 done_when 与排队修正均未满足。",
+          "next_codex_prompt": "强制 codex_mode=exec（全新冷会话），禁止对任何旧 thread/session 使用 resume。最小交付：在 flow 约定产出路径创建或更新单文件英文 KDD Section1.md，四级标题：Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末用括号标注证据锚点→既有分类矩阵/阅读摘要/bib 路径。文末附：Overleaf 友好说明、LaTeX→PDF 占位；100 篇文献的编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。学术英语 KDD 口吻，主张与证据表可追溯。服务不稳时仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
+          "completion_summary": "执行失败：resume/rollout 缺失；无增量产物；仍处于 execute，需用冷 exec 落盘最小英文 Section1 与证据锚点/占位清单。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:27:49",
+        "attempt_no": 59,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "第59轮 Codex 仍以 resume 调用且报错（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout），与要求的冷 exec 不符；无有效仓库产物，execute 的 done_when 与排队修正均未达成。",
+          "next_codex_prompt": "强制 codex_mode=exec（全新会话），禁止对任何 thread/session 使用 resume。最小交付：在 flow 约定产出路径写入或更新单文件英文 KDD Section1.md，四级标题：Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵/阅读摘要/bib 的路径。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。学术英语 KDD 口吻，主张与证据表可追溯。仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
+          "completion_summary": "执行失败：resume/rollout 缺失；无增量产物；仍处于 execute，需冷 exec 落盘英文 Section1 与证据锚点/占位清单。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:28:10",
+        "attempt_no": 60,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "第60轮 Codex 仍为 resume 且报错（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout），与要求的冷启动 exec 不符；execute 的 done_when、排队修正与英文 KDD Section1 均未达成。",
+          "next_codex_prompt": "强制 codex_mode=exec（禁止 resume/任何 thread 恢复）。最小交付：在 flow 约定产出路径更新单文件英文 KDD Section1.md，四节四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵、阅读摘要、bib 的相对路径。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
+          "completion_summary": "本轮执行失败：无有效 codex 产出；仍未落盘英文 Section1 与证据锚点；阶段仍为 execute，需下一轮冷 exec 纠正调用并完成最小文件交付。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:28:29",
+        "attempt_no": 61,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "本轮 Codex 以 resume 调用失败（thread 无 rollout），无有效产出；execute 的 done_when 与排队英文 KDD Section1/证据锚点仍未满足。",
+          "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread 恢复）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径指向既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+          "completion_summary": "第61轮执行失败：仅得 Codex resume 错误，未写入 Section1 或更新证据映射；仍停留在 execute。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      },
+      {
+        "at": "2026-04-02 19:28:47",
+        "attempt_no": 62,
+        "phase": "execute",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "execute",
+          "reason": "Codex 仍以 resume 启动且 thread 无 rollout，执行器无有效产出；execute 阶段的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+          "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+          "completion_summary": "第62轮：resume 失败，无 Section1 落盘与证据映射更新；仍处 execute。",
+          "issue_kind": "service_fault",
+          "followup_kind": "retry"
+        },
+        "token_usage": {},
+        "executed_operator_update_id": ""
+      }
+    ],
+    "phase_artifact": {
+      "workflow_id": "flow_20260402111642_01929624",
+      "workflow_kind": "managed_flow",
+      "phase": "execute",
+      "role_id": "implementer",
+      "attempt_no": 63,
+      "phase_attempt_no": 1,
+      "goal": "登录 `jianghy@10.254.73.179` 并进入 `Transfer_Recovery`，先基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，产出分类矩阵、阅读摘要与参考文献库；最终完成一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+      "guard_condition": "仅在以下条件全部满足时可结束：已确认并记录最终研究主题；文献样本不少于 100 且相关性可说明；分类矩阵、阅读摘要、参考文献库三类产物齐备并可追溯到证据来源；质量审查通过后方可进入 finalize。",
+      "codex_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+      "codex_status": "failed",
+      "codex_output": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+      "codex_metadata": {
+        "workspace": "/home/ocean/Desktop/SuperButler",
+        "provider": "codex",
+        "provider_returncode": 1,
+        "returncode": 1,
+        "failure_class": "",
+        "runtime_request": {
+          "model": "auto",
+          "profile": "",
+          "speed": "",
+          "config_overrides": [
+            "mcp_servers.stripe={enabled=false,transport=\"streamable_http\",url=\"https://mcp.stripe.com\"}",
+            "mcp_servers.supabase={enabled=false,transport=\"streamable_http\",url=\"https://mcp.supabase.com/mcp\"}",
+            "mcp_servers.vercel={enabled=false,transport=\"streamable_http\",url=\"https://mcp.vercel.com\"}"
+          ],
+          "extra_args": [],
+          "cli": "codex",
+          "_disable_runtime_fallback": true,
+          "workflow_id": "flow_20260402111642_01929624",
+          "agent_id": "butler_flow.codex_executor",
+          "codex_mode": "resume",
+          "codex_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+          "codex_home": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home",
+          "_profile_explicit": false,
+          "_provider_failover_managed": true,
+          "_provider_failover_active_profile": "aixj"
+        },
+        "cli_events": {
+          "usage": {},
+          "command_events": []
+        },
+        "usage": {},
+        "external_session": {
+          "provider": "codex",
+          "thread_id": "",
+          "resume_capable": false,
+          "resume_durable": false,
+          "mode": "resume",
+          "requested_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+          "durable_resume_id": "",
+          "session_persistence": "codex_home",
+          "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home",
+          "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/codex_home|1775128794|4096",
+          "cli_binary_path": "/home/ocean/.local/bin/codex",
+          "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+          "vendor_session_state": "resume_requested",
+          "recovery_state": {}
+        },
+        "recovery_state": {},
+        "vendor_capabilities": {
+          "vendor": "codex",
+          "capabilities": {
+            "session": {
+              "layer": "direct_contract",
+              "ownership": "vendor_native"
+            },
+            "resume": {
+              "layer": "direct_contract",
+              "ownership": "vendor_native"
+            },
+            "compact": {
+              "layer": "intrinsic",
+              "ownership": "vendor_native"
+            },
+            "skills": {
+              "layer": "intrinsic",
+              "ownership": "butler"
+            },
+            "collab": {
+              "layer": "intrinsic",
+              "ownership": "butler"
+            },
+            "subagent": {
+              "layer": "intrinsic",
+              "ownership": "butler"
+            },
+            "agent_team": {
+              "layer": "intrinsic",
+              "ownership": "butler"
+            },
+            "recent_memory": {
+              "layer": "butler_owned",
+              "ownership": "butler"
+            },
+            "local_memory": {
+              "layer": "butler_owned",
+              "ownership": "butler"
+            }
+          }
+        },
+        "command_events": [],
+        "stderr": "Error: thread/resume: thread/resume failed: no rollout found for thread id 019d4c3a-6784-7d30-88e3-892f32126cc1",
+        "stall_abort_reason": ""
+      },
+      "pending_codex_prompt": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\nService instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\n使用 codex_mode=exec 冷启动（禁止 resume/thread）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+      "last_cursor_decision": {
+        "decision": "RETRY",
+        "next_phase": "execute",
+        "reason": "Codex 仍以 resume 启动且 thread 无 rollout，执行器无有效产出；execute 阶段的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
+        "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+        "completion_summary": "第62轮：resume 失败，无 Section1 落盘与证据映射更新；仍处 execute。",
+        "issue_kind": "service_fault",
+        "followup_kind": "retry"
+      }
+    },
+    "active_role_id": "implementer",
+    "role_session_id": "019d4c3a-6784-7d30-88e3-892f32126cc1",
+    "inbound_handoff": {}
+  },
+  "queued_operator_updates": [
+    {
+      "update_id": "manual_resume_fix_20260402_kdd_section1_en",
+      "source": "manual_resume_fix",
+      "instruction": "Resume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.",
+      "status": "queued",
+      "created_at": "2026-04-02 19:12:00",
+      "planned_attempt_no": 0,
+      "executed_attempt_no": 0
+    },
+    {
+      "update_id": "action_20260402191040_23c62e47",
+      "source": "operator:append_instruction",
+      "instruction": "注意一下，最后的交付kdd稿要有pdf和能输入overleaf当中的md，长度、篇幅、格式要符合kdd要求。另外，还要有100篇文献的pdf+对他们的系统性整理",
+      "status": "queued",
+      "created_at": "2026-04-02 19:10:40",
+      "planned_attempt_no": 0,
+      "executed_attempt_no": 0
+    }
+  ],
+  "phase_snapshots": [
+    {
+      "snapshot_id": "phase_snapshot_20260402191146_0b8e8f3c",
+      "phase": "synthesize",
+      "attempt_no": 30,
+      "reason": "phase_transition:synthesize->quality_review",
+      "created_at": "2026-04-02 19:11:46",
+      "latest_supervisor_decision": {
+        "decision": "execute",
+        "turn_kind": "execute",
+        "reason": "follow pending instruction from previous judge/recovery via role=implementer",
+        "confidence": 0.78,
+        "next_action": "run_executor",
+        "attempt_no": 30,
+        "phase": "synthesize",
+        "instruction": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\n在 Transfer_Recovery 的 docs/0402（与 evidence 表及 v2 映射同目录）：向 20260402_KDD_Section1_en.md 仅追加「Limitations of prior work」与「This paper's entry point」两小节，各 3–6 句 KDD 学术英语，句末括号标注 evidence id/表行列或 mapping 键；同步更新 readiness.md（已完成小节清单、本节引用键、余下待填项）。仅对这两文件 git add+commit 并回报 commit hash；风格与 14e6684 中 Evolution 段落对齐；禁止全文重写与长推理。",
+        "issue_kind": "none",
+        "followup_kind": "retry",
+        "fix_round_no": 0,
+        "active_role_id": "implementer",
+        "execution_mode": "simple",
+        "session_strategy": "shared"
+      },
+      "latest_judge_decision": {
+        "decision": "ADVANCE",
+        "next_phase": "quality_review",
+        "reason": "执行器本轮按 bounded 指令在远端 main 提交 f6601d9，已补全英文 Section1 的 Limitations 与 Entry point 并更新 readiness；synthesize 初稿四段闭合。句末可追溯标注已有，但段落级 evidence mapping 仍标为待办，更适合进入 quality_review 收敛证据链。",
+        "next_codex_prompt": "在 Transfer_Recovery docs/0402：以 quality_review 为目标补齐/核对「英文段落级 evidence mapping」与现有 evidence 表及 v2 映射一致；通读 20260402_KDD_Section1_en.md 与 readiness.md，修正任何断裂或可反驳表述；另单列 backlog：operator 要求的 KDD 合规篇幅/格式、终稿 PDF、可进 Overleaf 的 MD、以及 100 篇文献 PDF 与系统整理是否已有明确产物路径——若没有则写入待办与建议目录结构。完成后更新 readiness 并 git commit。",
+        "completion_summary": "synthesize _bounded 交付已达成：两小节英文初稿 + readiness 四节完成标记 + f6601d9；剩余为映射补丁与审查/operator 交付项对齐。",
+        "issue_kind": "none",
+        "followup_kind": "none"
+      },
+      "latest_token_usage": {
+        "input_tokens": 18155646,
+        "cached_input_tokens": 16784384,
+        "output_tokens": 118766
+      }
+    },
+    {
+      "snapshot_id": "phase_snapshot_20260402191434_8108217d",
+      "phase": "quality_review",
+      "attempt_no": 31,
+      "reason": "phase_transition:quality_review->synthesize",
+      "created_at": "2026-04-02 19:14:34",
+      "latest_supervisor_decision": {
+        "decision": "execute",
+        "turn_kind": "execute",
+        "reason": "follow pending instruction from previous judge/recovery via role=implementer",
+        "confidence": 0.78,
+        "next_action": "run_executor",
+        "attempt_no": 31,
+        "phase": "quality_review",
+        "instruction": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\n在 Transfer_Recovery 的 docs/0402（与 evidence 表及 v2 映射同目录）：向 20260402_KDD_Section1_en.md 仅追加「Limitations of prior work」与「This paper's entry point」两小节，各 3–6 句 KDD 学术英语，句末括号标注 evidence id/表行列或 mapping 键；同步更新 readiness.md（已完成小节清单、本节引用键、余下待填项）。仅对这两文件 git add+commit 并回报 commit hash；风格与 14e6684 中 Evolution 段落对齐；禁止全文重写与长推理。",
+        "issue_kind": "none",
+        "followup_kind": "none",
+        "fix_round_no": 0,
+        "active_role_id": "implementer",
+        "execution_mode": "simple",
+        "session_strategy": "shared"
+      },
+      "latest_judge_decision": {
+        "decision": "ADVANCE",
+        "next_phase": "finalize",
+        "reason": "执行器本轮已提交并完成证据映射/质量报告/readiness 对齐，自述英文内容与证据链可通过审查；但 KDD 终稿 PDF、Overleaf 可用 MD、百篇文献 PDF 与版式要求仍处于未交付的打包缺口，符合进入 finalize 消化 operator backlog，而非结束整流。",
+        "next_codex_prompt": "在 Transfer_Recovery 的 docs/0402：以 finalize 为验收目标——(1) 从 20260402_KDD_Section1_en.md 导出/说明 KDD 合规篇幅与版式，并给出可迁入 Overleaf 的终版 MD 与同内容 PDF 的生成路径与文件名；(2) 明确百篇文献是 stable_access_url+摘要可接受还是需本地 PDF 镜像，并落地目录结构+索引（或 manifest）指向现有 evidence 表；(3) 更新 readiness.md 与 quality_review_report.md：将上述列为 finalize 阻塞项清零标准与复核路径。单轮流：add/commit 相关产物与文档，回报 hash。",
+        "completion_summary": "本轮文档侧 quality_review 收敛（映射/报告/readiness）；交付形态与文献 PDF 策略仍未闭环，应移交 finalize。",
+        "issue_kind": "plan_gap",
+        "followup_kind": "replan"
+      },
+      "latest_token_usage": {
+        "input_tokens": 18950563,
+        "cached_input_tokens": 17471488,
+        "output_tokens": 128452
+      }
+    },
+    {
+      "snapshot_id": "phase_snapshot_20260402191951_ea8de399",
+      "phase": "synthesize",
+      "attempt_no": 32,
+      "reason": "phase_transition:synthesize->execute",
+      "created_at": "2026-04-02 19:19:51",
+      "latest_supervisor_decision": {
+        "decision": "execute",
+        "turn_kind": "execute",
+        "reason": "follow pending instruction from previous judge/recovery via role=implementer",
+        "confidence": 0.78,
+        "next_action": "run_executor",
+        "attempt_no": 32,
+        "phase": "synthesize",
+        "instruction": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\n在 Transfer_Recovery 的 docs/0402：以 finalize 为验收目标——(1) 从 20260402_KDD_Section1_en.md 导出/说明 KDD 合规篇幅与版式，并给出可迁入 Overleaf 的终版 MD 与同内容 PDF 的生成路径与文件名；(2) 明确百篇文献是 stable_access_url+摘要可接受还是需本地 PDF 镜像，并落地目录结构+索引（或 manifest）指向现有 evidence 表；(3) 更新 readiness.md 与 quality_review_report.md：将上述列为 finalize 阻塞项清零标准与复核路径。单轮流：add/commit 相关产物与文档，回报 hash。",
+        "issue_kind": "plan_gap",
+        "followup_kind": "replan",
+        "fix_round_no": 0,
+        "active_role_id": "implementer",
+        "execution_mode": "simple",
+        "session_strategy": "shared"
+      },
+      "latest_judge_decision": {
+        "decision": "ADVANCE",
+        "next_phase": "quality_review",
+        "reason": "执行器本轮已落盘英文章节、Overleaf 用 MD、审查 PDF 及交付/readiness 更新并自述验收；但 guard 与 operator 追加项仍缺：文献 fulltext 本地缓存为 0（百篇 PDF 包未落地）、稿长约 568 词且明言仅为 section 级非 ACM/KDD 终稿版式；不满足 COMPLETE，也不宜在无 formal review 下直接收口。",
+        "next_codex_prompt": "进入 quality_review：1) 抽查 major claims 与现有证据表/分类矩阵/参考文献库的一一映射并记录缺口；2) 将「KDD 合规终稿（篇幅、两栏/引用样式、与全文结构衔接）」与「百篇文献：仅 stable_access_url+系统摘要 vs 必须本地 PDF」定为明确结论，并产出 manifest/目录约定与 finalize 阻塞清零 checklist；3) 更新 quality_review_report.md、readiness.md，给出通过/附条件通过/退回 synthesize 的判定与复核路径。单轮流 git add/commit 并回报 hash。",
+        "completion_summary": "合成侧交付物已生成并提交，但文献 PDF 镜像与 KDD 终稿形态仍为计划缺口，应转入质量审查以闭环证据链与 finalize 验收标准。",
+        "issue_kind": "plan_gap",
+        "followup_kind": "replan"
+      },
+      "latest_token_usage": {
+        "input_tokens": 20154365,
+        "cached_input_tokens": 18644480,
+        "output_tokens": 140592
+      }
+    }
+  ],
+  "context_governor": {
+    "mode": "reset",
+    "reasons": [
+      "late_attempt_window",
+      "repeated_service_fault"
+    ],
+    "input_tokens": 0,
+    "service_fault_streak": 31,
+    "session_epoch": 1,
+    "updated_at": "2026-04-02 19:29:06"
+  },
+  "session_epoch": 1,
+  "service_fault_streak": 31,
+  "latest_token_usage": {},
+  "max_runtime_seconds": 43200,
+  "runtime_started_at": "2026-04-02 18:58:45",
+  "runtime_elapsed_seconds": 1821,
+  "role_guidance": {
+    "suggested_roles": [
+      "planner",
+      "implementer",
+      "reviewer"
+    ],
+    "suggested_specialists": [
+      "creator",
+      "doctor"
+    ],
+    "activation_hints": [
+      "when environment, knowledge, or formatting gaps block KDD-style delivery",
+      "when repeated runtime/session faults block forward progress"
+    ],
+    "promotion_candidates": [
+      "creator"
+    ],
+    "manager_notes": "Keep role guidance lightweight: creator helps capability gaps, doctor helps runtime repair."
+  },
+  "doctor_policy": {
+    "enabled": true,
+    "activation_rules": [
+      "repeated_service_fault",
+      "same_resume_failure",
+      "session_binding_invalid"
+    ],
+    "repair_scope": "runtime_assets_first",
+    "framework_bug_action": "pause",
+    "max_rounds_per_episode": 1
+  }
+}

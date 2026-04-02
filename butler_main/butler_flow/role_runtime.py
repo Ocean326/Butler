@@ -6,6 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from .constants import (
+    DOCTOR_ROLE_ID,
     DONE_PHASE,
     EXECUTION_MODE_COMPLEX,
     EXECUTION_MODE_MEDIUM,
@@ -477,6 +478,15 @@ def _fallback_role_prompt(role_id: str) -> str:
             "Required outputs: user-journey observations, concrete pain points, severity, and suggested next checks.\n"
             "Handoff expectations: hand product and usability gaps back to supervisor, product-manager, or implementer.\n"
             "Artifact expectations: produce compact trial notes with scenario and impact."
+        )
+    if normalized == DOCTOR_ROLE_ID:
+        return (
+            "Role: doctor\n"
+            "Objective: recover the current flow by repairing runtime/session/instance-asset blockers before more task execution.\n"
+            "Allowed inputs: latest failure evidence, role/session bindings, sidecar state, flow-local bundle notes, recent artifacts.\n"
+            "Required outputs: diagnosis, repairs attempted, verification, and the safest next action.\n"
+            "Handoff expectations: if recovered, return a compact repair handoff to supervisor; if the blocker is a butler-flow framework bug, begin the final reply with `DOCTOR_FRAMEWORK_BUG:` and include `Problem:`, `Evidence:`, and `Fix plan:`.\n"
+            "Artifact expectations: produce recovery evidence; do not pretend the business task is completed."
         )
     return (
         "Role: implementer\n"

@@ -86,6 +86,7 @@ def build_flow_board(flow_state: dict[str, Any], *, latest_handoff_summary: dict
             if str(item or "").strip()
         ],
         "role_guidance": dict(asset_context.get("role_guidance") or flow_state.get("role_guidance") or {}),
+        "doctor_policy": dict(asset_context.get("doctor_policy") or flow_state.get("doctor_policy") or {}),
         "bundle_manifest": dict(asset_context.get("bundle_manifest") or flow_state.get("bundle_manifest") or {}),
     }
 
@@ -302,6 +303,7 @@ def _compact_asset_context(asset_context: dict[str, Any], *, load_profile: str) 
         "source_asset_version": _text(normalized.get("source_asset_version")),
         "review_checklist": list(normalized.get("review_checklist") or [])[:3],
         "role_guidance": dict(normalized.get("role_guidance") or {}),
+        "doctor_policy": dict(normalized.get("doctor_policy") or {}),
     }
     if load_profile == "compact":
         compacted["bundle_manifest"] = {}
@@ -407,6 +409,9 @@ def render_packet(packet: CompiledPromptPacketV1) -> str:
             - You must not rewrite global flow definitions or role catalogs.
             - If you use an ephemeral role, it must inherit from a known base role.
             - Treat any role_guidance in the shared asset context as advisory only for temporary-node choice or promotion, not a rigid team contract.
+            - Prefer a temporary `doctor` recovery role when repeated service faults, invalid session bindings, or repeated resume/no-rollout failures block the flow.
+            - `doctor` repairs only the current flow instance: runtime bindings, instance-local static assets, and safe local execution/session corrections.
+            - If `doctor` concludes the blocker is a butler-flow framework/code bug, route to `ask_operator` and preserve the diagnosis for human follow-up.
 
             Runtime mode:
             - Session mode: {session_mode}

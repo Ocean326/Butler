@@ -41,6 +41,7 @@ REVIEWER_ROLE_ID = "reviewer"
 FIXER_ROLE_ID = "fixer"
 REPORTER_ROLE_ID = "reporter"
 RESEARCHER_ROLE_ID = "researcher"
+DOCTOR_ROLE_ID = "doctor"
 
 ROLE_PACK_CODING_FLOW = "coding_flow"
 ROLE_PACK_RESEARCH_FLOW = "research_flow"

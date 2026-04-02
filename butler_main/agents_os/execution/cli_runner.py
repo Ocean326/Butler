@@ -460,6 +460,7 @@ def resolve_runtime_request(cfg: dict | None, runtime_request: dict | None = Non
     defaults = dict(settings.get("defaults") or {})
     request = dict(defaults)
     incoming = dict(runtime_request or {})
+    router_selected_runtime = bool(incoming.get("_router_selected_runtime"))
     if "_profile_explicit" in incoming:
         explicit_profile = bool(incoming.get("_profile_explicit"))
     else:
@@ -471,7 +472,8 @@ def resolve_runtime_request(cfg: dict | None, runtime_request: dict | None = Non
     request["model"] = normalize_model_name(model_override or request.get("model") or "auto", request.get("cli"))
     skip_codex_first, count_switchover_probe = codex_cursor_switchover.resolve_codex_first_switchover(cfg)
     if (
-        not cli_explicit
+        not router_selected_runtime
+        and not cli_explicit
         and str(request.get("cli") or "").strip().lower() == "cursor"
         and cli_provider_available("codex", cfg)
         and bool(dict(_provider_config(cfg, "codex") or {}).get("enabled", True))
@@ -512,6 +514,8 @@ def resolve_runtime_request(cfg: dict | None, runtime_request: dict | None = Non
         request["config_overrides"].extend(_normalize_str_list(provider_override.get("config_overrides")))
         request["extra_args"].extend(_normalize_str_list(provider_override.get("extra_args")))
     request["_profile_explicit"] = explicit_profile
+    if router_selected_runtime:
+        request["_router_selected_runtime"] = True
     return request
 
 
@@ -1278,6 +1282,15 @@ def _run_codex_detailed(
     stream_emitted = {"value": False}
     stream_halt = threading.Event()
 
+    def _mark_resume_failed(reason: str) -> None:
+        if codex_mode != "resume":
+            return
+        lowered = str(reason or "").strip().lower()
+        if "thread/resume failed" not in lowered and "no rollout found" not in lowered and "resume session not found" not in lowered:
+            return
+        external_session["resume_failed"] = True
+        external_session["vendor_session_state"] = "resume_failed"
+
     def _emit_stdout_line(raw_line: str) -> None:
         stdout_chunks.append(raw_line)
         if stream_halt.is_set():
@@ -1427,6 +1440,7 @@ def _run_codex_detailed(
         output = _extract_codex_output("".join(stdout_chunks), "".join(stderr_chunks))
         clean = strip_ansi(output).strip()
         stderr_clean = strip_ansi("".join(stderr_chunks)).strip()
+        _mark_resume_failed("\n".join(part for part in (clean, stderr_clean) if part))
         _unregister_active_process(run_token)
         return _coerce_execution_result(
             "codex",
@@ -1483,6 +1497,7 @@ def _run_codex_detailed(
     failure_class = ""
     if not base_ok:
         failure_blob = "\n".join(part for part in (clean, stderr_clean, stall_abort_reason) if part).strip()
+        _mark_resume_failed(failure_blob)
         failure_class = provider_failover.classify_failure(failure_blob)
     return _coerce_execution_result(
         "codex",

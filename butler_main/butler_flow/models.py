@@ -52,6 +52,7 @@ class FlowState(TypedDict, total=False):
     session_epoch: int
     service_fault_streak: int
     latest_token_usage: dict[str, Any]
+    doctor_policy: dict[str, Any]
     execution_mode: str
     session_strategy: str
     active_role_id: str
@@ -164,6 +165,7 @@ class FlowBoardV1(TypedDict, total=False):
     source_asset_version: str
     review_checklist: list[str]
     role_guidance: dict[str, Any]
+    doctor_policy: dict[str, Any]
     bundle_manifest: dict[str, Any]
 
 
@@ -363,6 +365,7 @@ class FlowDefinitionV1(TypedDict, total=False):
     autonomy_profile: str
     manager_handoff: dict[str, Any]
     role_guidance: dict[str, Any]
+    doctor_policy: dict[str, Any]
     version: str
     created_at: str
     updated_at: str

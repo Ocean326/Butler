@@ -1,0 +1,139 @@
+{
+  "flow_id": "flow_20260402111642_01929624",
+  "definition_id": "flow_20260402111642_01929624",
+  "asset_kind": "instance",
+  "label": "flow_20260402111642_01929624",
+  "description": "KDD research-and-writing managed flow with doctor recovery support.",
+  "workflow_kind": "managed_flow",
+  "goal": "登录 `jianghy@10.254.73.179` 并进入 `Transfer_Recovery`，先基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，产出分类矩阵、阅读摘要与参考文献库；最终完成一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+  "guard_condition": "仅在以下条件全部满足时可结束：已确认并记录最终研究主题；文献样本不少于 100 且相关性可说明；分类矩阵、阅读摘要、参考文献库三类产物齐备并可追溯到证据来源；质量审查通过后方可进入 finalize。",
+  "phase_plan": [
+    {
+      "phase_id": "clarify",
+      "title": "Clarify",
+      "objective": "明确任务边界与验收口径：确认 179 已配置 SSH 免密、必须先确认主题再检索、且交付物需证据可追溯并经质量审查通过后才能 finalize。",
+      "done_when": "形成书面化执行约束、主题确认流程与验收标准，且各方无歧义。",
+      "retry_phase_id": "clarify",
+      "fallback_phase_id": "clarify",
+      "next_phase_id": "discover"
+    },
+    {
+      "phase_id": "discover",
+      "title": "Discover",
+      "objective": "在 `Transfer_Recovery` 中盘点现有材料并确认研究主题，随后制定检索式、数据库范围、纳入排除标准与证据记录规范。",
+      "done_when": "研究主题已确认，检索与筛选策略可执行，证据记录模板已就绪。",
+      "retry_phase_id": "discover",
+      "fallback_phase_id": "clarify",
+      "next_phase_id": "structure"
+    },
+    {
+      "phase_id": "structure",
+      "title": "Structure",
+      "objective": "设计综述结构与分类矩阵维度，确定摘要模板、引用字段、标签体系和文献库组织方式。",
+      "done_when": "分类框架与数据结构定稿，可稳定承载 100+ 文献整理。",
+      "retry_phase_id": "structure",
+      "fallback_phase_id": "discover",
+      "next_phase_id": "execute"
+    },
+    {
+      "phase_id": "execute",
+      "title": "Execute",
+      "objective": "执行检索、筛选与阅读，沉淀不少于 100 篇高相关文献的分类矩阵、阅读摘要与参考文献库。",
+      "done_when": "达到数量与相关性门槛，三类核心产物完整并与证据源可追溯关联。",
+      "retry_phase_id": "execute",
+      "fallback_phase_id": "structure",
+      "next_phase_id": "synthesize"
+    },
+    {
+      "phase_id": "synthesize",
+      "title": "Synthesize",
+      "objective": "基于结构化证据撰写 KDD 风格“研究背景与现状”初稿，系统呈现问题定义、方法演进、不足与切入点。",
+      "done_when": "形成逻辑闭环完整、论据可追溯的第一版章节稿。",
+      "retry_phase_id": "synthesize",
+      "fallback_phase_id": "execute",
+      "next_phase_id": "quality_review"
+    },
+    {
+      "phase_id": "quality_review",
+      "title": "Quality Review",
+      "objective": "对证据链、覆盖度、论证一致性、引用规范与写作质量做审查并修正缺陷。",
+      "done_when": "质量审查通过，剩余风险已记录且不阻塞交付。",
+      "retry_phase_id": "quality_review",
+      "fallback_phase_id": "synthesize",
+      "next_phase_id": "finalize"
+    },
+    {
+      "phase_id": "finalize",
+      "title": "Finalize",
+      "objective": "冻结交付版本并输出最终说明，确保可复核、可复用、可继续迭代。",
+      "done_when": "最终产物与过程记录齐备并完成正式交接。",
+      "retry_phase_id": "finalize",
+      "fallback_phase_id": "quality_review",
+      "next_phase_id": ""
+    }
+  ],
+  "default_role_pack": "coding_flow",
+  "role_pack_id": "coding_flow",
+  "execution_mode": "medium",
+  "session_strategy": "role_bound",
+  "risk_level": "normal",
+  "autonomy_profile": "guarded",
+  "review_checklist": [],
+  "role_guidance": {
+    "suggested_roles": [
+      "planner",
+      "implementer",
+      "reviewer"
+    ],
+    "suggested_specialists": [
+      "creator",
+      "doctor"
+    ],
+    "activation_hints": [
+      "when environment, knowledge, or formatting gaps block KDD-style delivery",
+      "when repeated runtime/session faults block forward progress"
+    ],
+    "promotion_candidates": [
+      "creator"
+    ],
+    "manager_notes": "Keep role guidance lightweight: creator helps capability gaps, doctor helps runtime repair."
+  },
+  "doctor_policy": {
+    "enabled": true,
+    "activation_rules": [
+      "repeated_service_fault",
+      "same_resume_failure",
+      "session_binding_invalid"
+    ],
+    "repair_scope": "runtime_assets_first",
+    "framework_bug_action": "pause",
+    "max_rounds_per_episode": 1
+  },
+  "bundle_manifest": {
+    "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle",
+    "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/manager.md",
+    "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/supervisor.md",
+    "doctor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/doctor.md",
+    "doctor_skill_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/skills/doctor/SKILL.md",
+    "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/sources.json",
+    "manager_prompt": "manager.md",
+    "supervisor_prompt": "supervisor.md",
+    "doctor_prompt": "doctor.md",
+    "sources_path": "sources.json",
+    "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references",
+    "doctor_references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/references/doctor",
+    "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/assets",
+    "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived",
+    "derived_supervisor_prompt": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_compiled.md",
+    "derived_supervisor_knowledge": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json",
+    "derived": {
+      "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json"
+    }
+  },
+  "source_asset_key": "",
+  "source_asset_kind": "",
+  "source_asset_version": "",
+  "version": "1.3.0",
+  "created_at": "2026-04-02 11:16:42",
+  "updated_at": "2026-04-02 23:30:00"
+}

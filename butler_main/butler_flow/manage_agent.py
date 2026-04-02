@@ -6,7 +6,7 @@ from typing import Any, Callable
 from butler_main.agents_os.execution.cli_runner import cli_provider_available
 
 from .flow_definition import coerce_workflow_kind, normalize_phase_plan, resolve_phase_plan
-from .state import now_text
+from .state import normalize_doctor_policy_payload, now_text
 
 
 def _compact_json(value: Any) -> str:
@@ -206,10 +206,17 @@ def build_manage_prompt(
             "  ],\n"
             '  "role_guidance": {\n'
             '    "suggested_roles": ["planner","implementer","reviewer"],\n'
-            '    "suggested_specialists": ["creator","product-manager","user-simulator"],\n'
-            '    "activation_hints": ["when capability or environment gaps block progress"],\n'
+            '    "suggested_specialists": ["creator","doctor","product-manager","user-simulator"],\n'
+            '    "activation_hints": ["when capability, environment, runtime, or session gaps block progress"],\n'
             '    "promotion_candidates": ["creator"],\n'
             '    "manager_notes": "lightweight advisory notes only"\n'
+            "  },\n"
+            '  "doctor_policy": {\n'
+            '    "enabled": true,\n'
+            '    "activation_rules": ["repeated_service_fault","same_resume_failure","session_binding_invalid"],\n'
+            '    "repair_scope": "runtime_assets_first",\n'
+            '    "framework_bug_action": "pause",\n'
+            '    "max_rounds_per_episode": 1\n'
             "  },\n"
             '  "operator_guidance": "how the user should manage this flow next",\n'
             '  "confirmation_prompt": "one concise confirmation sentence"\n'
@@ -243,10 +250,17 @@ def build_manage_prompt(
         "  ],\n"
         '  "role_guidance": {\n'
         '    "suggested_roles": ["planner","implementer","reviewer"],\n'
-        '    "suggested_specialists": ["creator","product-manager","user-simulator"],\n'
-        '    "activation_hints": ["when capability or environment gaps block progress"],\n'
+        '    "suggested_specialists": ["creator","doctor","product-manager","user-simulator"],\n'
+        '    "activation_hints": ["when capability, environment, runtime, or session gaps block progress"],\n'
         '    "promotion_candidates": ["creator"],\n'
         '    "manager_notes": "lightweight advisory notes only"\n'
+        "  },\n"
+        '  "doctor_policy": {\n'
+        '    "enabled": true,\n'
+        '    "activation_rules": ["repeated_service_fault","same_resume_failure","session_binding_invalid"],\n'
+        '    "repair_scope": "runtime_assets_first",\n'
+        '    "framework_bug_action": "pause",\n'
+        '    "max_rounds_per_episode": 1\n'
         "  },\n"
         '  "operator_guidance": "how the user should manage this flow next",\n'
         '  "confirmation_prompt": "one concise confirmation sentence"\n'
@@ -257,6 +271,7 @@ def build_manage_prompt(
         "- Do not create arbitrary DAGs.\n"
         "- Match asset_kind to the target. Use instance for runnable flow instances, template for reusable editable assets, builtin for repo-owned builtins.\n"
         "- role_guidance is advisory only: it should guide manager design and give supervisor lightweight role references, not impose a rigid team contract.\n"
+        "- Use doctor_policy only as a lightweight recovery hint for supervisor runtime repair, not as a heavyweight governance layer.\n"
         "- The summary should read like a user handoff note.\n\n"
         f"Negotiation payload:\n{_compact_json(payload)}\n"
     )
@@ -283,7 +298,7 @@ def build_manage_chat_prompt(
             "if a specific asset is targeted, ground the answer in that asset's phases, static fields, lineage, bundle, and handoff",
             "if the request implies editing a builtin/template, explain the correct next action instead of mutating files in chat mode",
             "suggest when a supervisor prompt or bundled static asset should also be updated",
-            "treat role guidance as a lightweight default skill set for manager and supervisor, not a rigid team contract",
+            "treat role guidance and doctor policy as lightweight defaults for manager creation and supervisor runtime recovery, not a rigid team contract",
         ],
     }
     return (
@@ -314,7 +329,7 @@ def build_manage_chat_prompt(
         "- If the target is a builtin asset, mention clone/edit requirements when relevant.\n"
         "- If a builtin mutation is ready, set action_builtin_mode explicitly to clone or edit.\n"
         "- If the user asks about phases/static assets/supervisor prompt coupling, answer concretely from the supplied asset state.\n"
-        "- When discussing design quality, recommend lightweight role_guidance for manager creation and supervisor temporary-node reference.\n"
+        "- When discussing design quality, recommend lightweight role_guidance for manager creation and doctor_policy for supervisor runtime-repair reference.\n"
         "- Keep the response concise but specific.\n\n"
         f"Conversation payload:\n{_compact_json(payload)}\n"
     )
@@ -351,6 +366,10 @@ def normalize_manage_result(
         result.get("role_guidance") or {},
         current=dict(current.get("role_guidance") or dict(current.get("manage_handoff") or {}).get("role_guidance") or {}),
     )
+    doctor_policy = normalize_doctor_policy_payload(
+        result.get("doctor_policy"),
+        current=dict(current.get("doctor_policy") or dict(current.get("manage_handoff") or {}).get("doctor_policy") or {}),
+    )
     return {
         "summary": str(result.get("summary") or f"managed flow prepared for {goal or 'foreground work'}").strip(),
         "label": label,
@@ -365,6 +384,7 @@ def normalize_manage_result(
         "phase_plan": phase_plan,
         "review_checklist": review_checklist,
         "role_guidance": role_guidance,
+        "doctor_policy": doctor_policy,
         "instance_defaults": dict(result.get("instance_defaults") or current.get("instance_defaults") or {}),
         "lineage": dict(result.get("lineage") or current.get("lineage") or {}),
         "asset_state": dict(result.get("asset_state") or current.get("asset_state") or {}),

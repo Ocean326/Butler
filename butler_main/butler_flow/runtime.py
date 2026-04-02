@@ -22,6 +22,7 @@ from .constants import (
     DEFAULT_DISABLED_FLOW_MCP_SERVERS,
     DEFAULT_PROJECT_PHASE_MAX_ATTEMPTS,
     DEFAULT_SINGLE_GOAL_MAX_ATTEMPTS,
+    DOCTOR_ROLE_ID,
     DONE_PHASE,
     EXECUTION_MODE_SIMPLE,
     MANAGED_FLOW_KIND,
@@ -107,6 +108,7 @@ from .state import (
     read_flow_state,
     read_json,
     safe_int,
+    normalize_doctor_policy_payload,
     write_json_atomic,
 )
 
@@ -373,6 +375,8 @@ _SERVICE_FAULT_MARKERS = (
     "provider unavailable",
     "http 429",
     "http 5",
+    "thread/resume failed",
+    "no rollout found",
     "too many requests",
 )
 _AGENT_CLI_FAULT_MARKERS = (
@@ -775,6 +779,13 @@ def _looks_like_agent_cli_fault_text(*values: str) -> bool:
     return any(marker in haystack for marker in _AGENT_CLI_FAULT_MARKERS)
 
 
+def _looks_like_resume_no_rollout_failure(*values: str) -> bool:
+    haystack = " ".join(str(item or "").strip().lower() for item in values if str(item or "").strip())
+    if not haystack:
+        return False
+    return "thread/resume failed" in haystack or "no rollout found" in haystack
+
+
 def _classify_decision_defaults(
     decision: FlowDecision,
     *,
@@ -980,6 +991,10 @@ class FlowRuntime:
                 if str(item or "").strip()
             ],
             "role_guidance": dict(definition.get("role_guidance") or flow_state.get("role_guidance") or {}),
+            "doctor_policy": normalize_doctor_policy_payload(
+                definition.get("doctor_policy"),
+                current=dict(flow_state.get("doctor_policy") or {}),
+            ),
             "bundle_manifest": bundle_manifest,
         }
         base_dir = flow_dir_path
@@ -1023,6 +1038,178 @@ class FlowRuntime:
             "updated_at": str(compiled_payload.get("updated_at") or definition.get("updated_at") or "").strip(),
         }
         return asset_context, supervisor_knowledge
+
+    def _doctor_runtime_appendix(self, flow_dir_path: Path, flow_state: dict[str, Any]) -> str:
+        definition = read_json(flow_definition_path(Path(flow_dir_path)))
+        bundle_manifest = dict(definition.get("bundle_manifest") or flow_state.get("bundle_manifest") or {})
+        base_dir = Path(flow_dir_path)
+        bundle_root = self._resolve_bundle_ref(base_dir, bundle_manifest.get("bundle_root")) or base_dir
+        doctor_ref = (
+            self._resolve_bundle_ref(base_dir, bundle_manifest.get("doctor_ref"))
+            or self._resolve_bundle_ref(bundle_root, bundle_manifest.get("doctor_prompt"))
+            or self._resolve_bundle_ref(bundle_root, "doctor.md")
+        )
+        doctor_skill_ref = (
+            self._resolve_bundle_ref(base_dir, bundle_manifest.get("doctor_skill_ref"))
+            or self._resolve_bundle_ref(bundle_root, Path("skills") / DOCTOR_ROLE_ID / "SKILL.md")
+        )
+        sections = []
+        doctor_text = self._read_text_if_exists(doctor_ref)
+        if doctor_text:
+            sections.append(f"[doctor bundle]\n{doctor_text}")
+        doctor_skill_text = self._read_text_if_exists(doctor_skill_ref)
+        if doctor_skill_text:
+            sections.append(f"[doctor skill]\n{doctor_skill_text}")
+        return "\n\n".join(section for section in sections if section).strip()
+
+    def _doctor_policy(self, flow_state: dict[str, Any]) -> dict[str, Any]:
+        return normalize_doctor_policy_payload(flow_state.get("doctor_policy"), current={})
+
+    def _last_codex_failure_blob(self, flow_state: dict[str, Any]) -> str:
+        receipt = dict(flow_state.get("last_codex_receipt") or {})
+        metadata = dict(receipt.get("metadata") or {})
+        external_session = dict(metadata.get("external_session") or {})
+        parts = [
+            str(receipt.get("summary") or "").strip(),
+            str(receipt.get("output_text") or "").strip(),
+            str(metadata.get("stderr") or "").strip(),
+            str(external_session.get("requested_session_id") or "").strip(),
+            str(dict(metadata.get("runtime_request") or {}).get("codex_mode") or "").strip(),
+        ]
+        return "\n".join(part for part in parts if part).strip()
+
+    def _session_binding_invalid(self, flow_state: dict[str, Any]) -> bool:
+        receipt = dict(flow_state.get("last_codex_receipt") or {})
+        metadata = dict(receipt.get("metadata") or {})
+        runtime_request = dict(metadata.get("runtime_request") or {})
+        external_session = dict(metadata.get("external_session") or {})
+        expected_session_mode = str(dict(flow_state.get("latest_supervisor_decision") or {}).get("session_mode") or "").strip().lower()
+        requested_mode = str(runtime_request.get("codex_mode") or "").strip().lower()
+        if expected_session_mode == "cold" and requested_mode == "resume":
+            return True
+        requested_session_id = str(external_session.get("requested_session_id") or "").strip()
+        thread_id = str(external_session.get("thread_id") or "").strip()
+        if requested_mode == "resume" and requested_session_id and not thread_id and not bool(external_session.get("resume_durable")):
+            return True
+        if _looks_like_resume_no_rollout_failure(self._last_codex_failure_blob(flow_state)):
+            return True
+        return False
+
+    def _doctor_trigger_reason(self, flow_state: dict[str, Any], *, phase: str) -> str:
+        if str(phase or "").strip() == DONE_PHASE:
+            return ""
+        if str(flow_state.get("active_role_id") or "").strip() == DOCTOR_ROLE_ID:
+            return ""
+        policy = self._doctor_policy(flow_state)
+        if not bool(policy.get("enabled")):
+            return ""
+        max_rounds = max(1, safe_int(policy.get("max_rounds_per_episode"), 1))
+        if safe_int(dict(flow_state.get("role_turn_counts") or {}).get(DOCTOR_ROLE_ID), 0) >= max_rounds:
+            return ""
+        activation_rules = {str(item or "").strip() for item in list(policy.get("activation_rules") or []) if str(item or "").strip()}
+        if "same_resume_failure" in activation_rules and _looks_like_resume_no_rollout_failure(self._last_codex_failure_blob(flow_state)):
+            return "repair repeated resume/no-rollout failure via doctor"
+        if "session_binding_invalid" in activation_rules and self._session_binding_invalid(flow_state):
+            return "repair invalid session binding via doctor"
+        if "repeated_service_fault" in activation_rules and safe_int(flow_state.get("service_fault_streak"), 0) >= 2:
+            return "repair repeated service fault via doctor"
+        return ""
+
+    def _doctor_instruction(self, flow_state: dict[str, Any]) -> str:
+        pending = _compose_next_instruction(flow_state)
+        current_phase = str(flow_state.get("current_phase") or "").strip()
+        instruction = (
+            "Diagnose and repair the current flow before any more business execution. "
+            "Priority order: (1) runtime/session bindings, (2) instance-local assets such as flow_definition.json or bundle sidecars, "
+            "(3) safe flow-local mode/session corrections. Keep scope inside this flow instance.\n\n"
+            "If you conclude the blocker is a butler-flow framework/code bug, do not patch global code from inside the flow. "
+            "Instead begin the final reply with `DOCTOR_FRAMEWORK_BUG:` and include `Problem:`, `Evidence:`, and `Fix plan:`."
+        )
+        if pending:
+            instruction = f"{instruction}\n\nCurrent blocked task to resume after repair:\n{pending}"
+        if current_phase:
+            instruction = f"{instruction}\n\nReturn control so phase `{current_phase}` can continue safely."
+        return instruction.strip()
+
+    def _doctor_framework_bug_report(self, codex_receipt) -> str:
+        text = _receipt_text(codex_receipt)
+        marker = "DOCTOR_FRAMEWORK_BUG:"
+        if marker not in text:
+            return ""
+        _, _, suffix = text.partition(marker)
+        report = suffix.strip() or text.strip()
+        return report
+
+    def _pause_for_doctor_framework_bug(
+        self,
+        *,
+        flow_dir_path,
+        trace_store: FileTraceStore,
+        flow_state: dict[str, Any],
+        flow_id: str,
+        phase: str,
+        attempt_no: int,
+        report: str,
+    ) -> int:
+        summary = "doctor detected a butler-flow framework bug; flow paused for operator follow-up"
+        flow_state["status"] = "paused"
+        flow_state["pending_codex_prompt"] = str(report or "").strip()
+        flow_state["last_completion_summary"] = summary
+        supervisor_decision = {
+            "decision": "ask_operator",
+            "turn_kind": "operator_wait",
+            "reason": summary,
+            "confidence": 0.96,
+            "next_action": "ask_operator",
+            "attempt_no": int(attempt_no),
+            "phase": str(phase or "").strip(),
+            "instruction": str(report or "").strip(),
+            "issue_kind": "bug",
+            "followup_kind": "none",
+            "active_role_id": DOCTOR_ROLE_ID,
+        }
+        flow_state["latest_supervisor_decision"] = dict(supervisor_decision)
+        self._set_approval_state(
+            flow_dir_path=flow_dir_path,
+            flow_state=flow_state,
+            flow_id=flow_id,
+            phase=phase,
+            attempt_no=attempt_no,
+            approval_state="operator_required",
+            reason=summary,
+            source="doctor",
+        )
+        self._emit_ui_event(
+            kind="warning",
+            lane="supervisor",
+            family="risk",
+            flow_dir_path=flow_dir_path,
+            flow_id=flow_id,
+            phase=phase,
+            attempt_no=attempt_no,
+            message=summary,
+            payload={"reason": summary, "doctor_report": str(report or "").strip(), "role_id": DOCTOR_ROLE_ID},
+            raw_text=str(report or "").strip(),
+        )
+        self._append_strategy_trace(
+            flow_dir_path=flow_dir_path,
+            flow_state=flow_state,
+            kind="doctor_framework_bug",
+            title="doctor escalated framework bug",
+            summary=summary,
+            family="approval",
+            payload={"report": str(report or "").strip(), **dict(supervisor_decision)},
+            attempt_no=attempt_no,
+            phase=phase,
+        )
+        trace_store.append_event(
+            flow_id,
+            phase=phase,
+            event_type="doctor.framework_bug",
+            payload={"attempt_no": attempt_no, "report": str(report or "").strip()},
+        )
+        self._write_flow_state(flow_dir_path, flow_state)
+        return 0
 
     def _runtime_plan_payload(
         self,
@@ -1391,6 +1578,10 @@ class FlowRuntime:
             role_id=role_id,
             flow_state=flow_state,
         )
+        if str(role_id or "").strip() == DOCTOR_ROLE_ID:
+            doctor_appendix = self._doctor_runtime_appendix(flow_dir_path, flow_state)
+            if doctor_appendix:
+                role_charter = f"{role_charter}\n\n{doctor_appendix}".strip()
         flow_board = build_flow_board(
             flow_state,
             latest_handoff_summary=self._latest_handoff_summary(flow_dir_path, flow_state),
@@ -1610,6 +1801,14 @@ class FlowRuntime:
             role_id = str(ephemeral.get("role_id") or mutation.get("target_role_id") or "").strip()
             base_role_id = str(ephemeral.get("base_role_id") or "").strip()
             if role_id and base_role_id:
+                previous_role_id = str(flow_state.get("active_role_id") or "").strip()
+                if role_id == DOCTOR_ROLE_ID and previous_role_id and self._session_binding_invalid(flow_state):
+                    update_role_session_binding(
+                        flow_state,
+                        role_id=previous_role_id,
+                        session_id="",
+                        status="resume_failed",
+                    )
                 update_role_session_binding(
                     flow_state,
                     role_id=role_id,
@@ -1736,15 +1935,11 @@ class FlowRuntime:
         fix_round_no = safe_int(flow_state.get("auto_fix_round_count"), 0)
         active_role_id = select_active_role(flow_state, phase=phase)
         flow_state["active_role_id"] = active_role_id
-        decision_name = "execute"
-        turn_kind = _turn_kind_for_phase(phase)
-        reason = f"continue mainline flow execution via role={active_role_id}"
-        confidence = 0.72
         decision = {
-            "decision": decision_name,
-            "turn_kind": turn_kind,
-            "reason": reason,
-            "confidence": confidence,
+            "decision": "execute",
+            "turn_kind": _turn_kind_for_phase(phase),
+            "reason": f"continue mainline flow execution via role={active_role_id}",
+            "confidence": 0.72,
             "next_action": "run_executor",
             "attempt_no": int(attempt_no),
             "phase": str(phase or "").strip(),
@@ -1759,7 +1954,30 @@ class FlowRuntime:
                 execution_mode=str(flow_state.get("execution_mode") or "").strip(),
             ),
         }
-        if allow_fix_turns and issue_kind == "agent_cli_fault" and followup_kind == "fix" and pending:
+        doctor_reason = self._doctor_trigger_reason(flow_state, phase=phase)
+        if doctor_reason:
+            decision.update(
+                {
+                    "turn_kind": "recover",
+                    "reason": doctor_reason,
+                    "confidence": 0.9,
+                    "instruction": self._doctor_instruction(flow_state),
+                    "active_role_id": DOCTOR_ROLE_ID,
+                    "session_mode": "cold",
+                    "load_profile": "compact",
+                    "mutation": {
+                        "kind": "spawn_ephemeral_role",
+                        "target_role_id": DOCTOR_ROLE_ID,
+                        "summary": doctor_reason,
+                    },
+                    "ephemeral_role": {
+                        "role_id": DOCTOR_ROLE_ID,
+                        "base_role_id": "fixer",
+                        "charter_addendum": self._doctor_instruction(flow_state),
+                    },
+                }
+            )
+        elif allow_fix_turns and issue_kind == "agent_cli_fault" and followup_kind == "fix" and pending:
             decision["decision"] = "fix"
             decision["turn_kind"] = "fix"
             decision["reason"] = f"repair the local agent CLI fault identified by the previous judge result via role={active_role_id}"
@@ -1767,8 +1985,15 @@ class FlowRuntime:
         elif pending:
             decision["reason"] = f"follow pending instruction from previous judge/recovery via role={active_role_id}"
             decision["confidence"] = 0.78
-        flow_state["latest_supervisor_decision"] = dict(decision)
-        return decision
+        normalized = self._normalize_supervisor_decision(
+            decision,
+            flow_state=flow_state,
+            phase=phase,
+            attempt_no=attempt_no,
+            fallback_reason=str(decision.get("reason") or "").strip(),
+        )
+        flow_state["latest_supervisor_decision"] = dict(normalized)
+        return normalized
 
     def _run_supervisor_turn(
         self,
@@ -1832,6 +2057,8 @@ class FlowRuntime:
             attempt_no=attempt_no,
             message=str(compiled.get("rendered_prompt") or ""),
             payload={
+                "role_id": "supervisor",
+                "active_role_id": role_id,
                 "session_mode": session_mode,
                 "load_profile": load_profile,
                 "context_governor": governor,
@@ -1868,6 +2095,8 @@ class FlowRuntime:
                 attempt_no=attempt_no,
                 message=supervisor_raw_output,
                 payload={
+                    "role_id": "supervisor",
+                    "active_role_id": role_id,
                     "segment": supervisor_raw_output,
                     "source": "supervisor_runtime",
                     "thread_id": thread_id,
@@ -1888,6 +2117,8 @@ class FlowRuntime:
                 attempt_no=attempt_no,
                 message=supervisor_raw_output,
                 payload={
+                    "role_id": "supervisor",
+                    "active_role_id": role_id,
                     "segment": supervisor_raw_output,
                     "source": "supervisor_runtime",
                     "compat": True,
@@ -2242,12 +2473,12 @@ class FlowRuntime:
         active_role_id = str(flow_state.get("active_role_id") or "").strip()
         session_id = role_session_id_for_turn(flow_state, role_id=active_role_id)
         session_mode = str(dict(flow_state.get("latest_supervisor_decision") or {}).get("session_mode") or "").strip().lower()
-        if session_mode == "cold":
+        if session_mode == "cold" or active_role_id == DOCTOR_ROLE_ID:
             session_id = ""
         last_receipt = dict(flow_state.get("last_codex_receipt") or {})
         last_metadata = dict(last_receipt.get("metadata") or {})
         last_external_session = dict(last_metadata.get("external_session") or {})
-        resume_failed = bool(last_external_session.get("resume_failed"))
+        resume_failed = bool(last_external_session.get("resume_failed")) or self._session_binding_invalid(flow_state)
         effective_session_id = "" if resume_failed else str(session_id or "").strip()
         request = {
             "cli": "codex",
@@ -2614,6 +2845,11 @@ class FlowRuntime:
                         attempt_no=attempt_no,
                         allow_fix_turns=flow_fix_turns_enabled(cfg),
                     )
+                    self._apply_supervisor_mutation(
+                        flow_dir_path=flow_dir_path,
+                        flow_state=flow_state,
+                        decision=supervisor_decision,
+                    )
                     self._emit_ui_event(
                         kind="supervisor_output",
                         lane="supervisor",
@@ -2726,19 +2962,28 @@ class FlowRuntime:
                         phase=phase,
                         attempt_no=attempt_no,
                         message=str(segment or ""),
-                        payload={"segment": str(segment or "")},
+                        payload={
+                            "segment": str(segment or ""),
+                            "role_id": active_role_id,
+                            "active_role_id": active_role_id,
+                            "turn_kind": str(turn_record.get("turn_kind") or "").strip(),
+                        },
                     )
                 def _on_event(event: dict[str, Any]) -> None:
                     if console is not None:
                         console.emit_runtime_event(event)
+                    payload = dict(event or {})
+                    payload.setdefault("role_id", active_role_id)
+                    payload.setdefault("active_role_id", active_role_id)
+                    payload.setdefault("turn_kind", str(turn_record.get("turn_kind") or "").strip())
                     self._emit_ui_event(
                         kind="codex_runtime_event",
                         flow_dir_path=flow_dir_path,
                         flow_id=flow_id,
                         phase=phase,
                         attempt_no=attempt_no,
-                        message=str((event or {}).get("text") or (event or {}).get("kind") or "").strip(),
-                        payload=dict(event or {}),
+                        message=str(payload.get("text") or payload.get("kind") or "").strip(),
+                        payload=payload,
                     )
                 codex_receipt = self._run_prompt_receipt_fn(
                     codex_prompt,
@@ -2782,6 +3027,42 @@ class FlowRuntime:
                     event_type="codex.attempt.done" if str(getattr(codex_receipt, "status", "") or "").strip() == "completed" else "codex.attempt.failed",
                     payload={"attempt_no": attempt_no, "thread_id": str(flow_state.get("codex_session_id") or "").strip()},
                 )
+                doctor_framework_bug_report = ""
+                if active_role_id == DOCTOR_ROLE_ID:
+                    doctor_framework_bug_report = self._doctor_framework_bug_report(codex_receipt)
+                if doctor_framework_bug_report:
+                    turn_record["decision"] = "ASK_OPERATOR"
+                    turn_record["reason"] = "doctor escalated a butler-flow framework bug"
+                    turn_record["confidence"] = float(supervisor_decision.get("confidence") or 0.0)
+                    turn_record["completed_at"] = now_text()
+                    self._append_turn_record(flow_dir_path, turn_record)
+                    _append_unique_ref(flow_state, "trace_refs", str(turn_record.get("trace_id") or ""))
+                    _append_unique_ref(flow_state, "receipt_refs", str(turn_record.get("receipt_id") or ""))
+                    self._append_attempt_draft(
+                        state_store=state_store,
+                        attempt_no=attempt_no,
+                        phase=phase,
+                        codex_prompt=codex_prompt,
+                        codex_receipt=codex_receipt,
+                        cursor_receipt=None,
+                        decision={
+                            "decision": "ASK_OPERATOR",
+                            "reason": "doctor escalated a butler-flow framework bug",
+                            "next_codex_prompt": doctor_framework_bug_report,
+                            "completion_summary": doctor_framework_bug_report,
+                            "issue_kind": "bug",
+                            "followup_kind": "none",
+                        },
+                    )
+                    return self._pause_for_doctor_framework_bug(
+                        flow_dir_path=flow_dir_path,
+                        trace_store=trace_store,
+                        flow_state=flow_state,
+                        flow_id=flow_id,
+                        phase=phase,
+                        attempt_no=attempt_no,
+                        report=doctor_framework_bug_report,
+                    )
                 self._display.write("[butler-flow] cursor judge evaluating latest attempt")
                 cursor_receipt, decision = self.judge_attempt(
                     cfg,
