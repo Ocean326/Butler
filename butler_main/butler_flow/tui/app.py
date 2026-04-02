@@ -874,25 +874,74 @@ class ButlerFlowTuiApp(App[int]):
     def _current_flow_payload(self, flow_id: str) -> dict[str, Any]:
         return self._controller.single_flow_payload(config=self._current_config, flow_id=flow_id)
 
+    def _current_flow_summary(self, payload: dict[str, Any]) -> dict[str, Any]:
+        summary = _mapping_payload(payload.get("navigator_summary"))
+        if summary:
+            return summary
+        return _mapping_payload(payload.get("summary"))
+
+    def _event_row_key(self, entry: dict[str, Any]) -> str:
+        event_id = str(entry.get("event_id") or "").strip()
+        if event_id:
+            return f"id:{event_id}"
+        return "|".join(
+            [
+                str(entry.get("kind") or "").strip(),
+                str(entry.get("created_at") or "").strip(),
+                str(entry.get("message") or "").strip(),
+                str(entry.get("phase") or "").strip(),
+                str(entry.get("attempt_no") or "").strip(),
+            ]
+        )
+
+    def _merge_flow_events(self, *sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        merged: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for source in sources:
+            for entry in source:
+                row = dict(entry or {})
+                key = self._event_row_key(row)
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(row)
+        merged.sort(
+            key=lambda item: (
+                str(item.get("created_at") or ""),
+                int(item.get("attempt_no") or 0),
+                str(item.get("event_id") or ""),
+            )
+        )
+        return merged
+
     def _current_flow_events(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
-        return [dict(entry or {}) for entry in list(payload.get("timeline") or []) if self._event_matches_flow_view(dict(entry or {}))]
+        timeline = [dict(entry or {}) for entry in list(payload.get("timeline") or [])]
+        system_events = [row for row in timeline if str(row.get("lane") or "").strip() in {"system", ""}]
+        if self._flow_view_mode == "supervisor":
+            view_events = [dict(entry or {}) for entry in list(_mapping_payload(payload.get("supervisor_view")).get("events") or [])]
+        else:
+            view_events = [dict(entry or {}) for entry in list(_mapping_payload(payload.get("workflow_view")).get("events") or [])]
+        if not view_events:
+            return [dict(entry or {}) for entry in timeline if self._event_matches_flow_view(dict(entry or {}))]
+        return self._merge_flow_events(view_events, system_events)
 
     def _render_supervisor_header(self, payload: dict[str, Any]) -> str:
+        summary = self._current_flow_summary(payload)
         supervisor_view = dict(payload.get("supervisor_view") or {})
         header = dict(supervisor_view.get("header") or {})
         pointers = dict(supervisor_view.get("pointers") or {})
-        if not header:
+        if not header and not summary:
             return "Supervisor View\nNo flow selected."
         lines = [
             "Supervisor View",
-            f"flow_id={header.get('flow_id') or '-'}",
-            f"kind={header.get('workflow_kind') or '-'}",
-            f"status={header.get('status') or '-'}",
-            f"phase={header.get('phase') or '-'}",
-            f"goal={header.get('goal') or '-'}",
-            f"guard={header.get('guard_condition') or '-'}",
-            f"active_role={header.get('active_role_id') or '-'}",
-            f"approval_state={header.get('approval_state') or '-'}",
+            f"flow_id={header.get('flow_id') or payload.get('flow_id') or '-'}",
+            f"kind={header.get('workflow_kind') or summary.get('workflow_kind') or '-'}",
+            f"status={header.get('status') or summary.get('effective_status') or '-'}",
+            f"phase={header.get('phase') or summary.get('effective_phase') or '-'}",
+            f"goal={header.get('goal') or summary.get('goal') or '-'}",
+            f"guard={header.get('guard_condition') or summary.get('guard_condition') or '-'}",
+            f"active_role={header.get('active_role_id') or summary.get('active_role_id') or '-'}",
+            f"approval_state={header.get('approval_state') or summary.get('approval_state') or '-'}",
         ]
         risk_level = str(pointers.get("risk_level") or "").strip()
         if risk_level:
@@ -906,6 +955,7 @@ class ButlerFlowTuiApp(App[int]):
         return "\n".join(lines)
 
     def _render_supervisor_prelude(self, payload: dict[str, Any]) -> str:
+        summary = self._current_flow_summary(payload)
         supervisor_view = dict(payload.get("supervisor_view") or {})
         header = dict(supervisor_view.get("header") or {})
         pointers = dict(supervisor_view.get("pointers") or {})
@@ -913,11 +963,11 @@ class ButlerFlowTuiApp(App[int]):
         roles = _mapping_payload(inspector.get("roles"))
         latest_handoff = dict(pointers.get("latest_handoff_summary") or roles.get("latest_handoff_summary") or {})
         lines = [
-            f"flow_id={header.get('flow_id') or '-'}",
-            f"status={header.get('status') or '-'}",
-            f"phase={header.get('phase') or '-'}",
-            f"active_role={header.get('active_role_id') or '-'}",
-            f"approval_state={header.get('approval_state') or '-'}",
+            f"flow_id={header.get('flow_id') or payload.get('flow_id') or '-'}",
+            f"status={header.get('status') or summary.get('effective_status') or '-'}",
+            f"phase={header.get('phase') or summary.get('effective_phase') or '-'}",
+            f"active_role={header.get('active_role_id') or summary.get('active_role_id') or '-'}",
+            f"approval_state={header.get('approval_state') or summary.get('approval_state') or '-'}",
         ]
         supervisor_thread_id = str(header.get("supervisor_thread_id") or "").strip()
         if supervisor_thread_id:
@@ -955,18 +1005,34 @@ class ButlerFlowTuiApp(App[int]):
         return "\n".join(lines)
 
     def _render_workflow_prelude(self, payload: dict[str, Any]) -> str:
+        summary = self._current_flow_summary(payload)
         flow_id = str(payload.get("flow_id") or "-").strip() or "-"
-        return "\n".join([f"flow_id={flow_id}"])
+        lines = [f"flow_id={flow_id}"]
+        status = str(summary.get("effective_status") or "").strip()
+        phase = str(summary.get("effective_phase") or "").strip()
+        active_role = str(summary.get("active_role_id") or "").strip()
+        if status:
+            lines.append(f"status={status}")
+        if phase:
+            lines.append(f"phase={phase}")
+        if active_role:
+            lines.append(f"active_role={active_role}")
+        return "\n".join(lines)
 
     def _render_workflow_header(self, payload: dict[str, Any]) -> str:
+        summary = self._current_flow_summary(payload)
         flow_id = str(payload.get("flow_id") or "-").strip() or "-"
-        return "\n".join(
-            [
-                "Workflow View",
-                f"flow_id={flow_id}",
-                "mixed timeline for workflow events + raw execution output",
-            ]
-        )
+        lines = [
+            "Workflow View",
+            f"flow_id={flow_id}",
+            f"status={summary.get('effective_status') or '-'}",
+            f"phase={summary.get('effective_phase') or '-'}",
+            "mixed timeline for workflow events + raw execution output",
+        ]
+        active_role = str(summary.get("active_role_id") or "").strip()
+        if active_role:
+            lines.append(f"active_role={active_role}")
+        return "\n".join(lines)
 
     def _render_inspector(self, payload: dict[str, Any]) -> tuple[str, str]:
         if not self._inspector_open:
@@ -2423,18 +2489,43 @@ class ButlerFlowTuiApp(App[int]):
             response = str(payload.get("response") or payload.get("summary") or "").strip()
             if response:
                 self._write_manage_note(family="manager", body=response, tone="system")
+            draft_summary = str(payload.get("draft_summary") or "").strip()
+            if draft_summary:
+                self._write_manage_note(family="draft", body=draft_summary, tone="default")
             next_action = str(payload.get("suggested_next_action") or "").strip()
             if next_action:
                 self._write_manage_note(family="hint", body=f"next · {next_action}", tone="action")
             edit_hint = str(payload.get("edit_hint") or "").strip()
             if edit_hint:
                 self._write_manage_note(family="hint", body=edit_hint, tone="action")
+            pending_action_preview = str(payload.get("pending_action_preview") or "").strip()
+            if pending_action_preview:
+                self._write_manage_note(family="hint", body=pending_action_preview, tone="action")
+            manager_stage = str(payload.get("manager_stage") or "").strip()
+            active_skill = str(payload.get("active_skill") or "").strip()
+            confirmation_scope = str(payload.get("confirmation_scope") or "").strip()
+            confirmation_prompt = str(payload.get("confirmation_prompt") or "").strip()
+            if manager_stage or active_skill or (confirmation_scope and confirmation_scope != "none"):
+                details: list[str] = []
+                if manager_stage:
+                    details.append(f"stage={manager_stage}")
+                if active_skill:
+                    details.append(f"skill={active_skill}")
+                if confirmation_scope and confirmation_scope != "none":
+                    details.append(f"confirm={confirmation_scope}")
+                if details:
+                    self._write_manage_note(family="state", body="manager · " + " · ".join(details), tone="action")
+            if confirmation_prompt:
+                self._write_manage_note(family="hint", body=confirmation_prompt, tone="action")
             action = str(payload.get("action") or "").strip().lower()
             action_ready = bool(payload.get("action_ready"))
             action_manage_target = str(payload.get("action_manage_target") or manage_target or "").strip()
             action_instruction = str(payload.get("action_instruction") or "").strip()
             action_stage = str(payload.get("action_stage") or "").strip()
             action_builtin_mode = str(payload.get("action_builtin_mode") or "").strip()
+            action_draft = dict(payload.get("action_draft") or {})
+            action_goal = str(payload.get("action_goal") or "").strip()
+            action_guard_condition = str(payload.get("action_guard_condition") or "").strip()
             if action == "manage_flow" and action_ready and action_manage_target and action_instruction:
                 try:
                     self._run_manage_flow(
@@ -2442,6 +2533,9 @@ class ButlerFlowTuiApp(App[int]):
                         action_instruction,
                         stage=action_stage,
                         builtin_mode=action_builtin_mode,
+                        goal=action_goal,
+                        guard_condition=action_guard_condition,
+                        draft_payload=action_draft,
                     )
                 except Exception as exc:
                     error_text = f"{type(exc).__name__}: {exc}"
@@ -2830,7 +2924,8 @@ class ButlerFlowTuiApp(App[int]):
             self.notify("Supervisor instruction queued.", severity="information")
 
     def _handle_manage_prompt(self, text: str) -> None:
-        request = parse_manage_prompt(text)
+        active_asset_key = self._manage_cursor_asset_key if self._manage_chat_session_id else ""
+        request = parse_manage_prompt(text, active_asset_key=active_asset_key)
         if not request.raw_text:
             return
         if request.manage_target.startswith("instance:") or request.manage_target.startswith("flow_") or request.manage_target == "last":
@@ -2887,11 +2982,16 @@ class ButlerFlowTuiApp(App[int]):
         *,
         stage: str = "",
         builtin_mode: str = "",
+        goal: str = "",
+        guard_condition: str = "",
+        draft_payload: dict[str, Any] | None = None,
     ) -> None:
         target = str(manage_target or "new").strip() or "new"
         instruction_text = str(instruction or "").strip()
         stage_text = str(stage or "").strip()
         builtin_mode_text = str(builtin_mode or "").strip()
+        goal_text = str(goal or "").strip()
+        guard_text = str(guard_condition or "").strip()
         if self._manage_flow_busy:
             self.notify("Manager build already in progress.", severity="warning")
             return
@@ -2907,9 +3007,12 @@ class ButlerFlowTuiApp(App[int]):
                 payload = self._controller.manage_flow(
                     config=self._current_config,
                     manage_target=target,
+                    goal=goal_text,
+                    guard_condition=guard_text,
                     instruction=instruction_text,
                     stage=stage_text,
                     builtin_mode=builtin_mode_text,
+                    draft_payload=dict(draft_payload or {}),
                 )
             except Exception as exc:
                 self.call_from_thread(

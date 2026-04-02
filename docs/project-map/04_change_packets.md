@@ -1,6 +1,6 @@
 # 改前读包
 
-更新时间：2026-04-02  
+更新时间：2026-04-03  
 状态：现役  
 用途：把常见改动压成固定最小读包，避免 agent 自由扩散式读库
 
@@ -110,10 +110,13 @@
   - [分层地图](./01_layer_map.md)
   - [功能地图](./02_feature_map.md)
   - [真源矩阵](./03_truth_matrix.md)
+  - [0403 当日总纲](../daily-upgrade/0403/00_当日总纲.md)
+  - [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](../daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
+  - [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](../daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
   - [0401 当日总纲](../daily-upgrade/0401/00_当日总纲.md)
   - [0402 当日总纲](../daily-upgrade/0402/00_当日总纲.md)
   - [0402 Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）](../daily-upgrade/0402/20260402_Butler-flow%20Desktop%20V2.1%20PRD_main%E5%88%86%E6%94%AF%E5%AF%B9%E9%BD%90_flow%20CLI%E5%85%A5%E5%8F%A3%E4%B8%8E%E5%8F%8C%E8%BD%A8%E5%AE%9E%E6%96%BD_%E6%9B%B4%E6%96%B0%E7%89%88.md)
-  - [0402 Butler-flow-Desktop 开发计划（butler-flow 执行版）](../daily-upgrade/0402/20260402_Butler-flow-Desktop%E5%BC%80%E5%8F%91%E8%AE%A1%E5%88%92_butlerflow%E6%89%A7%E8%A1%8C%E7%89%88.md)
+  - [0402 Butler-flow-Desktop 开发计划（butler-flow 执行版，含 Desktop 技术选型与 Proma 复用边界）](../daily-upgrade/0402/20260402_Butler-flow-Desktop%E5%BC%80%E5%8F%91%E8%AE%A1%E5%88%92_butlerflow%E6%89%A7%E8%A1%8C%E7%89%88.md)
   - [0402 Butler Flow Manage Center 资产中心升级与会话式交互落地](../daily-upgrade/0402/02_butler-flow_manage-center资产中心升级与会话式交互落地.md)
   - [0402 Butler Flow 长流治理与 supervisor 可观测性升级](../daily-upgrade/0402/11_butler-flow_长流治理与supervisor可观测性升级.md)
   - [0402 Butler Flow Doctor 恢复角色与实例级静态资产修复](../daily-upgrade/0402/12_butler-flow_doctor恢复角色与实例级静态资产修复.md)
@@ -150,10 +153,12 @@
   - 当前 `/manage` 已收口为 shared asset center，只显示 `builtin + template`；`/flows` 只保留兼容别名，free 设计链路只应在 setup 内部通过 `/manage template:new ...` 进入
   - 当前 `/manage` 主视图必须是 transcript-first shell，而不是栏式资产卡片；底部输入框是主入口，支持 `$template:<id>` / `$builtin:<id>` mention 与自然语言管理意图
   - 当前纯文本路由固定为：`manage -> manager chat`、`flow -> supervisor queue`、`history -> reject`
-  - 若改 `/manage` 输入协议，先看 `butler_main/butler_flow/tui/manage_interaction.py` 与 `tui/app.py` 的 bare target/`$target` 解析、mention picker 7 项窗口、manager queue/session 续接；不要再把 manager chat 误接回 `manage_flow()` 的 builtin edit 分支
+  - 若改 `/manage` 输入协议，先看 `butler_main/butler_flow/tui/manage_interaction.py` 与 `tui/app.py` 的 bare target/`$target` 解析、mention picker 7 项窗口、manager queue/session 续接；当前 manager 会话默认沿用当前 asset focus，且会把 `manage_session / draft / pending_action` 落盘，支撑 `template_confirm -> flow_confirm` 的连续讨论
+  - 若改 manager chat prompt，优先看 `butler_main/butler_flow/manage_agent.py` 与 `butler_main/butler_flow/manager_prompt_assets/`；现役口径是 `manager role + skills + bundle/manager.md` 注入，但真正执行门控在代码侧：首次 draft 不自动提交，只有纯确认才能消费已有 `pending_action`
   - 若涉及 builtin 修改，必须核对当前是否仍要求显式 `clone` 或 `edit`，不要回退到隐式原地修改
-  - 若涉及静态资产，补看 shared JSON 是否带有 `asset_state / lineage / instance_defaults / review_checklist / role_guidance / bundle_manifest`
-  - 若涉及 runtime 注入，补看 instance `flow_definition.json` 是否已写入 `source_asset_key / source_asset_kind / source_asset_version`，以及 bundle 中 `supervisor.md + derived/supervisor_knowledge.json` 是否仍由 compiler/runtime 混合注入
+  - 若涉及静态资产，补看 shared JSON 是否带有 `asset_state / lineage / instance_defaults / review_checklist / role_guidance / supervisor_profile / run_brief / source_bindings / bundle_manifest`
+  - 若涉及 runtime 注入，补看 instance `flow_definition.json` 是否已写入 `source_asset_key / source_asset_kind / source_asset_version`，以及 bundle 中 `sources.json + supervisor.md + derived/supervisor_knowledge.json` 是否仍由 compiler/runtime 混合注入
+  - 若涉及 manager 真正提交路径，先看 `manage_chat()` 是否仍把确认后的结构化 `draft_payload` 传给 `manage_flow()`；不要回退到直接信任模型自由文本 `action_instruction`
   - 若涉及 `approval_state / judge / operator receipt / runtime events`，先核对它们是进入 transcript、rail 还是 detail，不要继续散落在 `/status`、`actions.jsonl` 和 raw timeline 之间
   - 若涉及 flow 管理，补看 repo-local `butler_main/butler_bot_code/assets/flows/{builtin,templates,instances}` 是否仍是唯一存储树；其中 `/manage` 只管 `builtin + template`，`instances` 只是 runtime/兼容布局
   - `test_codex_provider_failover.py`
@@ -167,6 +172,11 @@
   - 若改 `/manage`，优先检查 `build_manage_payload()`、`manage_flow()`、`tui/app.py` 的 transcript-first shell 与 `$asset` suggester，而不是回退到 `flows-list + flows-detail` 的卡片心智
   - `free` 设计链路固定是“setup -> /manage template:new -> template:<id> -> launch instance”，不要再把它写回 `/flows` 设计页
   - 若涉及角色运行时，先确认 `execution_mode` 与 `session_strategy`；当前口径是 `simple=shared`、`medium=role_bound`、`complex=per_activation(预留合同)`；再确认 `role_guidance` 是否仍只是 manager/supervisor 的轻量参考，而不是硬 team contract
+  - 若涉及 supervisor 治理、长流失控、repo contract、operator control action 或 manager->supervisor handoff，先看 `control_profile`；当前口径是 `packet_size / evidence_level / gate_cadence / repo_binding_policy` 属于实例级治理合同，supervisor 调整后必须回写实例态，而不是只挂在 `latest_supervisor_decision`
+  - 再确认 `execution_context` 与 `repo_binding_policy` 没有混用；当前 `repo_bound` 只表示执行位置，不再自动等于显式 repo contract
+  - 若涉及 asset/runtime 注入分叉，先核对 packet 是否以实例态 `flow_state.control_profile` 压过资产 definition 中的旧控制画像
+  - 若涉及 Codex 执行根、仓库根 `AGENTS.md` 被误读、或 flow 是否该在 repo 内执行，先看 `execution_context`；当前口径是 `coding_flow=repo_bound`，非 `coding_flow` 默认 `isolated`
+  - 再核对 receipt / `flow_exec_receipt` / `flow_definition.json` 是否已带 `execution_context + execution_workspace_root`
   - 若涉及长流恢复或 `/resume` 异常，补看 `doctor_policy`、实例 `bundle/doctor.md`、`bundle/skills/doctor/SKILL.md`，以及 `runtime.py` 是否会在重复 `resume/no-rollout`、session 绑定异常、重复 service fault 时自动拉起 `doctor`
   - 若涉及 flow 静态资产修复，先确认当前实例是否已经物化 `flow_definition.json + bundle/*`；不要把这类实例级修复重新退回模板或全局角色目录
   - 再看 `role_packs/<pack>/<role>.md` 与 `sources.json`；当前 role pack 只是前台 L1 prompt 资产，不是 L3 协议真源
@@ -184,7 +194,7 @@
   - 当前还新增 `exec`：最后一行固定 `flow_exec_receipt`，退出码按 flow 终态收口
   - TTY 下优先核对是否正确进入 Textual launcher / attached run screen；若未进入，再检查 `requirements-cli.txt`、终端宽度与 `--plain`
   - 若排查 TUI，优先看 `butler_main/butler_flow/tui/`、`events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
-  - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线
+  - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
   - 最后补跑 `tools/butler-flow ... --help`、`butler-flow --help` 与 `python -m butler_main --help`
   - 若目标是系统级 CLI，再补跑 `./tools/install-butler-flow` 并确认 `command -v butler-flow`

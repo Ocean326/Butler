@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any, Callable
 
 from butler_main.agents_os.execution.cli_runner import cli_provider_available
 
+from .constants import EXECUTION_CONTEXT_ISOLATED
 from .flow_definition import coerce_workflow_kind, normalize_phase_plan, resolve_phase_plan
-from .state import normalize_doctor_policy_payload, now_text
+from .state import (
+    asset_bundle_root,
+    normalize_control_profile_payload,
+    normalize_doctor_policy_payload,
+    normalize_source_items,
+    normalize_supervisor_profile_payload,
+    now_text,
+)
 
 
 def _compact_json(value: Any) -> str:
@@ -50,6 +59,121 @@ def _parse_json_object(text: str) -> dict[str, Any]:
 
 
 MANAGE_STAGES = ("proposal", "build", "review", "commit")
+MANAGE_CHAT_STAGES = ("discuss", "template_prepare", "template_confirm", "flow_prepare", "flow_confirm", "done")
+MANAGE_CHAT_CONFIRMATION_SCOPES = ("none", "template", "flow")
+MANAGE_CHAT_SKILL_IDS = (
+    "discuss_and_scope",
+    "template_select_or_create",
+    "template_update",
+    "flow_spec_finalize",
+    "flow_create_or_update",
+)
+
+_MANAGER_PROMPT_ROOT = Path(__file__).resolve().with_name("manager_prompt_assets")
+_MANAGER_ROLE_PATH = _MANAGER_PROMPT_ROOT / "role.md"
+_MANAGER_SKILL_ROOT = _MANAGER_PROMPT_ROOT / "skills"
+
+_MANAGE_CREATE_HINTS = (
+    "create",
+    "new",
+    "spawn",
+    "make",
+    "build",
+    "创建",
+    "新建",
+    "生成",
+    "做一个",
+    "做个",
+    "建一个",
+    "起一个",
+)
+
+_MANAGE_UPDATE_HINTS = (
+    "update",
+    "edit",
+    "clone",
+    "refine",
+    "adjust",
+    "modify",
+    "完善",
+    "补齐",
+    "更新",
+    "修改",
+    "编辑",
+    "克隆",
+    "细化",
+    "重写",
+    "改成",
+)
+
+_MANAGE_TEMPLATE_HINTS = (
+    "template",
+    "模板",
+)
+
+_MANAGE_FLOW_HINTS = (
+    "flow",
+    "pending flow",
+    "instance",
+    "workflow",
+    "工作流",
+    "托管流",
+    "实例",
+)
+
+_MANAGE_CONFIRM_HINTS = (
+    "confirm",
+    "confirmed",
+    "go ahead",
+    "proceed",
+    "yes",
+    "ok",
+    "okay",
+    "确认",
+    "同意",
+    "按这个",
+    "就这样",
+    "可以创建",
+    "继续创建",
+    "创建吧",
+    "创建它",
+    "好",
+    "行",
+)
+
+_MANAGE_EXPLAIN_HINTS = (
+    "?",
+    "？",
+    "how",
+    "why",
+    "what",
+    "explain",
+    "intro",
+    "introduce",
+    "phase",
+    "介绍",
+    "解释",
+    "阶段",
+    "怎么",
+    "如何",
+    "为什么",
+    "是什么",
+    "分析",
+    "概括",
+    "讨论",
+    "建议",
+    "修正",
+)
+
+_MANAGE_ONE_OFF_HINTS = (
+    "one-off",
+    "一次性",
+    "不用模板",
+    "不需要模板",
+    "跳过模板",
+    "直接创建flow",
+    "直接建flow",
+)
 
 
 def normalize_manage_stage(stage: str) -> str:
@@ -57,6 +181,106 @@ def normalize_manage_stage(stage: str) -> str:
     if token in MANAGE_STAGES:
         return token
     return "commit"
+
+
+def _contains_hint(text: str, hints: tuple[str, ...]) -> bool:
+    normalized = str(text or "").strip().casefold()
+    if not normalized:
+        return False
+    return any(token.casefold() in normalized for token in hints)
+
+
+def _coerce_bool(value: Any, *, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    token = str(value or "").strip().lower()
+    if token in {"true", "1", "yes", "y", "on"}:
+        return True
+    if token in {"false", "0", "no", "n", "off"}:
+        return False
+    return default
+
+
+def _read_prompt_asset(path: Path) -> str:
+    try:
+        return str(path.read_text(encoding="utf-8")).strip()
+    except Exception:
+        return ""
+
+
+def _parse_manage_target_token(token: str) -> tuple[str, str]:
+    raw = str(token or "").strip()
+    if not raw or ":" not in raw:
+        return "", raw
+    kind, _, asset_id = raw.partition(":")
+    return str(kind or "").strip().lower(), str(asset_id or "").strip()
+
+
+def select_manage_chat_skill(
+    *,
+    manage_target: str,
+    asset_kind: str,
+    instruction: str,
+) -> str:
+    target_kind, target_id = _parse_manage_target_token(manage_target)
+    normalized_asset_kind = str(asset_kind or "").strip().lower()
+    text = str(instruction or "").strip()
+    has_confirm = _contains_hint(text, _MANAGE_CONFIRM_HINTS)
+    has_template = _contains_hint(text, _MANAGE_TEMPLATE_HINTS)
+    has_flow = _contains_hint(text, _MANAGE_FLOW_HINTS)
+    has_create = _contains_hint(text, _MANAGE_CREATE_HINTS)
+    has_update = _contains_hint(text, _MANAGE_UPDATE_HINTS)
+    has_explain = _contains_hint(text, _MANAGE_EXPLAIN_HINTS)
+    one_off = _contains_hint(text, _MANAGE_ONE_OFF_HINTS)
+
+    if target_kind in {"builtin", "template"}:
+        if has_flow and has_confirm:
+            return "flow_create_or_update"
+        if has_flow:
+            return "flow_spec_finalize"
+        if has_explain and not (has_confirm or has_update or has_create):
+            return "discuss_and_scope"
+        if target_id == "new":
+            return "template_select_or_create"
+        if has_confirm or has_update or has_create or target_kind == "builtin":
+            return "template_update"
+        return "template_update"
+    if target_kind == "instance":
+        return "flow_create_or_update" if has_confirm else "flow_spec_finalize"
+    if one_off and has_flow:
+        return "flow_create_or_update" if has_confirm else "flow_spec_finalize"
+    if has_flow:
+        return "flow_create_or_update" if has_confirm else "template_select_or_create"
+    if has_template or has_create or has_update or normalized_asset_kind in {"template", "builtin"}:
+        return "template_select_or_create"
+    if has_explain:
+        return "discuss_and_scope"
+    return "discuss_and_scope"
+
+
+def _resolve_asset_manager_notes(
+    *,
+    workspace_root: str,
+    manage_target: str,
+    flow_state: dict[str, Any] | None = None,
+    asset_definition: dict[str, Any] | None = None,
+) -> str:
+    for payload in (asset_definition or {}, flow_state or {}):
+        manifest = dict(payload.get("bundle_manifest") or {})
+        manager_ref = str(manifest.get("manager_ref") or "").strip()
+        if manager_ref:
+            text = _read_prompt_asset(Path(manager_ref))
+            if text:
+                return text
+    target_kind, target_id = _parse_manage_target_token(manage_target)
+    if target_kind in {"builtin", "template", "instance"} and target_id and target_id != "new":
+        bundle_root = asset_bundle_root(workspace_root, asset_kind=target_kind, asset_id=target_id)
+        text = _read_prompt_asset(bundle_root / "manager.md")
+        if text:
+            return text
+    return ""
 
 
 def _dedupe_text_list(value: Any) -> list[str]:
@@ -117,6 +341,69 @@ def normalize_role_guidance_payload(
     if manager_notes:
         normalized["manager_notes"] = manager_notes
     return normalized
+
+
+def normalize_manage_chat_draft_payload(
+    raw: Any,
+    *,
+    current: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = dict(raw or {}) if isinstance(raw, dict) else {}
+    existing = dict(current or {})
+    workflow_kind = coerce_workflow_kind(str(payload.get("workflow_kind") or existing.get("workflow_kind") or "managed_flow"))
+    phase_plan = normalize_phase_plan(
+        payload.get("phase_plan") if isinstance(payload.get("phase_plan"), list) else existing.get("phase_plan"),
+        workflow_kind=workflow_kind,
+    )
+
+    def _text(key: str, *fallback_keys: str) -> str:
+        if key in payload:
+            return str(payload.get(key) or "").strip()
+        for item in fallback_keys:
+            if item in payload:
+                return str(payload.get(item) or "").strip()
+        if key in existing:
+            return str(existing.get(key) or "").strip()
+        for item in fallback_keys:
+            if item in existing:
+                return str(existing.get(item) or "").strip()
+        return ""
+
+    return {
+        "manage_target": _text("manage_target"),
+        "asset_kind": _text("asset_kind") or "instance",
+        "builtin_mode": _text("builtin_mode", "action_builtin_mode"),
+        "label": _text("label"),
+        "description": _text("description"),
+        "workflow_kind": workflow_kind,
+        "goal": _text("goal"),
+        "guard_condition": _text("guard_condition"),
+        "phase_plan": phase_plan,
+        "review_checklist": _dedupe_text_list(payload.get("review_checklist") or existing.get("review_checklist") or []),
+        "role_guidance": normalize_role_guidance_payload(
+            payload.get("role_guidance") or {},
+            current=dict(existing.get("role_guidance") or {}),
+        ),
+        "doctor_policy": normalize_doctor_policy_payload(
+            payload.get("doctor_policy"),
+            current=dict(existing.get("doctor_policy") or {}),
+        ),
+        "control_profile": normalize_control_profile_payload(
+            payload.get("control_profile"),
+            current=dict(existing.get("control_profile") or {}),
+            workflow_kind=workflow_kind,
+        ),
+        "supervisor_profile": normalize_supervisor_profile_payload(
+            payload.get("supervisor_profile"),
+            current=dict(existing.get("supervisor_profile") or {}),
+        ),
+        "run_brief": _text("run_brief", "supervisor_brief"),
+        "source_bindings": normalize_source_items(
+            payload.get("source_bindings") or payload.get("sources") or [],
+            current=list(existing.get("source_bindings") or []),
+        ),
+        "summary": _text("summary"),
+    }
 
 
 def build_manage_prompt(
@@ -211,6 +498,15 @@ def build_manage_prompt(
             '    "promotion_candidates": ["creator"],\n'
             '    "manager_notes": "lightweight advisory notes only"\n'
             "  },\n"
+            '  "control_profile": {\n'
+            '    "task_archetype": "repo_delivery | research_writing | product_iteration | general",\n'
+            '    "packet_size": "small | medium | large",\n'
+            '    "evidence_level": "minimal | standard | strict",\n'
+            '    "gate_cadence": "phase | risk_based | strict",\n'
+            '    "repo_binding_policy": "disabled | explicit",\n'
+            '    "repo_contract_paths": ["optional explicit repo contracts such as AGENTS.md"],\n'
+            '    "manager_notes": "why this control profile fits the task"\n'
+            "  },\n"
             '  "doctor_policy": {\n'
             '    "enabled": true,\n'
             '    "activation_rules": ["repeated_service_fault","same_resume_failure","session_binding_invalid"],\n'
@@ -255,6 +551,15 @@ def build_manage_prompt(
         '    "promotion_candidates": ["creator"],\n'
         '    "manager_notes": "lightweight advisory notes only"\n'
         "  },\n"
+        '  "control_profile": {\n'
+        '    "task_archetype": "repo_delivery | research_writing | product_iteration | general",\n'
+        '    "packet_size": "small | medium | large",\n'
+        '    "evidence_level": "minimal | standard | strict",\n'
+        '    "gate_cadence": "phase | risk_based | strict",\n'
+        '    "repo_binding_policy": "disabled | explicit",\n'
+        '    "repo_contract_paths": ["optional explicit repo contracts such as AGENTS.md"],\n'
+        '    "manager_notes": "why this control profile fits the task"\n'
+        "  },\n"
         '  "doctor_policy": {\n'
         '    "enabled": true,\n'
         '    "activation_rules": ["repeated_service_fault","same_resume_failure","session_binding_invalid"],\n'
@@ -279,26 +584,66 @@ def build_manage_prompt(
 
 def build_manage_chat_prompt(
     *,
+    workspace_root: str,
     manage_target: str,
     asset_kind: str,
     instruction: str,
     flow_state: dict[str, Any] | None = None,
     asset_definition: dict[str, Any] | None = None,
     asset_rows: list[dict[str, Any]] | None = None,
+    manager_session: dict[str, Any] | None = None,
+    current_draft: dict[str, Any] | None = None,
+    pending_action: dict[str, Any] | None = None,
+    selected_skill: str = "",
+    manager_role_text: str | None = None,
+    skill_prompt_text: str | None = None,
+    asset_manager_notes: str | None = None,
 ) -> str:
+    skill_id = str(selected_skill or "").strip().lower() or select_manage_chat_skill(
+        manage_target=manage_target,
+        asset_kind=asset_kind,
+        instruction=instruction,
+    )
+    if skill_id not in MANAGE_CHAT_SKILL_IDS:
+        skill_id = "discuss_and_scope"
+    role_text = str(manager_role_text).strip() if manager_role_text is not None else _read_prompt_asset(_MANAGER_ROLE_PATH)
+    skill_text = (
+        str(skill_prompt_text).strip()
+        if skill_prompt_text is not None
+        else _read_prompt_asset(_MANAGER_SKILL_ROOT / f"{skill_id}.md")
+    )
+    manager_notes_text = (
+        str(asset_manager_notes).strip()
+        if asset_manager_notes is not None
+        else _resolve_asset_manager_notes(
+            workspace_root=workspace_root,
+            manage_target=manage_target,
+            flow_state=flow_state,
+            asset_definition=asset_definition,
+        )
+    )
     payload = {
         "manage_target": str(manage_target or "").strip(),
         "asset_kind": str(asset_kind or "").strip(),
+        "selected_skill": skill_id,
+        "default_creation_path": "template_first_then_flow",
         "current_flow_state": dict(flow_state or {}),
         "asset_definition": dict(asset_definition or {}),
         "asset_index": [dict(row or {}) for row in list(asset_rows or [])[:12]],
+        "manager_session": dict(manager_session or {}),
+        "current_draft": dict(current_draft or {}),
+        "pending_action": dict(pending_action or {}),
+        "asset_manager_notes_present": bool(manager_notes_text),
         "user_instruction": str(instruction or "").strip(),
         "protocol": [
             "answer the operator's question directly",
             "if a specific asset is targeted, ground the answer in that asset's phases, static fields, lineage, bundle, and handoff",
-            "if the request implies editing a builtin/template, explain the correct next action instead of mutating files in chat mode",
-            "suggest when a supervisor prompt or bundled static asset should also be updated",
-            "treat role guidance and doctor policy as lightweight defaults for manager creation and supervisor runtime recovery, not a rigid team contract",
+            "default to template-first: discuss -> template shaping -> template confirm -> flow shaping -> flow confirm -> execute",
+            "before creating a flow, align the template, goal, and supervisor prompt direction",
+            "keep a structured draft of the current template/flow plan",
+            "if there is an existing pending action, either refine that draft or confirm it; do not silently replace it",
+            "only set action_ready=true when the operator has explicitly confirmed the current management action in this session",
+            "treat role guidance and doctor policy as lightweight defaults, not a rigid team contract",
         ],
     }
     return (
@@ -310,9 +655,33 @@ def build_manage_chat_prompt(
         '  "summary": "short chat summary",\n'
         '  "response": "direct operator-facing answer",\n'
         '  "manage_target": "resolved asset key or empty string",\n'
+        '  "manager_stage": "discuss" | "template_prepare" | "template_confirm" | "flow_prepare" | "flow_confirm" | "done",\n'
+        '  "active_skill": "discuss_and_scope" | "template_select_or_create" | "template_update" | "flow_spec_finalize" | "flow_create_or_update",\n'
+        '  "confirmation_scope": "none" | "template" | "flow",\n'
+        '  "confirmation_prompt": "the sentence the operator should confirm or answer next",\n'
         '  "suggested_next_action": "optional short next step",\n'
+        '  "reuse_decision": "reuse_existing_template" | "update_existing_template" | "create_new_template" | "one_off_flow" | "defer",\n'
         '  "should_edit_asset": true | false,\n'
         '  "edit_hint": "optional concise edit guidance",\n'
+        '  "draft": {\n'
+        '    "manage_target": "template:new | template:<id> | new | instance:<id> | builtin:<id>",\n'
+        '    "asset_kind": "template | instance | builtin",\n'
+        '    "builtin_mode": "optional clone|edit",\n'
+        '    "label": "optional label",\n'
+        '    "description": "optional description",\n'
+        '    "workflow_kind": "managed_flow | project_loop | single_goal",\n'
+        '    "goal": "draft goal",\n'
+        '    "guard_condition": "draft guard condition",\n'
+        '    "phase_plan": [],\n'
+        '    "review_checklist": [],\n'
+        '    "role_guidance": {},\n'
+        '    "control_profile": {},\n'
+        '    "supervisor_profile": {},\n'
+        '    "run_brief": "optional run brief",\n'
+        '    "source_bindings": []\n'
+        '  },\n'
+        '  "pending_action_preview": "short preview of the mutation waiting for confirmation",\n'
+        '  "supervisor_profile_preview": "short preview of supervisor tuning or empty",\n'
         '  "action": "none" | "manage_flow",\n'
         '  "action_ready": true | false,\n'
         '  "action_manage_target": "resolved manage target for manage_flow or empty string",\n'
@@ -320,17 +689,33 @@ def build_manage_chat_prompt(
         '  "action_stage": "optional manage stage",\n'
         '  "action_builtin_mode": "optional builtin mode clone|edit"\n'
         "}\n\n"
-        "Rules:\n"
-        "- Chat mode is the default frontdoor for Manage Center.\n"
-        "- Discuss, clarify, and refine first when needed.\n"
-        "- When the request is already actionable, set action=manage_flow and return the executable target/instruction.\n"
-        "- Use action_manage_target=new to create a pending flow instance, template:new to create a reusable template, or an explicit asset key when updating an existing asset.\n"
-        "- If the request is still ambiguous, keep action=none and ask the next best question.\n"
-        "- If the target is a builtin asset, mention clone/edit requirements when relevant.\n"
-        "- If a builtin mutation is ready, set action_builtin_mode explicitly to clone or edit.\n"
-        "- If the user asks about phases/static assets/supervisor prompt coupling, answer concretely from the supplied asset state.\n"
-        "- When discussing design quality, recommend lightweight role_guidance for manager creation and doctor_policy for supervisor runtime-repair reference.\n"
-        "- Keep the response concise but specific.\n\n"
+        "Manager role instructions:\n"
+        f"{role_text or '- missing manager role prompt -'}\n\n"
+        f"Active skill · {skill_id}\n"
+        f"{skill_text or '- missing manager skill prompt -'}\n\n"
+        + (
+            f"Asset-specific manager notes:\n{manager_notes_text}\n\n"
+            if manager_notes_text
+            else ""
+        )
+        + "Operational rules:\n"
+        "- 这里是 Manage Center 的 chat mode，默认先讨论、再整理管理动作。\n"
+        "- 默认新需求都先走 template-first；除非用户明确说这是 one-off，不需要沉淀 template。\n"
+        "- 在创建 flow 之前，先处理 template 选择/修改，并把 goal / guard / supervisor 方向理顺。\n"
+        "- `draft` 是当前真正在讨论的结构化草稿，尽量始终保持更新。\n"
+        "- `control_profile` 用来表达 supervisor 的控制哲学：工作包大小、证据强度、gate 节奏，以及 repo 合同是否显式绑定。\n"
+        "- `supervisor_profile` 只保留精选原则：项目风格、质量门槛、风险偏置、review 关注点与 done policy。\n"
+        "- 默认不要把仓库级 `AGENTS.md` 当作环境里天然生效的强约束；只有真的需要时，才把它放进 `control_profile.repo_contract_paths` 作为显式 repo contract。\n"
+        "- `source_bindings` 只保留对当前 template/flow 真有帮助的上下文来源，不要堆满。\n"
+        "- 用 manager_stage 明确表示你现在处在哪一步。\n"
+        "- 用 confirmation_scope 明确告诉用户你现在要确认的是 template 还是 flow。\n"
+        "- action=manage_flow 只表示“当前这个具体 mutation 已经准备好执行”。\n"
+        "- action_ready=true 只在用户已经明确确认当前 mutation 后才能出现。\n"
+        "- 首次给出 draft 时，正常也应该保持 action_ready=false；先让用户看草稿摘要和待确认动作。\n"
+        "- 处理 template 时，action_manage_target 应是 template:new、template:<id>，或带明确 clone/edit 的 builtin:<id>。\n"
+        "- 处理 flow 时，action_manage_target 通常应是 new 或具体实例 key。\n"
+        "- 如果用户是在问解释、审阅、比较、建议，先回答，不要跳过确认直接执行。\n"
+        "- 回复要自然、清楚、面向用户，不要像机器状态机。\n\n"
         f"Conversation payload:\n{_compact_json(payload)}\n"
     )
 
@@ -370,6 +755,11 @@ def normalize_manage_result(
         result.get("doctor_policy"),
         current=dict(current.get("doctor_policy") or dict(current.get("manage_handoff") or {}).get("doctor_policy") or {}),
     )
+    control_profile = normalize_control_profile_payload(
+        result.get("control_profile"),
+        current=dict(current.get("control_profile") or dict(current.get("manage_handoff") or {}).get("control_profile") or {}),
+        workflow_kind=workflow_kind,
+    )
     return {
         "summary": str(result.get("summary") or f"managed flow prepared for {goal or 'foreground work'}").strip(),
         "label": label,
@@ -384,6 +774,7 @@ def normalize_manage_result(
         "phase_plan": phase_plan,
         "review_checklist": review_checklist,
         "role_guidance": role_guidance,
+        "control_profile": control_profile,
         "doctor_policy": doctor_policy,
         "instance_defaults": dict(result.get("instance_defaults") or current.get("instance_defaults") or {}),
         "lineage": dict(result.get("lineage") or current.get("lineage") or {}),
@@ -601,6 +992,8 @@ def run_design_stage(
             "_disable_runtime_fallback": True,
             "workflow_id": str((flow_state or {}).get("workflow_id") or "butler_flow.design").strip(),
             "agent_id": f"butler_flow.designer_{str(stage or '').strip() or 'stage'}",
+            "execution_context": EXECUTION_CONTEXT_ISOLATED,
+            "execution_scope_id": str((flow_state or {}).get("workflow_id") or f"butler_flow.design.{stage or 'stage'}").strip(),
         },
         stream=False,
     )
@@ -617,6 +1010,7 @@ def normalize_manage_chat_result(
     result: dict[str, Any],
     *,
     manage_target: str = "",
+    current_draft: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     response = str(result.get("response") or result.get("answer") or result.get("summary") or "").strip()
     if not response:
@@ -624,20 +1018,44 @@ def normalize_manage_chat_result(
     action = str(result.get("action") or "none").strip().lower()
     if action not in {"none", "manage_flow"}:
         action = "none"
+    manager_stage = str(result.get("manager_stage") or "discuss").strip().lower()
+    if manager_stage not in MANAGE_CHAT_STAGES:
+        manager_stage = "discuss"
+    active_skill = str(result.get("active_skill") or "").strip().lower()
+    if active_skill not in MANAGE_CHAT_SKILL_IDS:
+        active_skill = ""
+    confirmation_scope = str(result.get("confirmation_scope") or "none").strip().lower()
+    if confirmation_scope not in MANAGE_CHAT_CONFIRMATION_SCOPES:
+        confirmation_scope = "none"
+    confirmation_prompt = str(result.get("confirmation_prompt") or "").strip()
     action_manage_target = str(result.get("action_manage_target") or result.get("manage_target") or manage_target or "").strip()
     action_instruction = str(result.get("action_instruction") or "").strip()
     action_stage = str(result.get("action_stage") or "").strip().lower()
     action_builtin_mode = str(result.get("action_builtin_mode") or "").strip().lower()
-    action_ready = bool(result.get("action_ready"))
-    if action == "manage_flow" and action_manage_target and action_instruction:
-        action_ready = True
+    action_ready = _coerce_bool(result.get("action_ready"), default=False)
+    if action == "manage_flow" and (not action_manage_target or not action_instruction):
+        action_ready = False
+    draft = normalize_manage_chat_draft_payload(result.get("draft"), current=current_draft)
+    if not str(draft.get("manage_target") or "").strip():
+        draft["manage_target"] = action_manage_target or str(result.get("manage_target") or manage_target or "").strip()
+    if not str(draft.get("asset_kind") or "").strip():
+        target_kind, _ = _parse_manage_target_token(str(draft.get("manage_target") or "").strip())
+        draft["asset_kind"] = target_kind or "instance"
     return {
         "summary": str(result.get("summary") or response).strip(),
         "response": response,
         "manage_target": str(result.get("manage_target") or manage_target or "").strip(),
+        "manager_stage": manager_stage,
+        "active_skill": active_skill,
+        "confirmation_scope": confirmation_scope,
+        "confirmation_prompt": confirmation_prompt,
         "suggested_next_action": str(result.get("suggested_next_action") or "").strip(),
-        "should_edit_asset": bool(result.get("should_edit_asset")),
+        "reuse_decision": str(result.get("reuse_decision") or "").strip(),
+        "should_edit_asset": _coerce_bool(result.get("should_edit_asset"), default=False),
         "edit_hint": str(result.get("edit_hint") or "").strip(),
+        "draft": draft,
+        "pending_action_preview": str(result.get("pending_action_preview") or "").strip(),
+        "supervisor_profile_preview": str(result.get("supervisor_profile_preview") or "").strip(),
         "action": action,
         "action_ready": action_ready,
         "action_manage_target": action_manage_target,
@@ -681,6 +1099,8 @@ def run_manage_agent(
             "_disable_runtime_fallback": True,
             "workflow_id": str((flow_state or {}).get("workflow_id") or manage_target or "butler_flow.manage").strip(),
             "agent_id": "butler_flow.manager_agent",
+            "execution_context": EXECUTION_CONTEXT_ISOLATED,
+            "execution_scope_id": str(manage_target or (flow_state or {}).get("workflow_id") or "butler_flow.manage").strip(),
         },
         stream=False,
     )
@@ -707,17 +1127,24 @@ def run_manage_chat_agent(
     flow_state: dict[str, Any] | None = None,
     asset_definition: dict[str, Any] | None = None,
     asset_rows: list[dict[str, Any]] | None = None,
+    manager_session: dict[str, Any] | None = None,
+    current_draft: dict[str, Any] | None = None,
+    pending_action: dict[str, Any] | None = None,
     manager_session_id: str = "",
 ) -> dict[str, Any]:
     if not cli_provider_available("codex", cfg):
         raise RuntimeError("Codex CLI is unavailable for Butler Flow manage chat")
     prompt = build_manage_chat_prompt(
+        workspace_root=workspace_root,
         manage_target=manage_target,
         asset_kind=asset_kind,
         instruction=instruction,
         flow_state=flow_state,
         asset_definition=asset_definition,
         asset_rows=asset_rows,
+        manager_session=manager_session,
+        current_draft=current_draft,
+        pending_action=pending_action,
     )
     runtime_request = {
         "cli": "codex",
@@ -726,6 +1153,8 @@ def run_manage_chat_agent(
         "agent_id": "butler_flow.manager_chat",
         "codex_mode": "resume" if str(manager_session_id or "").strip() else "exec",
         "codex_session_id": str(manager_session_id or "").strip(),
+        "execution_context": EXECUTION_CONTEXT_ISOLATED,
+        "execution_scope_id": str(manager_session_id or manage_target or "butler_flow.manage_chat").strip(),
     }
     receipt = run_prompt_receipt_fn(
         prompt,
@@ -738,6 +1167,7 @@ def run_manage_chat_agent(
     payload = normalize_manage_chat_result(
         _parse_json_object(_receipt_text(receipt)),
         manage_target=manage_target,
+        current_draft=current_draft,
     )
     payload["manager_session_id"] = _receipt_thread_id(receipt) or str(manager_session_id or "").strip()
     return payload
@@ -749,6 +1179,7 @@ __all__ = [
     "build_manage_prompt",
     "normalize_design_result",
     "normalize_manage_chat_result",
+    "normalize_manage_chat_draft_payload",
     "normalize_manage_result",
     "normalize_role_guidance_payload",
     "normalize_manage_stage_result",
@@ -756,4 +1187,5 @@ __all__ = [
     "run_manage_chat_agent",
     "run_design_stage",
     "run_manage_agent",
+    "select_manage_chat_skill",
 ]

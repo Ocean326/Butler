@@ -12,10 +12,17 @@ from butler_main.agents_os.state import FileRuntimeStateStore, FileTraceStore
 from butler_main.chat.pathing import resolve_butler_root
 
 from .constants import (
+    CONTROL_PACKET_LARGE,
+    CONTROL_PACKET_MEDIUM,
+    CONTROL_PACKET_SMALL,
     DEFAULT_CATALOG_FLOW_ID,
     DEFAULT_LAUNCH_MODE,
     DEFAULT_PROJECT_MAX_RUNTIME_SECONDS,
     DOCTOR_ROLE_ID,
+    EVIDENCE_LEVEL_MINIMAL,
+    EVIDENCE_LEVEL_STANDARD,
+    EVIDENCE_LEVEL_STRICT,
+    EXECUTION_CONTEXT_REPO_BOUND,
     EXECUTION_MODE_COMPLEX,
     EXECUTION_MODE_MEDIUM,
     EXECUTION_MODE_SIMPLE,
@@ -28,7 +35,18 @@ from .constants import (
     FLOW_INSTANCE_HOME_REL,
     FLOW_RUN_HOME_REL,
     FLOW_TEMPLATE_HOME_REL,
+    GATE_CADENCE_PHASE,
+    GATE_CADENCE_RISK_BASED,
+    GATE_CADENCE_STRICT,
     ROLE_PACK_CODING_FLOW,
+    ROLE_PACK_RESEARCH_FLOW,
+    REPO_BINDING_DISABLED,
+    REPO_BINDING_EXPLICIT,
+    TASK_ARCHETYPE_GENERAL,
+    TASK_ARCHETYPE_PRODUCT_ITERATION,
+    TASK_ARCHETYPE_REPO_DELIVERY,
+    TASK_ARCHETYPE_RESEARCH_WRITING,
+    normalize_execution_context,
     SESSION_STRATEGY_PER_ACTIVATION,
     SESSION_STRATEGY_ROLE_BOUND,
     SESSION_STRATEGY_SHARED,
@@ -76,6 +94,109 @@ def normalize_doctor_policy_payload(raw: Any, *, current: dict[str, Any] | None 
         "repair_scope": repair_scope,
         "framework_bug_action": framework_bug_action,
         "max_rounds_per_episode": max_rounds,
+    }
+
+
+def default_control_profile(
+    *,
+    workflow_kind: str = "",
+    role_pack_id: str = "",
+    execution_mode: str = "",
+    execution_context: str = "",
+) -> dict[str, Any]:
+    normalized_kind = str(workflow_kind or "").strip().lower()
+    normalized_role_pack = str(role_pack_id or "").strip().lower()
+    normalized_mode = str(execution_mode or "").strip().lower()
+    normalized_context = str(execution_context or "").strip().lower()
+    task_archetype = TASK_ARCHETYPE_GENERAL
+    if normalized_role_pack == ROLE_PACK_RESEARCH_FLOW:
+        task_archetype = TASK_ARCHETYPE_RESEARCH_WRITING
+    elif normalized_kind in {"project_loop", "managed_flow"}:
+        task_archetype = TASK_ARCHETYPE_REPO_DELIVERY
+    packet_size = CONTROL_PACKET_SMALL if normalized_kind == "single_goal" else CONTROL_PACKET_MEDIUM
+    evidence_level = EVIDENCE_LEVEL_MINIMAL if normalized_kind == "single_goal" else EVIDENCE_LEVEL_STANDARD
+    gate_cadence = GATE_CADENCE_RISK_BASED if normalized_kind == "single_goal" else GATE_CADENCE_PHASE
+    if normalized_role_pack == ROLE_PACK_RESEARCH_FLOW:
+        evidence_level = EVIDENCE_LEVEL_STRICT
+        packet_size = CONTROL_PACKET_SMALL if normalized_kind == "single_goal" else CONTROL_PACKET_MEDIUM
+        task_archetype = TASK_ARCHETYPE_RESEARCH_WRITING
+    if normalized_mode == EXECUTION_MODE_COMPLEX:
+        packet_size = CONTROL_PACKET_SMALL
+        gate_cadence = GATE_CADENCE_STRICT
+    elif normalized_mode == EXECUTION_MODE_MEDIUM and packet_size == CONTROL_PACKET_LARGE:
+        packet_size = CONTROL_PACKET_MEDIUM
+    repo_binding_policy = REPO_BINDING_DISABLED
+    return {
+        "task_archetype": task_archetype,
+        "packet_size": packet_size,
+        "evidence_level": evidence_level,
+        "gate_cadence": gate_cadence,
+        "repo_binding_policy": repo_binding_policy,
+        "repo_contract_paths": [],
+        "manager_notes": "",
+    }
+
+
+def normalize_control_profile_payload(
+    raw: Any,
+    *,
+    current: dict[str, Any] | None = None,
+    workflow_kind: str = "",
+    role_pack_id: str = "",
+    execution_mode: str = "",
+    execution_context: str = "",
+) -> dict[str, Any]:
+    base = default_control_profile(
+        workflow_kind=workflow_kind,
+        role_pack_id=role_pack_id,
+        execution_mode=execution_mode,
+        execution_context=execution_context,
+    )
+    payload = dict(current or {})
+    if isinstance(raw, dict):
+        payload.update(dict(raw))
+    if not payload and not base:
+        return {}
+    merged = {**base, **payload}
+    task_archetype = str(merged.get("task_archetype") or base.get("task_archetype") or "").strip().lower()
+    if task_archetype not in {
+        TASK_ARCHETYPE_GENERAL,
+        TASK_ARCHETYPE_REPO_DELIVERY,
+        TASK_ARCHETYPE_RESEARCH_WRITING,
+        TASK_ARCHETYPE_PRODUCT_ITERATION,
+    }:
+        task_archetype = str(base.get("task_archetype") or TASK_ARCHETYPE_GENERAL)
+    packet_size = str(merged.get("packet_size") or base.get("packet_size") or "").strip().lower()
+    if packet_size not in {CONTROL_PACKET_SMALL, CONTROL_PACKET_MEDIUM, CONTROL_PACKET_LARGE}:
+        packet_size = str(base.get("packet_size") or CONTROL_PACKET_MEDIUM)
+    evidence_level = str(merged.get("evidence_level") or base.get("evidence_level") or "").strip().lower()
+    if evidence_level not in {EVIDENCE_LEVEL_MINIMAL, EVIDENCE_LEVEL_STANDARD, EVIDENCE_LEVEL_STRICT}:
+        evidence_level = str(base.get("evidence_level") or EVIDENCE_LEVEL_STANDARD)
+    gate_cadence = str(merged.get("gate_cadence") or base.get("gate_cadence") or "").strip().lower()
+    if gate_cadence not in {GATE_CADENCE_PHASE, GATE_CADENCE_RISK_BASED, GATE_CADENCE_STRICT}:
+        gate_cadence = str(base.get("gate_cadence") or GATE_CADENCE_PHASE)
+    repo_binding_policy = str(merged.get("repo_binding_policy") or base.get("repo_binding_policy") or "").strip().lower()
+    if repo_binding_policy in {"explicit", "explicit_contract"}:
+        repo_binding_policy = REPO_BINDING_EXPLICIT
+    elif repo_binding_policy in {"disabled", "detached", "off", "inherit_workspace", "inherit"}:
+        repo_binding_policy = REPO_BINDING_DISABLED
+    if repo_binding_policy not in {REPO_BINDING_DISABLED, REPO_BINDING_EXPLICIT}:
+        repo_binding_policy = str(base.get("repo_binding_policy") or REPO_BINDING_DISABLED)
+    repo_contract_paths = [
+        str(item or "").strip()
+        for item in list(merged.get("repo_contract_paths") or [])
+        if str(item or "").strip()
+    ]
+    return {
+        "task_archetype": task_archetype,
+        "packet_size": packet_size,
+        "evidence_level": evidence_level,
+        "gate_cadence": gate_cadence,
+        "repo_binding_policy": repo_binding_policy,
+        "repo_contract_paths": repo_contract_paths,
+        "manager_notes": str(merged.get("manager_notes") or "").strip(),
+        "force_gate_next_turn": bool(merged.get("force_gate_next_turn")),
+        "force_doctor_next_turn": bool(merged.get("force_doctor_next_turn")),
     }
 
 
@@ -140,6 +261,33 @@ def asset_bundle_root(workspace: str | Path, *, asset_kind: str, asset_id: str) 
     return Path("")
 
 
+def manage_session_root(workspace: str | Path) -> Path:
+    return flow_asset_root(workspace) / "manage_sessions"
+
+
+def manage_session_dir(workspace: str | Path, manager_session_id: str) -> Path:
+    token = str(manager_session_id or "").strip()
+    if not token:
+        return Path("")
+    return manage_session_root(workspace) / token
+
+
+def manage_session_file(workspace: str | Path, manager_session_id: str) -> Path:
+    return manage_session_dir(workspace, manager_session_id) / "session.json"
+
+
+def manage_draft_file(workspace: str | Path, manager_session_id: str) -> Path:
+    return manage_session_dir(workspace, manager_session_id) / "draft.json"
+
+
+def manage_turns_file(workspace: str | Path, manager_session_id: str) -> Path:
+    return manage_session_dir(workspace, manager_session_id) / "turns.jsonl"
+
+
+def manage_pending_action_file(workspace: str | Path, manager_session_id: str) -> Path:
+    return manage_session_dir(workspace, manager_session_id) / "pending_action.json"
+
+
 def asset_bundle_manifest(*, asset_kind: str, asset_id: str) -> dict[str, Any]:
     normalized_kind = str(asset_kind or "").strip().lower()
     normalized_id = str(asset_id or "").strip()
@@ -198,10 +346,21 @@ def ensure_asset_bundle_files(workspace: str | Path, *, asset_kind: str, asset_i
                 [
                     f"# Manager Notes · {label}",
                     "",
+                    "## Asset Identity",
                     f"- asset_kind: {asset_kind}",
                     f"- asset_id: {asset_id}",
                     f"- goal: {goal or '-'}",
                     f"- guard_condition: {guard_condition or '-'}",
+                    "",
+                    "## Reuse Guidance",
+                    "- Default to discussing and refining this asset before creating any concrete flow from it.",
+                    "- Prefer template-first: if this asset is being used to shape a new task, settle the reusable template contract before instantiating a pending flow.",
+                    "",
+                    "## Manager Checklist",
+                    "- Clarify what should stay reusable at the template layer and what is specific to the current run.",
+                    "- Align `goal`, `guard_condition`, and `phase_plan` before creating or updating a flow instance.",
+                    "- Check whether `supervisor.md` also needs to be updated so the runtime instruction matches the newly agreed flow intent.",
+                    "- Ask for explicit confirmation before mutating the template or creating a new flow.",
                 ]
             )
             + "\n",
@@ -275,6 +434,246 @@ def ensure_asset_bundle_files(workspace: str | Path, *, asset_kind: str, asset_i
             },
         )
     return asset_bundle_manifest(asset_kind=asset_kind, asset_id=asset_id)
+
+
+def read_manage_session(workspace: str | Path, manager_session_id: str) -> dict[str, Any]:
+    path = manage_session_file(workspace, manager_session_id)
+    return read_json(path) if path != Path("") else {}
+
+
+def write_manage_session(workspace: str | Path, manager_session_id: str, payload: dict[str, Any]) -> None:
+    path = manage_session_file(workspace, manager_session_id)
+    if path == Path(""):
+        return
+    write_json_atomic(path, dict(payload or {}))
+
+
+def read_manage_draft(workspace: str | Path, manager_session_id: str) -> dict[str, Any]:
+    path = manage_draft_file(workspace, manager_session_id)
+    return read_json(path) if path != Path("") else {}
+
+
+def write_manage_draft(workspace: str | Path, manager_session_id: str, payload: dict[str, Any]) -> None:
+    path = manage_draft_file(workspace, manager_session_id)
+    if path == Path(""):
+        return
+    write_json_atomic(path, dict(payload or {}))
+
+
+def append_manage_turn(workspace: str | Path, manager_session_id: str, payload: dict[str, Any]) -> None:
+    path = manage_turns_file(workspace, manager_session_id)
+    if path == Path(""):
+        return
+    append_jsonl(path, dict(payload or {}))
+
+
+def read_manage_pending_action(workspace: str | Path, manager_session_id: str) -> dict[str, Any]:
+    path = manage_pending_action_file(workspace, manager_session_id)
+    return read_json(path) if path != Path("") else {}
+
+
+def write_manage_pending_action(workspace: str | Path, manager_session_id: str, payload: dict[str, Any]) -> None:
+    path = manage_pending_action_file(workspace, manager_session_id)
+    if path == Path(""):
+        return
+    write_json_atomic(path, dict(payload or {}))
+
+
+def clear_manage_pending_action(workspace: str | Path, manager_session_id: str) -> None:
+    path = manage_pending_action_file(workspace, manager_session_id)
+    if path == Path("") or not path.exists():
+        return
+    try:
+        path.unlink()
+    except Exception:
+        pass
+
+
+def _dedupe_text_list(items: Any) -> list[str]:
+    rows: list[str] = []
+    seen: set[str] = set()
+    for item in list(items or []):
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        rows.append(text)
+    return rows
+
+
+def normalize_supervisor_profile_payload(raw: Any, *, current: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = dict(current or {})
+    if isinstance(raw, dict):
+        payload.update(dict(raw))
+    if not payload:
+        return {}
+    archetype = str(payload.get("archetype") or "").strip()
+    primary_posture = str(payload.get("primary_posture") or "").strip()
+    quality_bar = str(payload.get("quality_bar") or "").strip()
+    risk_bias = str(payload.get("risk_bias") or "").strip()
+    review_focus = _dedupe_text_list(payload.get("review_focus") or [])
+    done_policy_raw = dict(payload.get("done_policy") or {})
+    done_policy = {
+        "must_block_on": _dedupe_text_list(done_policy_raw.get("must_block_on") or []),
+        "can_defer_with_note": _dedupe_text_list(done_policy_raw.get("can_defer_with_note") or []),
+    }
+    manager_notes = str(payload.get("manager_notes") or "").strip()
+    normalized = {
+        "archetype": archetype,
+        "primary_posture": primary_posture,
+        "quality_bar": quality_bar,
+        "risk_bias": risk_bias,
+        "review_focus": review_focus,
+        "done_policy": done_policy,
+        "manager_notes": manager_notes,
+    }
+    if any(
+        [
+            archetype,
+            primary_posture,
+            quality_bar,
+            risk_bias,
+            review_focus,
+            done_policy["must_block_on"],
+            done_policy["can_defer_with_note"],
+            manager_notes,
+        ]
+    ):
+        return normalized
+    return {}
+
+
+def normalize_source_items(raw: Any, *, current: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in list(raw or current or []):
+        if isinstance(item, str):
+            payload = {"kind": "note", "label": item, "ref": item, "notes": ""}
+        elif isinstance(item, dict):
+            payload = {
+                "kind": str(item.get("kind") or "reference").strip() or "reference",
+                "label": str(item.get("label") or item.get("title") or item.get("ref") or "").strip(),
+                "ref": str(item.get("ref") or item.get("path") or item.get("url") or "").strip(),
+                "notes": str(item.get("notes") or item.get("summary") or "").strip(),
+            }
+        else:
+            continue
+        fingerprint = "|".join([payload["kind"], payload["label"], payload["ref"], payload["notes"]])
+        if not payload["label"] and not payload["ref"]:
+            continue
+        if fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        rows.append(payload)
+    return rows
+
+
+def write_bundle_sources(
+    workspace: str | Path,
+    *,
+    asset_kind: str,
+    asset_id: str,
+    items: list[dict[str, Any]] | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    root = asset_bundle_root(workspace, asset_kind=asset_kind, asset_id=asset_id)
+    if root == Path(""):
+        return {}
+    root.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "asset_kind": str(asset_kind or "").strip(),
+        "asset_id": str(asset_id or "").strip(),
+        "items": list(items or []),
+        "updated_at": now_text(),
+    }
+    if metadata:
+        payload.update({key: value for key, value in dict(metadata).items() if key not in {"items"}})
+    write_json_atomic(root / "sources.json", payload)
+    return payload
+
+
+def build_supervisor_knowledge_payload(definition: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = dict(definition or {})
+    review_checklist = _dedupe_text_list(payload.get("review_checklist") or [])
+    supervisor_profile = normalize_supervisor_profile_payload(payload.get("supervisor_profile"), current={})
+    control_profile = normalize_control_profile_payload(
+        payload.get("control_profile"),
+        current={},
+        workflow_kind=str(payload.get("workflow_kind") or "").strip(),
+        role_pack_id=str(payload.get("role_pack_id") or payload.get("default_role_pack") or "").strip(),
+        execution_mode=str(payload.get("execution_mode") or "").strip(),
+        execution_context=str(payload.get("execution_context") or "").strip(),
+    )
+    run_brief = str(payload.get("run_brief") or "").strip()
+    source_items = normalize_source_items(payload.get("source_bindings") or payload.get("source_items") or [])
+    knowledge_parts: list[str] = []
+    if run_brief:
+        knowledge_parts.append(f"[run brief]\n{run_brief}")
+    if control_profile:
+        control_lines = []
+        for key in ("task_archetype", "packet_size", "evidence_level", "gate_cadence", "repo_binding_policy"):
+            value = str(control_profile.get(key) or "").strip()
+            if value:
+                control_lines.append(f"- {key}: {value}")
+        repo_contract_paths = _dedupe_text_list(control_profile.get("repo_contract_paths") or [])
+        if repo_contract_paths:
+            control_lines.append(f"- repo_contract_paths: {', '.join(repo_contract_paths)}")
+        if control_lines:
+            knowledge_parts.append("[control profile]\n" + "\n".join(control_lines))
+    if supervisor_profile:
+        profile_lines = []
+        for key in ("archetype", "primary_posture", "quality_bar", "risk_bias", "manager_notes"):
+            value = str(supervisor_profile.get(key) or "").strip()
+            if value:
+                profile_lines.append(f"- {key}: {value}")
+        for key in ("must_block_on", "can_defer_with_note"):
+            values = _dedupe_text_list(dict(supervisor_profile.get("done_policy") or {}).get(key) or [])
+            if values:
+                profile_lines.append(f"- done_policy.{key}: {', '.join(values)}")
+        review_focus = _dedupe_text_list(supervisor_profile.get("review_focus") or [])
+        if review_focus:
+            profile_lines.append(f"- review_focus: {', '.join(review_focus)}")
+        if profile_lines:
+            knowledge_parts.append("[supervisor profile]\n" + "\n".join(profile_lines))
+    if source_items:
+        source_lines = []
+        for item in source_items[:8]:
+            label = str(item.get("label") or item.get("ref") or "").strip()
+            detail = str(item.get("notes") or item.get("ref") or "").strip()
+            if label and detail and detail != label:
+                source_lines.append(f"- {label}: {detail}")
+            elif label:
+                source_lines.append(f"- {label}")
+        if source_lines:
+            knowledge_parts.append("[sources]\n" + "\n".join(source_lines))
+    if review_checklist:
+        knowledge_parts.append("[review checklist]\n" + "\n".join(f"- {item}" for item in review_checklist[:8]))
+    return {
+        "composition_mode": "handwritten+compiled",
+        "knowledge_text": "\n\n".join(part for part in knowledge_parts if part).strip(),
+        "control_profile": control_profile,
+        "supervisor_profile": supervisor_profile,
+        "run_brief": run_brief,
+        "source_items": source_items,
+        "review_checklist": review_checklist,
+        "updated_at": now_text(),
+    }
+
+
+def write_compiled_supervisor_knowledge(
+    workspace: str | Path,
+    *,
+    asset_kind: str,
+    asset_id: str,
+    definition: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    root = asset_bundle_root(workspace, asset_kind=asset_kind, asset_id=asset_id)
+    if root == Path(""):
+        return {}
+    (root / "derived").mkdir(parents=True, exist_ok=True)
+    payload = build_supervisor_knowledge_payload(definition)
+    write_json_atomic(root / "derived" / "supervisor_knowledge.json", payload)
+    return payload
 
 
 def legacy_flow_root(workspace: str | Path) -> Path:
@@ -451,9 +850,17 @@ def ensure_flow_state_v1(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(state.get("role_guidance"), dict):
         state["role_guidance"] = {}
     state["doctor_policy"] = normalize_doctor_policy_payload(state.get("doctor_policy"), current={})
+    state["supervisor_profile"] = normalize_supervisor_profile_payload(
+        state.get("supervisor_profile"),
+        current={},
+    )
     execution_mode = str(state.get("execution_mode") or "").strip().lower()
     if execution_mode not in {EXECUTION_MODE_SIMPLE, EXECUTION_MODE_MEDIUM, EXECUTION_MODE_COMPLEX}:
-        execution_mode = EXECUTION_MODE_SIMPLE
+        execution_mode = (
+            EXECUTION_MODE_MEDIUM
+            if workflow_kind in {"project_loop", "managed_flow"}
+            else EXECUTION_MODE_SIMPLE
+        )
     state["execution_mode"] = execution_mode
     session_strategy = str(state.get("session_strategy") or "").strip().lower()
     if session_strategy not in {SESSION_STRATEGY_SHARED, SESSION_STRATEGY_ROLE_BOUND, SESSION_STRATEGY_PER_ACTIVATION}:
@@ -470,6 +877,19 @@ def ensure_flow_state_v1(payload: dict[str, Any]) -> dict[str, Any]:
         state["active_role_turn_no"] = 0
     if "role_pack_id" not in state:
         state["role_pack_id"] = ROLE_PACK_CODING_FLOW
+    state["execution_context"] = normalize_execution_context(
+        state.get("execution_context"),
+        role_pack_id=str(state.get("role_pack_id") or "").strip(),
+        workflow_kind=workflow_kind,
+    )
+    state["control_profile"] = normalize_control_profile_payload(
+        state.get("control_profile"),
+        current={},
+        workflow_kind=workflow_kind,
+        role_pack_id=str(state.get("role_pack_id") or "").strip(),
+        execution_mode=execution_mode,
+        execution_context=str(state.get("execution_context") or "").strip(),
+    )
     if not isinstance(state.get("role_sessions"), dict):
         state["role_sessions"] = {}
     else:
@@ -542,6 +962,7 @@ def new_flow_state(
     codex_session_id: str = "",
     pending_codex_prompt: str = "",
     resume_source: str = "",
+    execution_context: str = "",
 ) -> dict[str, Any]:
     normalized_kind = str(workflow_kind or "").strip()
     phase_plan = default_phase_plan(normalized_kind)
@@ -589,11 +1010,30 @@ def new_flow_state(
         "manage_handoff": {},
         "role_guidance": {},
         "doctor_policy": {},
-        "execution_mode": EXECUTION_MODE_SIMPLE,
-        "session_strategy": SESSION_STRATEGY_SHARED,
+        "execution_mode": (
+            EXECUTION_MODE_MEDIUM
+            if normalized_kind in {"project_loop", "managed_flow"}
+            else EXECUTION_MODE_SIMPLE
+        ),
+        "session_strategy": (
+            SESSION_STRATEGY_ROLE_BOUND
+            if normalized_kind in {"project_loop", "managed_flow"}
+            else SESSION_STRATEGY_SHARED
+        ),
         "active_role_id": "",
         "active_role_turn_no": 0,
         "role_pack_id": ROLE_PACK_CODING_FLOW,
+        "execution_context": str(execution_context or EXECUTION_CONTEXT_REPO_BOUND).strip(),
+        "control_profile": default_control_profile(
+            workflow_kind=normalized_kind,
+            role_pack_id=ROLE_PACK_CODING_FLOW,
+            execution_mode=(
+                EXECUTION_MODE_MEDIUM
+                if normalized_kind in {"project_loop", "managed_flow"}
+                else EXECUTION_MODE_SIMPLE
+            ),
+            execution_context=str(execution_context or EXECUTION_CONTEXT_REPO_BOUND).strip(),
+        ),
         "role_sessions": {},
         "latest_role_handoffs": {},
         "role_turn_counts": {},
@@ -669,9 +1109,12 @@ def ensure_flow_sidecars(flow_dir: Path, flow_state: dict[str, Any]) -> None:
                 "risk_level": str(flow_state.get("risk_level") or "normal").strip(),
                 "autonomy_profile": str(flow_state.get("autonomy_profile") or "default").strip(),
                 "manager_handoff": dict(flow_state.get("manage_handoff") or {}),
+                "control_profile": dict(flow_state.get("control_profile") or {}),
+                "supervisor_profile": dict(flow_state.get("supervisor_profile") or {}),
                 "execution_mode": str(flow_state.get("execution_mode") or EXECUTION_MODE_SIMPLE).strip(),
                 "session_strategy": str(flow_state.get("session_strategy") or SESSION_STRATEGY_SHARED).strip(),
                 "role_pack_id": str(flow_state.get("role_pack_id") or ROLE_PACK_CODING_FLOW).strip(),
+                "execution_context": str(flow_state.get("execution_context") or "").strip(),
                 "version": str(flow_state.get("flow_version") or BUTLER_FLOW_VERSION).strip(),
                 "created_at": str(flow_state.get("created_at") or now_text()).strip(),
                 "updated_at": now_text(),
@@ -688,6 +1131,9 @@ def ensure_flow_sidecars(flow_dir: Path, flow_state: dict[str, Any]) -> None:
                 "active_role_id": str(flow_state.get("active_role_id") or "").strip(),
                 "execution_mode": str(flow_state.get("execution_mode") or EXECUTION_MODE_SIMPLE).strip(),
                 "session_strategy": str(flow_state.get("session_strategy") or SESSION_STRATEGY_SHARED).strip(),
+                "execution_context": str(flow_state.get("execution_context") or "").strip(),
+                "control_profile": dict(flow_state.get("control_profile") or {}),
+                "supervisor_profile": dict(flow_state.get("supervisor_profile") or {}),
                 "goal": str(flow_state.get("goal") or "").strip(),
                 "guard_condition": str(flow_state.get("guard_condition") or "").strip(),
                 "risk_level": str(flow_state.get("risk_level") or "normal").strip(),
@@ -802,7 +1248,10 @@ __all__ = [
     "FileRuntimeStateStore",
     "FileTraceStore",
     "append_jsonl",
+    "append_manage_turn",
     "build_flow_root",
+    "build_supervisor_knowledge_payload",
+    "clear_manage_pending_action",
     "asset_bundle_manifest",
     "ensure_asset_bundle_files",
     "asset_bundle_root",
@@ -819,12 +1268,24 @@ __all__ = [
     "flow_artifacts_path",
     "flow_events_path",
     "flow_definition_path",
+    "flow_asset_root",
     "handoffs_path",
     "flow_codex_home_dir",
     "flow_dir",
     "flow_bundle_root",
+    "manage_draft_file",
+    "manage_pending_action_file",
+    "manage_session_dir",
+    "manage_session_file",
+    "manage_session_root",
+    "manage_turns_file",
     "mutations_path",
+    "normalize_source_items",
+    "normalize_supervisor_profile_payload",
     "prompt_packets_path",
+    "read_manage_draft",
+    "read_manage_pending_action",
+    "read_manage_session",
     "runtime_plan_path",
     "strategy_trace_path",
     "template_bundle_root",
@@ -834,10 +1295,17 @@ __all__ = [
     "flow_state_path",
     "new_flow_id",
     "now_text",
+    "default_control_profile",
+    "normalize_control_profile_payload",
     "prepare_flow_codex_home",
     "read_flow_state",
     "read_json",
     "safe_int",
     "system_codex_home",
+    "write_bundle_sources",
+    "write_compiled_supervisor_knowledge",
+    "write_manage_draft",
+    "write_manage_pending_action",
+    "write_manage_session",
     "write_json_atomic",
 ]

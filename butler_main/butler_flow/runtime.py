@@ -19,17 +19,29 @@ from .compiler import (
     session_mode_for_role,
 )
 from .constants import (
+    CONTROL_PACKET_LARGE,
+    CONTROL_PACKET_MEDIUM,
+    CONTROL_PACKET_SMALL,
     DEFAULT_DISABLED_FLOW_MCP_SERVERS,
     DEFAULT_PROJECT_PHASE_MAX_ATTEMPTS,
     DEFAULT_SINGLE_GOAL_MAX_ATTEMPTS,
     DOCTOR_ROLE_ID,
     DONE_PHASE,
+    EVIDENCE_LEVEL_MINIMAL,
+    EVIDENCE_LEVEL_STANDARD,
+    EVIDENCE_LEVEL_STRICT,
     EXECUTION_MODE_SIMPLE,
+    GATE_CADENCE_PHASE,
+    GATE_CADENCE_RISK_BASED,
+    GATE_CADENCE_STRICT,
     MANAGED_FLOW_KIND,
     PROJECT_LOOP_KIND,
     PROJECT_PHASES,
+    REPO_BINDING_DISABLED,
+    REPO_BINDING_EXPLICIT,
     SINGLE_GOAL_KIND,
     SINGLE_GOAL_PHASE,
+    normalize_execution_context,
 )
 from .flow_definition import first_phase_id, next_phase_id, phase_ids, phase_prompt_context, resolve_phase_plan
 from .display import FlowDisplay
@@ -56,6 +68,7 @@ from .prompts import (
     build_role_bound_codex_prompt,
     build_single_goal_codex_prompt,
     build_single_goal_judge_prompt,
+    compact_json,
 )
 from .role_runtime import (
     append_handoff,
@@ -89,6 +102,7 @@ from .state import (
     FileRuntimeStateStore,
     FileTraceStore,
     append_jsonl,
+    default_control_profile,
     ensure_trace,
     ensure_flow_sidecars,
     flow_actions_path,
@@ -108,6 +122,7 @@ from .state import (
     read_flow_state,
     read_json,
     safe_int,
+    normalize_control_profile_payload,
     normalize_doctor_policy_payload,
     write_json_atomic,
 )
@@ -652,20 +667,52 @@ def _append_phase_snapshot(flow_state: dict[str, Any], *, phase: str, attempt_no
 
 def _governor_state(flow_state: dict[str, Any], *, attempt_no: int) -> dict[str, Any]:
     latest_usage = dict(flow_state.get("latest_token_usage") or {})
+    control_profile = dict(flow_state.get("control_profile") or {})
     input_tokens = int(safe_int(latest_usage.get("input_tokens"), 0))
     service_fault_streak = int(safe_int(flow_state.get("service_fault_streak"), 0))
     session_epoch = int(safe_int(flow_state.get("session_epoch"), 0))
+    packet_size = str(control_profile.get("packet_size") or CONTROL_PACKET_MEDIUM).strip().lower()
+    evidence_level = str(control_profile.get("evidence_level") or EVIDENCE_LEVEL_STANDARD).strip().lower()
+    gate_cadence = str(control_profile.get("gate_cadence") or GATE_CADENCE_PHASE).strip().lower()
+    compact_attempt_threshold = 6
+    reset_attempt_threshold = 10
+    compact_input_threshold = 120000
+    reset_input_threshold = 180000
+    compact_fault_threshold = 2
+    reset_fault_threshold = 4
+    if packet_size == CONTROL_PACKET_LARGE:
+        compact_attempt_threshold = max(3, compact_attempt_threshold - 1)
+        reset_attempt_threshold = max(6, reset_attempt_threshold - 1)
+    elif packet_size == CONTROL_PACKET_SMALL:
+        compact_attempt_threshold += 1
+        reset_attempt_threshold += 1
+    if evidence_level == EVIDENCE_LEVEL_STRICT:
+        compact_attempt_threshold = max(3, compact_attempt_threshold - 1)
+        compact_input_threshold = max(90000, compact_input_threshold - 20000)
+    elif evidence_level == EVIDENCE_LEVEL_MINIMAL:
+        compact_input_threshold += 20000
+    if gate_cadence == GATE_CADENCE_STRICT:
+        compact_attempt_threshold = min(compact_attempt_threshold, 4)
+        reset_attempt_threshold = min(reset_attempt_threshold, 8)
+        compact_fault_threshold = 1
+        reset_fault_threshold = 3
+    elif gate_cadence == GATE_CADENCE_RISK_BASED:
+        compact_attempt_threshold += 1
     mode = "normal"
     reasons: list[str] = []
-    if attempt_no >= 6:
+    if attempt_no >= compact_attempt_threshold:
         reasons.append("late_attempt_window")
-    if input_tokens >= 120000:
+    if input_tokens >= compact_input_threshold:
         reasons.append("large_input_context")
-    if service_fault_streak >= 2:
+    if service_fault_streak >= compact_fault_threshold:
         reasons.append("repeated_service_fault")
     if reasons:
         mode = "compact"
-    if input_tokens >= 180000 or service_fault_streak >= 4 or attempt_no >= 10:
+    if (
+        input_tokens >= reset_input_threshold
+        or service_fault_streak >= reset_fault_threshold
+        or attempt_no >= reset_attempt_threshold
+    ):
         mode = "reset"
     governor = {
         "mode": mode,
@@ -673,6 +720,9 @@ def _governor_state(flow_state: dict[str, Any], *, attempt_no: int) -> dict[str,
         "input_tokens": input_tokens,
         "service_fault_streak": service_fault_streak,
         "session_epoch": session_epoch,
+        "packet_size": packet_size,
+        "evidence_level": evidence_level,
+        "gate_cadence": gate_cadence,
         "updated_at": now_text(),
     }
     previous_mode = str(dict(flow_state.get("context_governor") or {}).get("mode") or "").strip()
@@ -688,6 +738,26 @@ def _runtime_budget_reached(flow_state: dict[str, Any]) -> bool:
     if budget <= 0:
         return False
     return _refresh_runtime_clock(flow_state) >= budget
+
+
+def _packet_size_for_mode(packet_size: str, *, mode: str) -> str:
+    normalized = str(packet_size or "").strip().lower()
+    if normalized not in {CONTROL_PACKET_SMALL, CONTROL_PACKET_MEDIUM, CONTROL_PACKET_LARGE}:
+        normalized = CONTROL_PACKET_MEDIUM
+    if mode == "reset":
+        return CONTROL_PACKET_SMALL
+    if mode == "compact" and normalized == CONTROL_PACKET_LARGE:
+        return CONTROL_PACKET_MEDIUM
+    return normalized
+
+
+def _evidence_level_for_mode(evidence_level: str, *, mode: str) -> str:
+    normalized = str(evidence_level or "").strip().lower()
+    if normalized not in {EVIDENCE_LEVEL_MINIMAL, EVIDENCE_LEVEL_STANDARD, EVIDENCE_LEVEL_STRICT}:
+        normalized = EVIDENCE_LEVEL_STANDARD
+    if mode == "reset" and normalized == EVIDENCE_LEVEL_STRICT:
+        return EVIDENCE_LEVEL_STANDARD
+    return normalized
 
 
 def _turn_kind_for_phase(phase: str) -> str:
@@ -978,9 +1048,76 @@ class FlowRuntime:
         except Exception:
             return ""
 
+    @staticmethod
+    def _strip_named_section(text: str, section_name: str) -> str:
+        body = str(text or "").strip()
+        token = f"[{str(section_name or '').strip().lower()}]"
+        if not body or not token.strip("[]"):
+            return body
+        rows: list[str] = []
+        skipping = False
+        for line in body.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                skipping = stripped.lower() == token
+                if skipping:
+                    continue
+            if not skipping:
+                rows.append(line)
+        return "\n".join(rows).strip()
+
+    def _current_control_profile(
+        self,
+        flow_state: dict[str, Any],
+        *,
+        current: dict[str, Any] | None = None,
+        raw: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return normalize_control_profile_payload(
+            raw if raw is not None else flow_state.get("control_profile"),
+            current=current or {},
+            workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+            role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+            execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+            execution_context=str(flow_state.get("execution_context") or "").strip(),
+        )
+
+    def _apply_supervisor_control_profile(
+        self,
+        flow_state: dict[str, Any],
+        decision: dict[str, Any],
+        *,
+        clear_transient_flags: bool = False,
+    ) -> dict[str, Any]:
+        current = self._current_control_profile(flow_state)
+        updated = dict(current)
+        for key in ("packet_size", "evidence_level", "gate_cadence", "repo_binding_policy"):
+            value = str(decision.get(key) or "").strip()
+            if value:
+                updated[key] = value
+        if clear_transient_flags:
+            updated["force_gate_next_turn"] = False
+            updated["force_doctor_next_turn"] = False
+        normalized = self._current_control_profile(flow_state, current=current, raw=updated)
+        flow_state["control_profile"] = normalized
+        return normalized
+
     def _asset_runtime_context(self, flow_dir_path: Path, flow_state: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         definition = read_json(flow_definition_path(flow_dir_path))
         bundle_manifest = dict(definition.get("bundle_manifest") or flow_state.get("bundle_manifest") or {})
+        base_control_profile = normalize_control_profile_payload(
+            definition.get("control_profile"),
+            current={},
+            workflow_kind=str(definition.get("workflow_kind") or flow_state.get("workflow_kind") or "").strip(),
+            role_pack_id=str(definition.get("role_pack_id") or flow_state.get("role_pack_id") or "").strip(),
+            execution_mode=str(definition.get("execution_mode") or flow_state.get("execution_mode") or "").strip(),
+            execution_context=str(definition.get("execution_context") or flow_state.get("execution_context") or "").strip(),
+        )
+        control_profile = self._current_control_profile(
+            flow_state,
+            current=base_control_profile,
+            raw=flow_state.get("control_profile") or definition.get("control_profile"),
+        )
         asset_context = {
             "source_asset_key": str(definition.get("source_asset_key") or flow_state.get("source_asset_key") or "").strip(),
             "source_asset_kind": str(definition.get("source_asset_kind") or flow_state.get("source_asset_kind") or "").strip(),
@@ -995,10 +1132,25 @@ class FlowRuntime:
                 definition.get("doctor_policy"),
                 current=dict(flow_state.get("doctor_policy") or {}),
             ),
+            "control_profile": control_profile,
+            "supervisor_profile": dict(definition.get("supervisor_profile") or flow_state.get("supervisor_profile") or {}),
+            "run_brief": str(definition.get("run_brief") or flow_state.get("run_brief") or "").strip(),
             "bundle_manifest": bundle_manifest,
         }
         base_dir = flow_dir_path
         bundle_root = self._resolve_bundle_ref(base_dir, bundle_manifest.get("bundle_root")) or base_dir
+        sources_ref = (
+            self._resolve_bundle_ref(base_dir, bundle_manifest.get("sources_ref"))
+            or self._resolve_bundle_ref(bundle_root, bundle_manifest.get("sources_path"))
+            or self._resolve_bundle_ref(bundle_root, "sources.json")
+        )
+        sources_payload = read_json(sources_ref) if sources_ref is not None and sources_ref.exists() else {}
+        asset_context["source_bindings"] = list(
+            definition.get("source_bindings")
+            or flow_state.get("source_bindings")
+            or sources_payload.get("items")
+            or []
+        )
         supervisor_ref = (
             self._resolve_bundle_ref(base_dir, bundle_manifest.get("supervisor_ref"))
             or self._resolve_bundle_ref(bundle_root, bundle_manifest.get("supervisor"))
@@ -1018,9 +1170,23 @@ class FlowRuntime:
             or flow_state.get("compiled_supervisor_knowledge_text")
             or ""
         ).strip()
+        compiled_text = self._strip_named_section(compiled_text, "control profile")
+        control_summary = ""
+        if control_profile:
+            control_summary = compact_json(
+                {
+                    "task_archetype": str(control_profile.get("task_archetype") or "").strip(),
+                    "packet_size": str(control_profile.get("packet_size") or "").strip(),
+                    "evidence_level": str(control_profile.get("evidence_level") or "").strip(),
+                    "gate_cadence": str(control_profile.get("gate_cadence") or "").strip(),
+                    "repo_binding_policy": str(control_profile.get("repo_binding_policy") or "").strip(),
+                    "repo_contract_paths": list(control_profile.get("repo_contract_paths") or []),
+                }
+            )
         sections = [
             f"[handwritten supervisor]\n{handwritten_text}" if handwritten_text else "",
             f"[compiled supervisor knowledge]\n{compiled_text}" if compiled_text else "",
+            f"[control profile]\n{control_summary}" if control_summary else "",
         ]
         knowledge_text = "\n\n".join(section for section in sections if section).strip()
         supervisor_knowledge = {
@@ -1032,12 +1198,47 @@ class FlowRuntime:
             ).strip(),
             "refs": [
                 str(path)
-                for path in [supervisor_ref, compiled_ref]
+                for path in [supervisor_ref, compiled_ref, sources_ref]
                 if path is not None and str(path).strip()
             ],
             "updated_at": str(compiled_payload.get("updated_at") or definition.get("updated_at") or "").strip(),
         }
         return asset_context, supervisor_knowledge
+
+    def _repo_contract_appendix(self, flow_state: dict[str, Any]) -> str:
+        control_profile = normalize_control_profile_payload(
+            flow_state.get("control_profile"),
+            current=default_control_profile(
+                workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+                role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+                execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+                execution_context=str(flow_state.get("execution_context") or "").strip(),
+            ),
+            workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+            role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+            execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+            execution_context=str(flow_state.get("execution_context") or "").strip(),
+        )
+        if str(control_profile.get("repo_binding_policy") or REPO_BINDING_DISABLED).strip().lower() != REPO_BINDING_EXPLICIT:
+            return ""
+        workspace_root = Path(str(flow_state.get("workspace_root") or ".")).resolve()
+        sections: list[str] = []
+        for raw_path in list(control_profile.get("repo_contract_paths") or [])[:3]:
+            ref = str(raw_path or "").strip()
+            if not ref:
+                continue
+            candidate = Path(ref)
+            if not candidate.is_absolute():
+                candidate = (workspace_root / candidate).resolve()
+            text = self._read_text_if_exists(candidate)
+            if not text:
+                continue
+            if len(text) > 3200:
+                text = f"{text[:3197]}..."
+            sections.append(f"[repo contract: {ref}]\n{text}")
+        if not sections:
+            return ""
+        return "Explicit repo contracts:\n" + "\n\n".join(sections)
 
     def _doctor_runtime_appendix(self, flow_dir_path: Path, flow_state: dict[str, Any]) -> str:
         definition = read_json(flow_definition_path(Path(flow_dir_path)))
@@ -1100,6 +1301,9 @@ class FlowRuntime:
             return ""
         if str(flow_state.get("active_role_id") or "").strip() == DOCTOR_ROLE_ID:
             return ""
+        control_profile = dict(flow_state.get("control_profile") or {})
+        if bool(control_profile.get("force_doctor_next_turn")):
+            return "run doctor on the next bounded turn via explicit operator request"
         policy = self._doctor_policy(flow_state)
         if not bool(policy.get("enabled")):
             return ""
@@ -1619,6 +1823,7 @@ class FlowRuntime:
             phase_attempt_no=phase_attempt_no,
             next_instruction=next_instruction,
             task_brief=task_brief,
+            control_profile=dict(flow_state.get("control_profile") or {}),
         )
         compiled = compile_packet(
             target_role=target_role,
@@ -1668,6 +1873,8 @@ class FlowRuntime:
             "codex_mode": "resume" if session_id else "exec",
             "codex_session_id": session_id,
             "codex_home": str(prepare_flow_codex_home(flow_dir_path)),
+            "execution_context": "isolated",
+            "execution_workspace_root": str(Path(flow_dir_path) / "supervisor_runtime"),
         }
         overrides = flow_codex_config_overrides(cfg)
         if overrides:
@@ -1687,6 +1894,7 @@ class FlowRuntime:
         valid_roles = set(stable_role_ids(str(flow_state.get("role_pack_id") or "").strip()))
         ephemeral_role = dict(payload.get("ephemeral_role") or {})
         governor = dict(flow_state.get("context_governor") or {})
+        control_profile = self._current_control_profile(flow_state)
         if active_role_id and active_role_id not in valid_roles and not ephemeral_role:
             active_role_id = ""
         if not active_role_id:
@@ -1720,6 +1928,28 @@ class FlowRuntime:
             load_profile = "compact"
         elif governor_mode == "reset":
             load_profile = "compact"
+        packet_size = _packet_size_for_mode(
+            str(payload.get("packet_size") or control_profile.get("packet_size") or ""),
+            mode=governor_mode,
+        )
+        evidence_level = _evidence_level_for_mode(
+            str(payload.get("evidence_level") or control_profile.get("evidence_level") or ""),
+            mode=governor_mode,
+        )
+        gate_cadence = str(payload.get("gate_cadence") or control_profile.get("gate_cadence") or GATE_CADENCE_PHASE).strip().lower()
+        if gate_cadence not in {GATE_CADENCE_PHASE, GATE_CADENCE_RISK_BASED, GATE_CADENCE_STRICT}:
+            gate_cadence = GATE_CADENCE_PHASE
+        gate_required = bool(payload.get("gate_required"))
+        if not gate_required:
+            gate_required = bool(control_profile.get("force_gate_next_turn"))
+        control_mode = str(payload.get("control_mode") or "").strip().lower()
+        if control_mode not in {"progress", "stabilize", "recover"}:
+            control_mode = "recover" if governor_mode == "reset" else ("stabilize" if gate_required or governor_mode == "compact" else "progress")
+        repo_binding_policy = str(
+            payload.get("repo_binding_policy") or control_profile.get("repo_binding_policy") or REPO_BINDING_DISABLED
+        ).strip().lower()
+        if repo_binding_policy not in {REPO_BINDING_DISABLED, REPO_BINDING_EXPLICIT}:
+            repo_binding_policy = REPO_BINDING_DISABLED
         normalized: SupervisorDecisionV1 = {
             "decision": decision,
             "turn_kind": turn_kind,
@@ -1733,6 +1963,12 @@ class FlowRuntime:
             "followup_kind": str(payload.get("followup_kind") or "none").strip().lower() or "none",
             "fix_round_no": int(safe_int(flow_state.get("auto_fix_round_count"), 0)),
             "active_role_id": active_role_id,
+            "control_mode": control_mode,
+            "packet_size": packet_size,
+            "evidence_level": evidence_level,
+            "gate_cadence": gate_cadence,
+            "gate_required": gate_required,
+            "repo_binding_policy": repo_binding_policy,
             "execution_mode": normalize_execution_mode(flow_state.get("execution_mode")),
             "session_strategy": normalize_session_strategy(
                 flow_state.get("session_strategy"),
@@ -1849,6 +2085,7 @@ class FlowRuntime:
             "runtime_elapsed_seconds",
             "latest_token_usage",
             "context_governor",
+            "control_profile",
         ):
             if field in external_state:
                 flow_state[field] = external_state.get(field)
@@ -1915,7 +2152,16 @@ class FlowRuntime:
             flow_state["status"] = "running"
             flow_state["auto_fix_round_count"] = 0
             self._write_flow_state(flow_dir_path, flow_state)
-        elif action_type in {"append_instruction", "retry_current_phase"}:
+        elif action_type in {
+            "append_instruction",
+            "retry_current_phase",
+            "shrink_packet",
+            "broaden_packet",
+            "force_gate",
+            "force_doctor",
+            "bind_repo_contract",
+            "unbind_repo_contract",
+        }:
             flow_state["auto_fix_round_count"] = 0
             self._write_flow_state(flow_dir_path, flow_state)
         return None
@@ -1935,6 +2181,26 @@ class FlowRuntime:
         fix_round_no = safe_int(flow_state.get("auto_fix_round_count"), 0)
         active_role_id = select_active_role(flow_state, phase=phase)
         flow_state["active_role_id"] = active_role_id
+        governor = _governor_state(flow_state, attempt_no=attempt_no)
+        control_profile = self._current_control_profile(
+            flow_state,
+            current=default_control_profile(
+                workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+                role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+                execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+                execution_context=str(flow_state.get("execution_context") or "").strip(),
+            ),
+        )
+        flow_state["control_profile"] = control_profile
+        governor_mode = str(governor.get("mode") or "").strip()
+        gate_required = bool(control_profile.get("force_gate_next_turn"))
+        if gate_required:
+            governor_mode = "compact"
+        control_mode = "recover" if governor_mode == "reset" else ("stabilize" if gate_required or governor_mode == "compact" else "progress")
+        packet_size = _packet_size_for_mode(str(control_profile.get("packet_size") or ""), mode=governor_mode)
+        evidence_level = _evidence_level_for_mode(str(control_profile.get("evidence_level") or ""), mode=governor_mode)
+        gate_cadence = str(control_profile.get("gate_cadence") or GATE_CADENCE_PHASE).strip().lower()
+        repo_binding_policy = str(control_profile.get("repo_binding_policy") or REPO_BINDING_DISABLED).strip().lower()
         decision = {
             "decision": "execute",
             "turn_kind": _turn_kind_for_phase(phase),
@@ -1948,6 +2214,12 @@ class FlowRuntime:
             "followup_kind": followup_kind or "none",
             "fix_round_no": int(fix_round_no),
             "active_role_id": active_role_id,
+            "control_mode": control_mode,
+            "packet_size": packet_size,
+            "evidence_level": evidence_level,
+            "gate_cadence": gate_cadence,
+            "gate_required": gate_required,
+            "repo_binding_policy": repo_binding_policy,
             "execution_mode": normalize_execution_mode(flow_state.get("execution_mode")),
             "session_strategy": normalize_session_strategy(
                 flow_state.get("session_strategy"),
@@ -1985,12 +2257,20 @@ class FlowRuntime:
         elif pending:
             decision["reason"] = f"follow pending instruction from previous judge/recovery via role={active_role_id}"
             decision["confidence"] = 0.78
+        if gate_required and decision["decision"] != "ask_operator":
+            decision["reason"] = f"force a bounded gate turn before more expansion via role={active_role_id}"
+            decision["confidence"] = max(float(decision.get("confidence") or 0.72), 0.8)
         normalized = self._normalize_supervisor_decision(
             decision,
             flow_state=flow_state,
             phase=phase,
             attempt_no=attempt_no,
             fallback_reason=str(decision.get("reason") or "").strip(),
+        )
+        self._apply_supervisor_control_profile(
+            flow_state,
+            normalized,
+            clear_transient_flags=bool(gate_required or doctor_reason),
         )
         flow_state["latest_supervisor_decision"] = dict(normalized)
         return normalized
@@ -2200,6 +2480,7 @@ class FlowRuntime:
             attempt_no=attempt_no,
             fallback_reason=str(heuristic.get("reason") or "").strip(),
         )
+        self._apply_supervisor_control_profile(flow_state, decision)
         flow_state["latest_supervisor_decision"] = dict(decision)
         self._append_strategy_trace(
             flow_dir_path=flow_dir_path,
@@ -2363,6 +2644,7 @@ class FlowRuntime:
             "status": str(flow_state.get("status") or "").strip(),
             "current_phase": str(flow_state.get("current_phase") or "").strip(),
             "pending_codex_prompt": _compose_next_instruction(flow_state),
+            "control_profile": dict(flow_state.get("control_profile") or {}),
         }
         result_summary = ""
         if action == "pause":
@@ -2398,6 +2680,65 @@ class FlowRuntime:
                 source=f"operator:{action}",
             )
             result_summary = "current phase prepared for retry; start a real resume turn to continue execution"
+        elif action in {"shrink_packet", "broaden_packet", "force_gate", "force_doctor", "bind_repo_contract", "unbind_repo_contract"}:
+            control_profile = normalize_control_profile_payload(
+                flow_state.get("control_profile"),
+                current={},
+                workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+                role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+                execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+                execution_context=str(flow_state.get("execution_context") or "").strip(),
+            )
+            if action == "shrink_packet":
+                current_size = str(control_profile.get("packet_size") or CONTROL_PACKET_MEDIUM).strip().lower()
+                next_size = {
+                    CONTROL_PACKET_LARGE: CONTROL_PACKET_MEDIUM,
+                    CONTROL_PACKET_MEDIUM: CONTROL_PACKET_SMALL,
+                    CONTROL_PACKET_SMALL: CONTROL_PACKET_SMALL,
+                }[current_size]
+                control_profile["packet_size"] = next_size
+                control_profile["force_gate_next_turn"] = True
+                result_summary = f"packet size tightened to {next_size}; next turn will run as a bounded gate"
+            elif action == "broaden_packet":
+                current_size = str(control_profile.get("packet_size") or CONTROL_PACKET_MEDIUM).strip().lower()
+                next_size = {
+                    CONTROL_PACKET_SMALL: CONTROL_PACKET_MEDIUM,
+                    CONTROL_PACKET_MEDIUM: CONTROL_PACKET_LARGE,
+                    CONTROL_PACKET_LARGE: CONTROL_PACKET_LARGE,
+                }[current_size]
+                control_profile["packet_size"] = next_size
+                result_summary = f"packet size broadened to {next_size}"
+            elif action == "force_gate":
+                control_profile["force_gate_next_turn"] = True
+                result_summary = "next supervisor turn forced into a bounded gate"
+            elif action == "force_doctor":
+                control_profile["force_doctor_next_turn"] = True
+                result_summary = "doctor will be requested on the next supervisor turn"
+            elif action == "bind_repo_contract":
+                contract_path = str(data.get("repo_contract_path") or "AGENTS.md").strip()
+                existing_paths = [
+                    str(item or "").strip()
+                    for item in list(control_profile.get("repo_contract_paths") or [])
+                    if str(item or "").strip()
+                ]
+                if contract_path and contract_path not in existing_paths:
+                    existing_paths.append(contract_path)
+                control_profile["repo_binding_policy"] = REPO_BINDING_EXPLICIT
+                control_profile["repo_contract_paths"] = existing_paths
+                result_summary = f"repo contract bound explicitly ({contract_path or 'AGENTS.md'})"
+            elif action == "unbind_repo_contract":
+                control_profile["repo_binding_policy"] = REPO_BINDING_DISABLED
+                control_profile["repo_contract_paths"] = []
+                result_summary = "repo contract binding cleared"
+            flow_state["control_profile"] = normalize_control_profile_payload(
+                control_profile,
+                current={},
+                workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+                role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+                execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+                execution_context=str(flow_state.get("execution_context") or "").strip(),
+            )
+            flow_state["auto_fix_round_count"] = 0
         elif action == "abort":
             flow_state["status"] = "failed"
             flow_state["auto_fix_round_count"] = 0
@@ -2409,6 +2750,12 @@ class FlowRuntime:
             "resume": "not_required",
             "append_instruction": "not_required",
             "retry_current_phase": "not_required",
+            "shrink_packet": "not_required",
+            "broaden_packet": "not_required",
+            "force_gate": "not_required",
+            "force_doctor": "not_required",
+            "bind_repo_contract": "not_required",
+            "unbind_repo_contract": "not_required",
             "abort": "operator_aborted",
         }[action]
         self._set_approval_state(
@@ -2434,6 +2781,7 @@ class FlowRuntime:
                 "current_phase": str(flow_state.get("current_phase") or "").strip(),
                 "pending_codex_prompt": _compose_next_instruction(flow_state),
                 "queued_operator_updates": list(flow_state.get("queued_operator_updates") or []),
+                "control_profile": dict(flow_state.get("control_profile") or {}),
             },
             "trace_id": trace_id,
             "receipt_id": action_id,
@@ -2488,7 +2836,40 @@ class FlowRuntime:
             "codex_mode": "resume" if effective_session_id else "exec",
             "codex_session_id": effective_session_id,
             "codex_home": str(prepare_flow_codex_home(flow_dir_path)),
+            "execution_context": (
+                "isolated"
+                if active_role_id == DOCTOR_ROLE_ID
+                else normalize_execution_context(
+                    flow_state.get("execution_context"),
+                    role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+                    workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+                )
+            ),
         }
+        control_profile = normalize_control_profile_payload(
+            flow_state.get("control_profile"),
+            current=default_control_profile(
+                workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+                role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+                execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+                execution_context=str(flow_state.get("execution_context") or "").strip(),
+            ),
+            workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+            role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+            execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+            execution_context=str(flow_state.get("execution_context") or "").strip(),
+        )
+        request["repo_binding_policy"] = str(
+            control_profile.get("repo_binding_policy") or REPO_BINDING_DISABLED
+        ).strip().lower()
+        if request["repo_binding_policy"] == REPO_BINDING_EXPLICIT:
+            request["repo_contract_paths"] = [
+                str(item or "").strip()
+                for item in list(control_profile.get("repo_contract_paths") or [])
+                if str(item or "").strip()
+            ]
+        if active_role_id == DOCTOR_ROLE_ID:
+            request["execution_workspace_root"] = str(Path(flow_dir_path) / "doctor_runtime")
         if str(last_external_session.get("thread_id") or "").strip() == effective_session_id:
             request["_butler_session_binding"] = dict(last_external_session)
         overrides = flow_codex_config_overrides(cfg)
@@ -2534,7 +2915,12 @@ class FlowRuntime:
             turn_kind=str(dict(flow_state.get("latest_supervisor_decision") or {}).get("turn_kind") or _turn_kind_for_phase(str(flow_state.get("current_phase") or ""))).strip(),
             next_instruction=_compose_next_instruction(flow_state),
         )
-        return str(compiled.get("rendered_prompt") or "")
+        prompt = str(compiled.get("rendered_prompt") or "")
+        if active_role_id != DOCTOR_ROLE_ID:
+            repo_contract_appendix = self._repo_contract_appendix(flow_state)
+            if repo_contract_appendix:
+                prompt = f"{prompt}\n\n{repo_contract_appendix}".strip()
+        return prompt
 
     def judge_attempt(
         self,
@@ -2671,7 +3057,8 @@ class FlowRuntime:
         )
         flow_id = str(flow_state.get("workflow_id") or "").strip()
         flow_state["execution_mode"] = normalize_execution_mode(
-            flow_state.get("execution_mode") or default_execution_mode(cfg)
+            flow_state.get("execution_mode")
+            or default_execution_mode(cfg, workflow_kind=str(flow_state.get("workflow_kind") or "").strip())
         )
         flow_state["session_strategy"] = normalize_session_strategy(
             flow_state.get("session_strategy"),

@@ -52,7 +52,9 @@ class FlowState(TypedDict, total=False):
     session_epoch: int
     service_fault_streak: int
     latest_token_usage: dict[str, Any]
+    control_profile: dict[str, Any]
     doctor_policy: dict[str, Any]
+    supervisor_profile: dict[str, Any]
     execution_mode: str
     session_strategy: str
     active_role_id: str
@@ -81,6 +83,7 @@ class FlowRuntimePlanV1(TypedDict, total=False):
     guard_condition: str
     risk_level: str
     autonomy_profile: str
+    control_profile: dict[str, Any]
     summary: str
     flow_board: dict[str, Any]
     active_turn_task: dict[str, Any]
@@ -160,12 +163,14 @@ class FlowBoardV1(TypedDict, total=False):
     runtime_elapsed_seconds: int
     context_governor: dict[str, Any]
     latest_token_usage: dict[str, Any]
+    control_profile: dict[str, Any]
     source_asset_key: str
     source_asset_kind: str
     source_asset_version: str
     review_checklist: list[str]
     role_guidance: dict[str, Any]
     doctor_policy: dict[str, Any]
+    supervisor_profile: dict[str, Any]
     bundle_manifest: dict[str, Any]
 
 
@@ -188,6 +193,12 @@ class TurnTaskPacketV1(TypedDict, total=False):
     task_brief: str
     attempt_no: int
     phase_attempt_no: int
+    control_mode: str
+    packet_size: str
+    evidence_level: str
+    gate_cadence: str
+    repo_binding_policy: str
+    gate_required: bool
     success_criteria: list[str]
     input_refs: list[str]
     output_contract: list[str]
@@ -223,6 +234,12 @@ class SupervisorDecisionV1(TypedDict, total=False):
     followup_kind: str
     fix_round_no: int
     active_role_id: str
+    control_mode: str
+    packet_size: str
+    evidence_level: str
+    gate_cadence: str
+    gate_required: bool
+    repo_binding_policy: str
     execution_mode: str
     session_strategy: str
     session_mode: str
@@ -326,6 +343,8 @@ class FlowExecReceiptV1(TypedDict, total=False):
     execution_mode: str
     session_strategy: str
     role_pack_id: str
+    execution_context: str
+    execution_workspace_root: str
     attempt_count: int
     codex_session_id: str
     summary: str
@@ -358,6 +377,7 @@ class FlowDefinitionV1(TypedDict, total=False):
     execution_mode: str
     session_strategy: str
     role_pack_id: str
+    execution_context: str
     goal: str
     guard_condition: str
     phase_plan: list[dict[str, Any]]
@@ -366,6 +386,8 @@ class FlowDefinitionV1(TypedDict, total=False):
     manager_handoff: dict[str, Any]
     role_guidance: dict[str, Any]
     doctor_policy: dict[str, Any]
+    supervisor_profile: dict[str, Any]
+    control_profile: dict[str, Any]
     version: str
     created_at: str
     updated_at: str

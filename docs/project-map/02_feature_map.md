@@ -1,12 +1,12 @@
 # 功能地图
 
-更新时间：2026-04-02  
+更新时间：2026-04-03  
 状态：现役  
 用途：按功能命中当前真源、代码目录、改前读包和测试入口
 
 ## chat / frontdoor / console 产品面
 
-- 用户价值：让长任务先协商、再后台启动，并在产品面以自然语言 `task_summary + latest_turn_receipt + harness` 稳定查询与展示
+- 用户价值：让 chat/frontdoor 在一次前门编译里同时决定会话续接、模式、前门能力和 CLI lane；长任务先协商、再后台启动，并在产品面以自然语言 `task_summary + latest_turn_receipt + harness` 稳定查询与展示
 - 主层级：`Product Surface（产品表面层）`
 - 次层级：`Domain & Control Plane（领域与控制平面）`
 - 关键代码目录：`butler_main/chat/`、`butler_main/console/`、`butler_main/orchestrator/interfaces/`
@@ -16,6 +16,7 @@
   - [0329 后台任务双状态与前门弱化重构](../daily-upgrade/0329/03_后台任务双状态与前门弱化重构.md)
   - [0329 Chat 显式模式与 Project 循环收口](../daily-upgrade/0329/02_Chat显式模式与Project循环收口.md)
   - [0330 Chat 默认厚 Prompt 分层治理真源](../daily-upgrade/0330/04_Chat默认厚Prompt分层治理真源.md)
+  - [0402 Chat Router 选会话能力升级回写](../daily-upgrade/0402/01_chat_router选会话能力升级回写.md)
   - [0331 后台主线 Campaign 宏账本与 Agent 可重入内环实施回写（历史文件名保留草稿）](../daily-upgrade/0331/03_后台主线控制面瘦身与Agent内环提权草稿计划.md)
   - [Visual Console API Contract v1](../runtime/Visual_Console_API_Contract_v1.md)
 - 改前读包：`frontdoor`
@@ -24,6 +25,7 @@
   - `test_chat_long_task_frontdoor_regression.py`
   - `test_talk_mainline_service.py`
   - `test_chat_router_frontdoor.py`
+  - `test_chat_engine_model_controls.py`
   - `test_console_server.py`
 - 历史别名：`heartbeat 后台入口`、`旧长任务 chat 接管`
 
@@ -128,12 +130,15 @@
 
 ## foreground butler-flow CLI / launcher / legacy aliases
 
-- 用户价值：让用户在本地前台直接用 `butler-flow` 以 `new/resume/exec` 跑可恢复的 Codex workflow；`new` 必经 setup picker；默认 home 是 `workspace`；单 flow 页现役为 `flow 主要信息头 + supervisor 结构化流 + workflow 实时流 + inspector`；`simple` 单 session，`medium` 为 role-bound session；`/manage` 只管理 `builtin + template` shared assets，但现已升级为 transcript-first manage center，支持 `$asset` mention、manager staged lifecycle、shared asset bundle 与 source-asset materialization；当前纯文本交互固定为 `manage -> manager chat`、`flow -> supervisor queue`、`history -> reject`
+- 用户价值：让用户在本地前台直接用 `butler-flow` 以 `new/resume/exec` 跑可恢复的 Codex workflow；`new` 必经 setup picker；默认 home 是 `workspace`；单 flow 页现役为 `flow 主要信息头 + supervisor 结构化流 + workflow 实时流 + inspector`；`simple` 单 session，`medium` 为 role-bound session；当前 `execution_context` 只表达执行位置：`coding_flow=repo_bound`，其他 role pack 默认 `isolated`，隔离执行根落在 `~/.butler/codex_exec_roots/<workflow_id>/`；长流治理当前收口为实例级 `control_profile`，由 manager 设计默认值、supervisor 运行时可调并回写实例态；repo contract 改成显式绑定，不再把仓库根 `AGENTS.md` 当 ambient authority；`/manage` 只管理 `builtin + template` shared assets，但现已升级为 transcript-first manage center，支持 `$asset` mention、manager staged lifecycle、shared asset bundle 与 source-asset materialization；manager chat 当前还会持久化 `manage_session / draft / pending_action`，只在纯确认时提交，并通过 `draft_payload -> manage_flow()` 落盘；shared/instance static asset 当前补入 `supervisor_profile / run_brief / source_bindings`
 - 主层级：`L1 Agent Execution Runtime（Agent 执行运行时）`
 - 次层级：`L2 Durability Substrate（持久化基座）`
 - 关键代码目录：`butler_main/butler_flow/`、`butler_main/runtime_os/agent_runtime/`、`tools/butler-flow`、`butler_main/butler_cli.py`
 - 当前真源文档：
   - [当前系统基线](./00_current_baseline.md)
+  - [0403 当日总纲](../daily-upgrade/0403/00_当日总纲.md)
+  - [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](../daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
+  - [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](../daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
   - [系统分层与事件契约](../runtime/System_Layering_and_Event_Contracts.md)
   - [0401 当日总纲](../daily-upgrade/0401/00_当日总纲.md)
   - [0402 当日总纲](../daily-upgrade/0402/00_当日总纲.md)

@@ -73,9 +73,13 @@ def session_strategy_for_mode(execution_mode: str) -> str:
     return SESSION_STRATEGY_SHARED
 
 
-def default_execution_mode(cfg: dict[str, Any] | None) -> str:
+def default_execution_mode(cfg: dict[str, Any] | None, *, workflow_kind: str = "") -> str:
     settings = _role_runtime_settings(cfg)
-    return normalize_execution_mode(settings.get("execution_mode_default"))
+    configured = normalize_execution_mode(settings.get("execution_mode_default"))
+    normalized_kind = str(workflow_kind or "").strip()
+    if configured == EXECUTION_MODE_SIMPLE and normalized_kind in {PROJECT_LOOP_KIND, MANAGED_FLOW_KIND}:
+        return EXECUTION_MODE_MEDIUM
+    return configured
 
 
 def normalize_role_pack_id(raw: Any, *, workflow_kind: str = "") -> str:

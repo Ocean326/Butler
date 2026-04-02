@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from datetime import datetime
@@ -33,12 +34,14 @@ from .constants import (
     LAUNCH_MODE_FLOW,
     LAUNCH_MODE_SINGLE,
     SINGLE_GOAL_KIND,
+    normalize_execution_context,
 )
 from .display import FlowDisplay, JsonlFlowDisplay, RichFlowDisplay
 from .events import FlowLifecycleHook, FlowUiEvent, FlowUiEventCallback
 from .flow_catalog import builtin_flow_catalog, catalog_entry
 from .flow_definition import coerce_workflow_kind, first_phase_id, normalize_phase_plan, phase_ids, resolve_phase_plan
 from .manage_agent import (
+    normalize_manage_chat_draft_payload,
     normalize_manage_stage,
     normalize_role_guidance_payload,
     run_design_stage,
@@ -79,13 +82,26 @@ from .state import (
     legacy_flow_root,
     new_flow_id,
     new_flow_state,
+    normalize_control_profile_payload,
+    normalize_source_items,
+    normalize_supervisor_profile_payload,
     normalize_doctor_policy_payload,
     now_text,
+    read_manage_draft,
+    read_manage_pending_action,
+    read_manage_session,
     read_flow_state,
     read_json,
     resolve_flow_dir,
     safe_int,
     template_asset_root,
+    write_bundle_sources,
+    write_compiled_supervisor_knowledge,
+    write_manage_draft,
+    write_manage_pending_action,
+    write_manage_session,
+    append_manage_turn,
+    clear_manage_pending_action,
     write_json_atomic,
 )
 from .version import BUTLER_FLOW_VERSION
@@ -155,6 +171,7 @@ class FlowApp:
         return 1
 
     def _build_exec_receipt(self, *, flow_path: Path, flow_state: dict[str, Any], return_code: int) -> FlowExecReceiptV1:
+        last_codex_metadata = dict(dict(flow_state.get("last_codex_receipt") or {}).get("metadata") or {})
         return {
             "receipt_id": f"flow_exec_receipt_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid4().hex[:8]}",
             "kind": "flow_exec_receipt",
@@ -171,6 +188,8 @@ class FlowApp:
             "execution_mode": str(flow_state.get("execution_mode") or "").strip(),
             "session_strategy": str(flow_state.get("session_strategy") or "").strip(),
             "role_pack_id": str(flow_state.get("role_pack_id") or "").strip(),
+            "execution_context": str(flow_state.get("execution_context") or "").strip(),
+            "execution_workspace_root": str(last_codex_metadata.get("execution_workspace_root") or "").strip(),
             "attempt_count": safe_int(flow_state.get("attempt_count"), 0),
             "codex_session_id": str(flow_state.get("codex_session_id") or "").strip(),
             "summary": str(flow_state.get("last_completion_summary") or "").strip(),
@@ -310,6 +329,204 @@ class FlowApp:
         return manifest
 
     @staticmethod
+    def _contains_asset_token(text: str) -> bool:
+        return bool(re.search(r"(^|\s)\$?(?:template|builtin|instance):[A-Za-z0-9_.-]+", str(text or "")))
+
+    def _is_pure_manage_confirmation(self, instruction: str, *, pending_action: dict[str, Any] | None = None) -> bool:
+        if not dict(pending_action or {}):
+            return False
+        stripped = str(instruction or "").strip()
+        if not stripped or "\n" in stripped or len(stripped) > 24:
+            return False
+        if self._contains_asset_token(stripped):
+            return False
+        token = stripped.casefold()
+        return token in {
+            "confirm",
+            "confirmed",
+            "go ahead",
+            "proceed",
+            "yes",
+            "ok",
+            "okay",
+            "确认",
+            "同意",
+            "按这个",
+            "就这样",
+            "可以",
+            "可以了",
+            "继续",
+            "创建吧",
+            "好",
+            "行",
+        }
+
+    def _manage_draft_seed(
+        self,
+        *,
+        manage_target: str,
+        asset_kind: str,
+        flow_state: dict[str, Any] | None,
+        asset_definition: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        base = dict(asset_definition or flow_state or {})
+        seed = normalize_manage_chat_draft_payload(
+            {
+                "manage_target": manage_target,
+                "asset_kind": asset_kind,
+                "label": base.get("label"),
+                "description": base.get("description"),
+                "workflow_kind": base.get("workflow_kind"),
+                "goal": base.get("goal"),
+                "guard_condition": base.get("guard_condition"),
+                "phase_plan": base.get("phase_plan"),
+                "review_checklist": base.get("review_checklist"),
+                "role_guidance": base.get("role_guidance"),
+                "control_profile": base.get("control_profile"),
+                "doctor_policy": base.get("doctor_policy"),
+                "supervisor_profile": base.get("supervisor_profile"),
+                "run_brief": base.get("run_brief"),
+                "source_bindings": base.get("source_bindings") or base.get("source_items"),
+            }
+        )
+        if manage_target and not str(seed.get("manage_target") or "").strip():
+            seed["manage_target"] = manage_target
+        if asset_kind and not str(seed.get("asset_kind") or "").strip():
+            seed["asset_kind"] = asset_kind
+        return seed
+
+    def _merge_manage_chat_draft(
+        self,
+        *,
+        manage_target: str,
+        asset_kind: str,
+        current_draft: dict[str, Any] | None,
+        result_draft: dict[str, Any] | None,
+        flow_state: dict[str, Any] | None,
+        asset_definition: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        seed = self._manage_draft_seed(
+            manage_target=manage_target,
+            asset_kind=asset_kind,
+            flow_state=flow_state,
+            asset_definition=asset_definition,
+        )
+        merged = normalize_manage_chat_draft_payload(current_draft, current=seed)
+        merged = normalize_manage_chat_draft_payload(result_draft, current=merged)
+        if not str(merged.get("manage_target") or "").strip():
+            merged["manage_target"] = manage_target
+        if not str(merged.get("asset_kind") or "").strip():
+            merged["asset_kind"] = asset_kind or "instance"
+        return merged
+
+    @staticmethod
+    def _draft_summary(draft: dict[str, Any]) -> str:
+        payload = dict(draft or {})
+        target = str(payload.get("manage_target") or "").strip() or str(payload.get("asset_kind") or "instance").strip()
+        label = str(payload.get("label") or "").strip()
+        workflow_kind = str(payload.get("workflow_kind") or "").strip()
+        goal = str(payload.get("goal") or "").strip()
+        control_profile = dict(payload.get("control_profile") or {})
+        posture = str(dict(payload.get("supervisor_profile") or {}).get("archetype") or "").strip()
+        parts = [target]
+        if label:
+            parts.append(label)
+        if workflow_kind:
+            parts.append(workflow_kind)
+        if control_profile:
+            control_summary = "/".join(
+                token
+                for token in (
+                    str(control_profile.get("task_archetype") or "").strip(),
+                    str(control_profile.get("packet_size") or "").strip(),
+                    str(control_profile.get("evidence_level") or "").strip(),
+                )
+                if token
+            )
+            if control_summary:
+                parts.append(f"control={control_summary}")
+        if posture:
+            parts.append(f"supervisor={posture}")
+        summary = " · ".join(parts)
+        if goal:
+            summary = f"{summary}\n目标: {goal}"
+        return summary.strip()
+
+    def _build_manage_pending_action(
+        self,
+        *,
+        resolved_target: str,
+        result: dict[str, Any],
+        draft: dict[str, Any],
+        fallback_stage: str,
+    ) -> dict[str, Any]:
+        target = str(result.get("action_manage_target") or resolved_target or draft.get("manage_target") or "").strip()
+        return {
+            "manage_target": target,
+            "stage": str(result.get("action_stage") or fallback_stage or "commit").strip() or "commit",
+            "builtin_mode": str(result.get("action_builtin_mode") or draft.get("builtin_mode") or "").strip(),
+            "instruction": str(result.get("action_instruction") or result.get("summary") or "").strip(),
+            "draft": dict(draft or {}),
+            "draft_summary": self._draft_summary(draft),
+            "preview": str(result.get("pending_action_preview") or result.get("confirmation_prompt") or "").strip(),
+            "confirmation_scope": str(result.get("confirmation_scope") or "none").strip(),
+            "created_at": now_text(),
+            "status": "pending_confirmation",
+        }
+
+    def _canonical_manage_summary(self, *, asset_kind: str, asset_id: str, definition: dict[str, Any]) -> str:
+        workflow_kind = str(definition.get("workflow_kind") or "").strip() or "managed_flow"
+        goal = str(definition.get("goal") or "").strip()
+        target = f"{asset_kind}:{asset_id}"
+        summary = f"{target} {workflow_kind}"
+        if goal:
+            summary = f"{summary} · {goal}"
+        return summary
+
+    def _manage_result_from_draft(
+        self,
+        *,
+        draft_payload: dict[str, Any],
+        flow_state: dict[str, Any] | None,
+        asset_kind: str,
+        manage_target: str,
+        requested_goal: str,
+        requested_guard: str,
+        manage_stage: str,
+    ) -> dict[str, Any]:
+        draft = normalize_manage_chat_draft_payload(
+            draft_payload,
+            current=self._manage_draft_seed(
+                manage_target=manage_target,
+                asset_kind=asset_kind,
+                flow_state=flow_state,
+                asset_definition=None,
+            ),
+        )
+        result = {
+            "summary": str(draft.get("summary") or "").strip(),
+            "label": str(draft.get("label") or "").strip(),
+            "description": str(draft.get("description") or "").strip(),
+            "goal": str(draft.get("goal") or requested_goal or (flow_state or {}).get("goal") or "").strip(),
+            "guard_condition": str(draft.get("guard_condition") or requested_guard or (flow_state or {}).get("guard_condition") or "").strip(),
+            "workflow_kind": str(draft.get("workflow_kind") or (flow_state or {}).get("workflow_kind") or MANAGED_FLOW_KIND).strip(),
+            "asset_kind": str(draft.get("asset_kind") or asset_kind or "instance").strip(),
+            "mutation": "create" if str(manage_target or "").strip().endswith(":new") or str(manage_target or "").strip() == "new" else "update",
+            "phase_plan": list(draft.get("phase_plan") or (flow_state or {}).get("phase_plan") or []),
+            "review_checklist": list(draft.get("review_checklist") or []),
+            "role_guidance": dict(draft.get("role_guidance") or {}),
+            "control_profile": dict(draft.get("control_profile") or {}),
+            "doctor_policy": dict(draft.get("doctor_policy") or {}),
+            "supervisor_profile": dict(draft.get("supervisor_profile") or {}),
+            "run_brief": str(draft.get("run_brief") or "").strip(),
+            "source_bindings": list(draft.get("source_bindings") or []),
+            "manage_stage": manage_stage,
+        }
+        if not str(result["summary"] or "").strip():
+            result["summary"] = self._draft_summary(draft) or "managed flow updated"
+        return result
+
+    @staticmethod
     def _normalize_asset_definition(payload: dict[str, Any], *, asset_kind: str, asset_id: str) -> dict[str, Any]:
         raw = dict(payload or {})
         flow_id = str(raw.get("flow_id") or raw.get("definition_id") or asset_id).strip() or asset_id
@@ -327,8 +544,23 @@ class FlowApp:
                 "execution_mode": str(raw.get("execution_mode") or "").strip(),
                 "session_strategy": str(raw.get("session_strategy") or "").strip(),
                 "role_pack_id": str(raw.get("role_pack_id") or raw.get("default_role_pack") or "").strip(),
+                "execution_context": str(raw.get("execution_context") or "").strip(),
                 "launch_mode": str(raw.get("launch_mode") or "").strip(),
             }
+        normalized_role_pack_id = normalize_role_pack_id(
+            raw.get("role_pack_id") or raw.get("default_role_pack"),
+            workflow_kind=workflow_kind,
+        )
+        execution_context = normalize_execution_context(
+            raw.get("execution_context") or instance_defaults.get("execution_context"),
+            role_pack_id=normalized_role_pack_id,
+            workflow_kind=workflow_kind,
+        )
+        instance_defaults["execution_context"] = normalize_execution_context(
+            instance_defaults.get("execution_context"),
+            role_pack_id=str(instance_defaults.get("role_pack_id") or normalized_role_pack_id).strip(),
+            workflow_kind=workflow_kind,
+        )
         review_checklist = [
             str(item or "").strip()
             for item in list(raw.get("review_checklist") or [])
@@ -341,6 +573,22 @@ class FlowApp:
         doctor_policy = normalize_doctor_policy_payload(
             raw.get("doctor_policy"),
             current=dict(manager_handoff.get("doctor_policy") or {}),
+        )
+        control_profile = normalize_control_profile_payload(
+            raw.get("control_profile"),
+            current=dict(manager_handoff.get("control_profile") or {}),
+            workflow_kind=workflow_kind,
+            role_pack_id=normalized_role_pack_id,
+            execution_mode=str(raw.get("execution_mode") or instance_defaults.get("execution_mode") or "").strip(),
+            execution_context=execution_context,
+        )
+        supervisor_profile = normalize_supervisor_profile_payload(
+            raw.get("supervisor_profile"),
+            current=dict(manager_handoff.get("supervisor_profile") or {}),
+        )
+        run_brief = str(raw.get("run_brief") or manager_handoff.get("run_brief") or "").strip()
+        source_bindings = normalize_source_items(
+            raw.get("source_bindings") or raw.get("source_items") or [],
         )
         return {
             "flow_id": flow_id,
@@ -355,7 +603,7 @@ class FlowApp:
                 raw.get("phase_plan") if isinstance(raw.get("phase_plan"), list) else None,
                 workflow_kind=workflow_kind,
             ),
-            "default_role_pack": str(raw.get("default_role_pack") or raw.get("role_pack_id") or "coding_flow").strip() or "coding_flow",
+            "default_role_pack": str(raw.get("default_role_pack") or normalized_role_pack_id or "coding_flow").strip() or "coding_flow",
             "allowed_execution_modes": [
                 str(item or "").strip()
                 for item in list(raw.get("allowed_execution_modes") or [])
@@ -365,7 +613,8 @@ class FlowApp:
             "catalog_flow_id": str(raw.get("catalog_flow_id") or "").strip(),
             "execution_mode": str(raw.get("execution_mode") or "").strip(),
             "session_strategy": str(raw.get("session_strategy") or "").strip(),
-            "role_pack_id": str(raw.get("role_pack_id") or raw.get("default_role_pack") or "coding_flow").strip() or "coding_flow",
+            "role_pack_id": normalized_role_pack_id,
+            "execution_context": execution_context,
             "risk_level": str(raw.get("risk_level") or "normal").strip() or "normal",
             "autonomy_profile": str(raw.get("autonomy_profile") or "default").strip() or "default",
             "manager_handoff": manager_handoff,
@@ -374,7 +623,11 @@ class FlowApp:
             "instance_defaults": instance_defaults,
             "review_checklist": review_checklist,
             "role_guidance": role_guidance,
+            "control_profile": control_profile,
             "doctor_policy": doctor_policy,
+            "supervisor_profile": supervisor_profile,
+            "run_brief": run_brief,
+            "source_bindings": source_bindings,
             "bundle_manifest": bundle_manifest,
             "source_asset_key": str(raw.get("source_asset_key") or "").strip(),
             "source_asset_kind": str(raw.get("source_asset_kind") or "").strip(),
@@ -433,6 +686,9 @@ class FlowApp:
             "lineage": dict(definition.get("lineage") or {}),
             "review_checklist": list(definition.get("review_checklist") or []),
             "role_guidance": dict(definition.get("role_guidance") or {}),
+            "control_profile": dict(definition.get("control_profile") or {}),
+            "supervisor_profile": dict(definition.get("supervisor_profile") or {}),
+            "run_brief": str(definition.get("run_brief") or "").strip(),
             "bundle_manifest": dict(bundle_manifest),
             "definition": definition,
             "_sort_value": sort_value,
@@ -528,8 +784,10 @@ class FlowApp:
         return DEFAULT_EXECUTION_LEVEL
 
     def _non_tty_launch_defaults(self, args: argparse.Namespace) -> tuple[str, str, str]:
-        launch_mode = self._normalize_launch_mode(getattr(args, "launch_mode", ""))
-        execution_level = self._normalize_execution_level(getattr(args, "execution_level", ""))
+        raw_launch_mode = str(getattr(args, "launch_mode", "") or "").strip()
+        raw_execution_level = str(getattr(args, "execution_level", "") or "").strip()
+        launch_mode = self._normalize_launch_mode(raw_launch_mode)
+        execution_level = self._normalize_execution_level(raw_execution_level) if raw_execution_level else ""
         catalog_flow_id = str(getattr(args, "catalog_flow_id", "") or "").strip() or DEFAULT_CATALOG_FLOW_ID
         legacy_kind = str(getattr(args, "kind", "") or "").strip()
         if launch_mode == LAUNCH_MODE_FLOW:
@@ -626,7 +884,7 @@ class FlowApp:
         elif prefer_existing and str(flow_state.get("execution_mode") or "").strip():
             execution_mode = normalize_execution_mode(flow_state.get("execution_mode"))
         else:
-            execution_mode = default_execution_mode(cfg)
+            execution_mode = default_execution_mode(cfg, workflow_kind=workflow_kind)
         if raw_role_pack:
             role_pack_id = normalize_role_pack_id(raw_role_pack, workflow_kind=workflow_kind)
         elif prefer_existing and str(flow_state.get("role_pack_id") or "").strip():
@@ -639,6 +897,12 @@ class FlowApp:
             execution_mode=execution_mode,
         )
         flow_state["role_pack_id"] = role_pack_id
+        existing_execution_context = str(flow_state.get("execution_context") or "").strip()
+        flow_state["execution_context"] = normalize_execution_context(
+            "" if raw_role_pack or not existing_execution_context else existing_execution_context,
+            role_pack_id=role_pack_id,
+            workflow_kind=workflow_kind,
+        )
 
     def _save_design_session(self, flow_path: Path, payload: dict[str, Any]) -> None:
         write_json_atomic(design_session_path(flow_path), dict(payload or {}))
@@ -680,6 +944,11 @@ class FlowApp:
             flow_state["execution_mode"] = EXECUTION_MODE_SIMPLE
             flow_state["session_strategy"] = session_strategy_for_mode(EXECUTION_MODE_SIMPLE)
             flow_state["role_pack_id"] = normalize_role_pack_id(raw_role_pack or default_role_pack_id(cfg, workflow_kind=SINGLE_GOAL_KIND), workflow_kind=SINGLE_GOAL_KIND)
+            flow_state["execution_context"] = normalize_execution_context(
+                "",
+                role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+                workflow_kind=SINGLE_GOAL_KIND,
+            )
             return
         if execution_level == EXECUTION_LEVEL_HIGH:
             raise ValueError("execution level `high` is coming soon and cannot be launched yet")
@@ -763,13 +1032,18 @@ class FlowApp:
             workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
         )
         flow_state["execution_mode"] = (
-            default_execution_mode(cfg)
+            default_execution_mode(cfg, workflow_kind=str(flow_state.get("workflow_kind") or "").strip())
             if not execution_level
             else (EXECUTION_MODE_MEDIUM if execution_level == EXECUTION_LEVEL_MEDIUM else EXECUTION_MODE_SIMPLE)
         )
         flow_state["session_strategy"] = session_strategy_for_mode(str(flow_state.get("execution_mode") or "").strip())
         flow_state["role_pack_id"] = normalize_role_pack_id(
             raw_role_pack or default_role_pack_id(cfg, workflow_kind=str(flow_state.get("workflow_kind") or "").strip()),
+            workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+        )
+        flow_state["execution_context"] = normalize_execution_context(
+            "",
+            role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
             workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
         )
 
@@ -1103,8 +1377,27 @@ class FlowApp:
             flow_state.get("role_pack_id"),
             workflow_kind=workflow_kind,
         )
+        flow_state["execution_context"] = normalize_execution_context(
+            flow_state.get("execution_context"),
+            role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+            workflow_kind=workflow_kind,
+        )
+        flow_state["control_profile"] = normalize_control_profile_payload(
+            flow_state.get("control_profile"),
+            current={},
+            workflow_kind=workflow_kind,
+            role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+            execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+            execution_context=str(flow_state.get("execution_context") or "").strip(),
+        )
         flow_state["role_guidance"] = normalize_role_guidance_payload(flow_state.get("role_guidance") or {})
         flow_state["doctor_policy"] = normalize_doctor_policy_payload(flow_state.get("doctor_policy"), current={})
+        flow_state["supervisor_profile"] = normalize_supervisor_profile_payload(
+            flow_state.get("supervisor_profile"),
+            current={},
+        )
+        flow_state["run_brief"] = str(flow_state.get("run_brief") or "").strip()
+        flow_state["source_bindings"] = normalize_source_items(flow_state.get("source_bindings") or [])
         flow_state["flow_version"] = str(flow_state.get("flow_version") or BUTLER_FLOW_VERSION).strip() or BUTLER_FLOW_VERSION
         return flow_state
 
@@ -1112,6 +1405,8 @@ class FlowApp:
         payload = {
             "definition_id": str(flow_state.get("workflow_id") or flow_path.name).strip(),
             "flow_id": str(flow_state.get("workflow_id") or flow_path.name).strip(),
+            "label": str(flow_state.get("label") or flow_state.get("workflow_id") or flow_path.name).strip(),
+            "description": str(flow_state.get("description") or "").strip(),
             "workflow_kind": str(flow_state.get("workflow_kind") or "").strip(),
             "entry_mode": str(flow_state.get("entry_mode") or flow_state.get("workflow_kind") or "").strip(),
             "launch_mode": str(flow_state.get("launch_mode") or "").strip(),
@@ -1119,15 +1414,20 @@ class FlowApp:
             "execution_mode": str(flow_state.get("execution_mode") or "").strip(),
             "session_strategy": str(flow_state.get("session_strategy") or "").strip(),
             "role_pack_id": str(flow_state.get("role_pack_id") or "").strip(),
+            "execution_context": str(flow_state.get("execution_context") or "").strip(),
             "goal": str(flow_state.get("goal") or "").strip(),
             "guard_condition": str(flow_state.get("guard_condition") or "").strip(),
             "phase_plan": list(flow_state.get("phase_plan") or []),
             "risk_level": str(flow_state.get("risk_level") or "normal").strip() or "normal",
             "autonomy_profile": str(flow_state.get("autonomy_profile") or "default").strip() or "default",
             "manager_handoff": dict(flow_state.get("manage_handoff") or {}),
+            "control_profile": dict(flow_state.get("control_profile") or {}),
             "review_checklist": list(flow_state.get("review_checklist") or []),
             "role_guidance": dict(flow_state.get("role_guidance") or {}),
             "doctor_policy": dict(flow_state.get("doctor_policy") or {}),
+            "supervisor_profile": dict(flow_state.get("supervisor_profile") or {}),
+            "run_brief": str(flow_state.get("run_brief") or "").strip(),
+            "source_bindings": list(flow_state.get("source_bindings") or []),
             "bundle_manifest": dict(flow_state.get("bundle_manifest") or {}),
             "source_asset_key": str(flow_state.get("source_asset_key") or "").strip(),
             "source_asset_kind": str(flow_state.get("source_asset_kind") or "").strip(),
@@ -1153,6 +1453,19 @@ class FlowApp:
             asset_kind="instance",
             asset_id=workflow_id,
             definition={**flow_state, "bundle_manifest": bundle_manifest},
+        )
+        write_bundle_sources(
+            str(flow_state.get("workspace_root") or "").strip(),
+            asset_kind="instance",
+            asset_id=workflow_id,
+            items=list(flow_state.get("source_bindings") or []),
+            metadata={"source_asset_key": str(flow_state.get("source_asset_key") or "").strip()},
+        )
+        write_compiled_supervisor_knowledge(
+            str(flow_state.get("workspace_root") or "").strip(),
+            asset_kind="instance",
+            asset_id=workflow_id,
+            definition=flow_state,
         )
         flow_state["bundle_manifest"] = bundle_manifest
         flow_state["updated_at"] = now_text()
@@ -1206,12 +1519,17 @@ class FlowApp:
         flow_state["execution_mode"] = str(normalized.get("execution_mode") or flow_state.get("execution_mode") or "").strip()
         flow_state["session_strategy"] = str(normalized.get("session_strategy") or flow_state.get("session_strategy") or "").strip()
         flow_state["role_pack_id"] = str(normalized.get("role_pack_id") or flow_state.get("role_pack_id") or "").strip()
+        flow_state["execution_context"] = str(normalized.get("execution_context") or flow_state.get("execution_context") or "").strip()
         flow_state["risk_level"] = str(normalized.get("risk_level") or "normal").strip() or "normal"
         flow_state["autonomy_profile"] = str(normalized.get("autonomy_profile") or "default").strip() or "default"
         flow_state["manage_handoff"] = dict(normalized.get("manager_handoff") or {})
         flow_state["review_checklist"] = list(normalized.get("review_checklist") or [])
         flow_state["role_guidance"] = dict(normalized.get("role_guidance") or {})
+        flow_state["control_profile"] = dict(normalized.get("control_profile") or {})
         flow_state["doctor_policy"] = dict(normalized.get("doctor_policy") or {})
+        flow_state["supervisor_profile"] = dict(normalized.get("supervisor_profile") or {})
+        flow_state["run_brief"] = str(normalized.get("run_brief") or "").strip()
+        flow_state["source_bindings"] = list(normalized.get("source_bindings") or [])
         flow_state["bundle_manifest"] = dict(normalized.get("bundle_manifest") or {})
         flow_state["source_asset_key"] = str(normalized.get("source_asset_key") or "").strip()
         flow_state["source_asset_kind"] = str(normalized.get("source_asset_kind") or "").strip()
@@ -1257,6 +1575,23 @@ class FlowApp:
             result.get("doctor_policy"),
             current=dict(existing.get("doctor_policy") or dict(existing.get("manager_handoff") or {}).get("doctor_policy") or {}),
         )
+        supervisor_profile = normalize_supervisor_profile_payload(
+            result.get("supervisor_profile"),
+            current=dict(existing.get("supervisor_profile") or dict(existing.get("manager_handoff") or {}).get("supervisor_profile") or {}),
+        )
+        control_profile = normalize_control_profile_payload(
+            result.get("control_profile"),
+            current=dict(existing.get("control_profile") or dict(existing.get("manager_handoff") or {}).get("control_profile") or {}),
+            workflow_kind=str(result.get("workflow_kind") or existing.get("workflow_kind") or MANAGED_FLOW_KIND).strip(),
+            role_pack_id=str((flow_state or {}).get("role_pack_id") or existing.get("role_pack_id") or existing.get("default_role_pack") or "coding_flow").strip(),
+            execution_mode=str((flow_state or {}).get("execution_mode") or existing.get("execution_mode") or "").strip(),
+            execution_context=str((flow_state or {}).get("execution_context") or existing.get("execution_context") or "").strip(),
+        )
+        run_brief = str(result.get("run_brief") or existing.get("run_brief") or "").strip()
+        source_bindings = normalize_source_items(
+            result.get("source_bindings") or result.get("source_items") or [],
+            current=list(existing.get("source_bindings") or []),
+        )
         bundle_manifest = dict(existing.get("bundle_manifest") or {})
         if asset_kind in {"builtin", "template", "instance"}:
             bundle_manifest = self._runtime_bundle_manifest(
@@ -1271,6 +1606,7 @@ class FlowApp:
                 "execution_mode": str((flow_state or {}).get("execution_mode") or existing.get("execution_mode") or "").strip(),
                 "session_strategy": str((flow_state or {}).get("session_strategy") or existing.get("session_strategy") or "").strip(),
                 "role_pack_id": str((flow_state or {}).get("role_pack_id") or existing.get("role_pack_id") or existing.get("default_role_pack") or "").strip(),
+                "execution_context": str((flow_state or {}).get("execution_context") or existing.get("execution_context") or "").strip(),
                 "launch_mode": str(existing.get("launch_mode") or LAUNCH_MODE_FLOW).strip(),
             }
         payload = self._normalize_asset_definition(
@@ -1297,6 +1633,7 @@ class FlowApp:
                     "execution_mode": str((flow_state or {}).get("execution_mode") or existing.get("execution_mode") or "").strip(),
                     "session_strategy": str((flow_state or {}).get("session_strategy") or existing.get("session_strategy") or "").strip(),
                     "role_pack_id": str((flow_state or {}).get("role_pack_id") or existing.get("role_pack_id") or existing.get("default_role_pack") or "coding_flow").strip(),
+                    "execution_context": str((flow_state or {}).get("execution_context") or existing.get("execution_context") or "").strip(),
                     "risk_level": str(result.get("risk_level") or existing.get("risk_level") or "normal").strip() or "normal",
                     "autonomy_profile": str(result.get("autonomy_profile") or existing.get("autonomy_profile") or "default").strip() or "default",
                     "manager_handoff": dict(result or {}),
@@ -1305,7 +1642,11 @@ class FlowApp:
                     "instance_defaults": instance_defaults,
                     "review_checklist": review_checklist,
                     "role_guidance": role_guidance,
+                    "control_profile": control_profile,
                     "doctor_policy": doctor_policy,
+                    "supervisor_profile": supervisor_profile,
+                    "run_brief": run_brief,
+                    "source_bindings": source_bindings,
                     "bundle_manifest": bundle_manifest,
                     "source_asset_key": str((flow_state or {}).get("source_asset_key") or existing.get("source_asset_key") or "").strip(),
                     "source_asset_kind": str((flow_state or {}).get("source_asset_kind") or existing.get("source_asset_kind") or "").strip(),
@@ -1321,6 +1662,19 @@ class FlowApp:
         write_json_atomic(path, payload)
         if asset_kind in {"builtin", "template", "instance"}:
             ensure_asset_bundle_files(
+                workspace_root,
+                asset_kind=asset_kind,
+                asset_id=asset_id,
+                definition=payload,
+            )
+            write_bundle_sources(
+                workspace_root,
+                asset_kind=asset_kind,
+                asset_id=asset_id,
+                items=list(payload.get("source_bindings") or []),
+                metadata={"source_asset_key": str(payload.get("source_asset_key") or "").strip()},
+            )
+            write_compiled_supervisor_knowledge(
                 workspace_root,
                 asset_kind=asset_kind,
                 asset_id=asset_id,
@@ -1353,6 +1707,8 @@ class FlowApp:
         payload: dict[str, Any] = {}
         if action_name == "append_instruction":
             payload["instruction"] = str(self._input_fn("append instruction: ")).strip()
+        elif action_name == "bind_repo_contract":
+            payload["repo_contract_path"] = str(self._input_fn("repo contract path [AGENTS.md]: ")).strip() or "AGENTS.md"
         receipt = self._runtime.apply_operator_action(
             cfg=cfg,
             flow_dir_path=flow_path,
@@ -1373,7 +1729,7 @@ class FlowApp:
             "flow_root": str(build_flow_root(workspace_root)),
             "codex_available": bool(cli_provider_available("codex", cfg)),
             "cursor_available": bool(cli_provider_available("cursor", cfg)),
-            "execution_mode_default": default_execution_mode(cfg),
+            "execution_mode_default": default_execution_mode(cfg, workflow_kind=PROJECT_LOOP_KIND),
             "role_pack_default": default_role_pack_id(cfg),
             "flow_codex_disabled_mcp_servers": disabled,
             "timeouts": {
@@ -1526,7 +1882,7 @@ class FlowApp:
                         launch_mode=DEFAULT_LAUNCH_MODE,
                         execution_level=DEFAULT_EXECUTION_LEVEL,
                         catalog_flow_id=DEFAULT_CATALOG_FLOW_ID,
-                        execution_mode=default_execution_mode(cfg),
+                        execution_mode=default_execution_mode(cfg, workflow_kind=PROJECT_LOOP_KIND),
                         role_pack=default_role_pack_id(cfg, workflow_kind=PROJECT_LOOP_KIND),
                         goal="",
                         guard_condition="",
@@ -1546,7 +1902,7 @@ class FlowApp:
                     launch_mode=DEFAULT_LAUNCH_MODE,
                     execution_level=DEFAULT_EXECUTION_LEVEL,
                     catalog_flow_id=DEFAULT_CATALOG_FLOW_ID,
-                    execution_mode=default_execution_mode(cfg),
+                    execution_mode=default_execution_mode(cfg, workflow_kind=PROJECT_LOOP_KIND),
                     role_pack=default_role_pack_id(cfg, workflow_kind=PROJECT_LOOP_KIND),
                     goal="",
                     guard_condition="",
@@ -1804,6 +2160,14 @@ class FlowApp:
         requested_goal = str(getattr(args, "goal", "") or "").strip()
         requested_guard = str(getattr(args, "guard_condition", "") or "").strip()
         requested_instruction = str(getattr(args, "instruction", "") or "").strip()
+        raw_draft_payload = getattr(args, "draft_payload", None)
+        if isinstance(raw_draft_payload, str):
+            try:
+                draft_payload = dict(json.loads(raw_draft_payload))
+            except Exception:
+                draft_payload = {}
+        else:
+            draft_payload = dict(raw_draft_payload or {}) if isinstance(raw_draft_payload, dict) else {}
 
         if manage_target == "last":
             manage_target = self._manage_target_key("instance", self._resolve_recent_flow_id(workspace_root=workspace_root))
@@ -1919,18 +2283,29 @@ class FlowApp:
         if builtin_source_key and not lineage.get("cloned_from_asset_key"):
             lineage["source_asset_key"] = builtin_source_key
 
-        result = run_manage_agent(
-            cfg=cfg,
-            workspace_root=workspace_root,
-            run_prompt_receipt_fn=self._run_prompt_receipt_fn,
-            flow_state=flow_state,
-            manage_target=manage_target,
-            asset_kind=asset_kind,
-            goal=requested_goal or str(flow_state.get("goal") or "").strip(),
-            guard_condition=requested_guard or str(flow_state.get("guard_condition") or "").strip(),
-            instruction=requested_instruction,
-            stage=manage_stage,
-        )
+        if draft_payload:
+            result = self._manage_result_from_draft(
+                draft_payload=draft_payload,
+                flow_state=flow_state,
+                asset_kind=asset_kind,
+                manage_target=manage_target,
+                requested_goal=requested_goal,
+                requested_guard=requested_guard,
+                manage_stage=manage_stage,
+            )
+        else:
+            result = run_manage_agent(
+                cfg=cfg,
+                workspace_root=workspace_root,
+                run_prompt_receipt_fn=self._run_prompt_receipt_fn,
+                flow_state=flow_state,
+                manage_target=manage_target,
+                asset_kind=asset_kind,
+                goal=requested_goal or str(flow_state.get("goal") or "").strip(),
+                guard_condition=requested_guard or str(flow_state.get("guard_condition") or "").strip(),
+                instruction=requested_instruction,
+                stage=manage_stage,
+            )
         if asset_kind == "template" and creating_new_asset:
             asset_id = self._next_readable_asset_id(
                 workspace_root=workspace_root,
@@ -1946,6 +2321,8 @@ class FlowApp:
 
         flow_state["workflow_id"] = asset_id
         flow_state["flow_id"] = asset_id
+        flow_state["label"] = str(result.get("label") or flow_state.get("label") or asset_id).strip() or asset_id
+        flow_state["description"] = str(result.get("description") or flow_state.get("description") or "").strip()
         flow_state["workflow_kind"] = str(result.get("workflow_kind") or MANAGED_FLOW_KIND).strip()
         flow_state["goal"] = str(result.get("goal") or flow_state.get("goal") or "").strip()
         flow_state["guard_condition"] = str(result.get("guard_condition") or flow_state.get("guard_condition") or "").strip()
@@ -1955,6 +2332,18 @@ class FlowApp:
         flow_state["manage_handoff"] = dict(result or {})
         flow_state["review_checklist"] = list(result.get("review_checklist") or flow_state.get("review_checklist") or [])
         flow_state["role_guidance"] = dict(result.get("role_guidance") or flow_state.get("role_guidance") or {})
+        flow_state["control_profile"] = normalize_control_profile_payload(
+            result.get("control_profile"),
+            current=dict(flow_state.get("control_profile") or {}),
+            workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
+            role_pack_id=str(flow_state.get("role_pack_id") or "").strip(),
+            execution_mode=str(flow_state.get("execution_mode") or "").strip(),
+            execution_context=str(flow_state.get("execution_context") or "").strip(),
+        )
+        flow_state["doctor_policy"] = dict(result.get("doctor_policy") or flow_state.get("doctor_policy") or {})
+        flow_state["supervisor_profile"] = dict(result.get("supervisor_profile") or flow_state.get("supervisor_profile") or {})
+        flow_state["run_brief"] = str(result.get("run_brief") or flow_state.get("run_brief") or "").strip()
+        flow_state["source_bindings"] = list(result.get("source_bindings") or flow_state.get("source_bindings") or [])
         flow_state["bundle_manifest"] = dict(result.get("bundle_manifest") or flow_state.get("bundle_manifest") or {})
         flow_state["entry_mode"] = "manage"
         flow_state["launch_mode"] = LAUNCH_MODE_FLOW
@@ -1971,7 +2360,6 @@ class FlowApp:
             if str(flow_state.get("status") or "").strip() not in {"running", "completed"}:
                 flow_state["status"] = "pending"
             self._save_flow_state(flow_path, flow_state)
-            self._emit_manage_handoff_ready(flow_path=flow_path, flow_state=flow_state, payload=dict(flow_state.get("manage_handoff") or {}))
             asset_path, asset_definition = self._save_managed_asset_definition(
                 workspace_root=workspace_root,
                 asset_kind=asset_kind,
@@ -1994,6 +2382,15 @@ class FlowApp:
                 asset_state=asset_state,
             )
 
+        summary = self._canonical_manage_summary(asset_kind=asset_kind, asset_id=asset_id, definition=asset_definition)
+        canonical_manage_handoff = dict(result or {})
+        canonical_manage_handoff["summary"] = summary
+        asset_definition["manager_handoff"] = canonical_manage_handoff
+        write_json_atomic(asset_path, asset_definition)
+        if asset_kind == "instance":
+            flow_state["manage_handoff"] = canonical_manage_handoff
+            self._save_flow_state(flow_path, flow_state)
+            self._emit_manage_handoff_ready(flow_path=flow_path, flow_state=flow_state, payload=canonical_manage_handoff)
         self._append_manage_audit(
             workspace_root=workspace_root,
             asset_kind=asset_kind,
@@ -2018,8 +2415,9 @@ class FlowApp:
             "guard_condition": str(result.get("guard_condition") or flow_state.get("guard_condition") or "").strip(),
             "manage_stage": manage_stage,
             "builtin_mode": builtin_mode,
-            "manage_handoff": dict(result or {}),
+            "manage_handoff": canonical_manage_handoff,
             "flow_definition": asset_definition,
+            "summary": summary,
         }
         if bool(getattr(args, "json", False)):
             self._display.write_json(payload)
@@ -2037,6 +2435,9 @@ class FlowApp:
         requested_manage = str(getattr(args, "manage", "") or "").strip()
         requested_instruction = str(getattr(args, "instruction", "") or "").strip()
         manager_session_id = str(getattr(args, "manager_session_id", "") or "").strip()
+        persisted_session = read_manage_session(workspace_root, manager_session_id) if manager_session_id else {}
+        persisted_draft = read_manage_draft(workspace_root, manager_session_id) if manager_session_id else {}
+        persisted_pending_action = read_manage_pending_action(workspace_root, manager_session_id) if manager_session_id else {}
         manage_target = requested_manage
         asset_kind = ""
         asset_id = ""
@@ -2045,6 +2446,13 @@ class FlowApp:
 
         if manage_target == "last":
             manage_target = self._manage_target_key("instance", self._resolve_recent_flow_id(workspace_root=workspace_root))
+        if not manage_target:
+            manage_target = str(
+                persisted_pending_action.get("manage_target")
+                or persisted_session.get("active_manage_target")
+                or persisted_draft.get("manage_target")
+                or ""
+            ).strip()
 
         if manage_target:
             asset_kind, asset_id = self._parse_manage_target(manage_target)
@@ -2104,26 +2512,126 @@ class FlowApp:
             flow_state=flow_state or None,
             asset_definition=asset_definition or None,
             asset_rows=asset_rows,
+            manager_session=persisted_session or None,
+            current_draft=persisted_draft or None,
+            pending_action=persisted_pending_action or None,
             manager_session_id=manager_session_id,
         )
+        resolved_session_id = str(result.get("manager_session_id") or manager_session_id).strip()
+        resolved_manage_target = str(
+            result.get("manage_target")
+            or manage_target
+            or persisted_pending_action.get("manage_target")
+            or persisted_session.get("active_manage_target")
+            or ""
+        ).strip()
+        resolved_asset_kind, resolved_asset_id = self._parse_manage_target(resolved_manage_target) if resolved_manage_target else (asset_kind, asset_id)
+        merged_draft = self._merge_manage_chat_draft(
+            manage_target=resolved_manage_target,
+            asset_kind=resolved_asset_kind or asset_kind or "instance",
+            current_draft=persisted_draft or dict(persisted_pending_action.get("draft") or {}),
+            result_draft=result.get("draft"),
+            flow_state=flow_state or None,
+            asset_definition=asset_definition or None,
+        )
+        pending_action = dict(persisted_pending_action or {})
+        pure_confirm = self._is_pure_manage_confirmation(requested_instruction, pending_action=pending_action)
+        action = "none"
+        action_ready = False
+        action_manage_target = ""
+        action_instruction = ""
+        action_stage = ""
+        action_builtin_mode = ""
+        action_draft: dict[str, Any] = {}
+        pending_action_preview = str(result.get("pending_action_preview") or "").strip()
+        if pure_confirm and pending_action:
+            action = "manage_flow"
+            action_ready = True
+            action_manage_target = str(pending_action.get("manage_target") or "").strip()
+            action_instruction = str(pending_action.get("instruction") or result.get("summary") or "").strip()
+            action_stage = str(pending_action.get("stage") or "commit").strip()
+            action_builtin_mode = str(pending_action.get("builtin_mode") or "").strip()
+            action_draft = dict(pending_action.get("draft") or merged_draft)
+            pending_action_preview = str(pending_action.get("preview") or pending_action.get("draft_summary") or "").strip()
+        else:
+            candidate_pending_action: dict[str, Any] = {}
+            candidate_target = str(result.get("action_manage_target") or resolved_manage_target or merged_draft.get("manage_target") or "").strip()
+            if str(result.get("action") or "").strip().lower() == "manage_flow" and candidate_target:
+                merged_draft["manage_target"] = candidate_target
+                candidate_pending_action = self._build_manage_pending_action(
+                    resolved_target=candidate_target,
+                    result=result,
+                    draft=merged_draft,
+                    fallback_stage=str(result.get("manager_stage") or "commit").strip(),
+                )
+            if candidate_pending_action:
+                pending_action = candidate_pending_action
+                pending_action_preview = str(
+                    pending_action.get("preview") or pending_action.get("draft_summary") or pending_action_preview
+                ).strip()
+            elif requested_instruction.strip():
+                pending_action = {}
+        if resolved_session_id:
+            write_manage_session(
+                workspace_root,
+                resolved_session_id,
+                {
+                    "manager_session_id": resolved_session_id,
+                    "active_manage_target": resolved_manage_target,
+                    "manager_stage": str(result.get("manager_stage") or "").strip(),
+                    "confirmation_scope": str(result.get("confirmation_scope") or "").strip(),
+                    "updated_at": now_text(),
+                },
+            )
+            write_manage_draft(workspace_root, resolved_session_id, merged_draft)
+            if pending_action:
+                write_manage_pending_action(workspace_root, resolved_session_id, pending_action)
+            else:
+                clear_manage_pending_action(workspace_root, resolved_session_id)
+            append_manage_turn(
+                workspace_root,
+                resolved_session_id,
+                {
+                    "created_at": now_text(),
+                    "manage_target": resolved_manage_target,
+                    "instruction": requested_instruction,
+                    "response": str(result.get("response") or "").strip(),
+                    "manager_stage": str(result.get("manager_stage") or "").strip(),
+                    "draft": merged_draft,
+                    "pending_action": pending_action,
+                    "action_ready": action_ready,
+                },
+            )
         payload = {
             "version": BUTLER_FLOW_VERSION,
             "config_path": config_path,
-            "manage_target": manage_target,
-            "asset_kind": asset_kind,
-            "asset_id": asset_id,
+            "manage_target": resolved_manage_target,
+            "asset_kind": resolved_asset_kind or asset_kind,
+            "asset_id": resolved_asset_id or asset_id,
             "response": str(result.get("response") or "").strip(),
             "summary": str(result.get("summary") or "").strip(),
+            "manager_stage": str(result.get("manager_stage") or "").strip(),
+            "active_skill": str(result.get("active_skill") or "").strip(),
+            "confirmation_scope": str(result.get("confirmation_scope") or "").strip(),
+            "confirmation_prompt": str(result.get("confirmation_prompt") or "").strip(),
             "suggested_next_action": str(result.get("suggested_next_action") or "").strip(),
+            "reuse_decision": str(result.get("reuse_decision") or "").strip(),
             "should_edit_asset": bool(result.get("should_edit_asset")),
             "edit_hint": str(result.get("edit_hint") or "").strip(),
-            "action": str(result.get("action") or "none").strip(),
-            "action_ready": bool(result.get("action_ready")),
-            "action_manage_target": str(result.get("action_manage_target") or "").strip(),
-            "action_instruction": str(result.get("action_instruction") or "").strip(),
-            "action_stage": str(result.get("action_stage") or "").strip(),
-            "action_builtin_mode": str(result.get("action_builtin_mode") or "").strip(),
-            "manager_session_id": str(result.get("manager_session_id") or manager_session_id).strip(),
+            "draft": merged_draft,
+            "draft_summary": self._draft_summary(merged_draft),
+            "pending_action_preview": pending_action_preview,
+            "supervisor_profile_preview": str(result.get("supervisor_profile_preview") or "").strip(),
+            "action": action,
+            "action_ready": action_ready,
+            "action_manage_target": action_manage_target,
+            "action_instruction": action_instruction,
+            "action_stage": action_stage,
+            "action_builtin_mode": action_builtin_mode,
+            "action_draft": action_draft,
+            "action_goal": str(dict(action_draft or merged_draft).get("goal") or "").strip(),
+            "action_guard_condition": str(dict(action_draft or merged_draft).get("guard_condition") or "").strip(),
+            "manager_session_id": resolved_session_id,
         }
         if bool(getattr(args, "json", False)):
             self._display.write_json(payload)
@@ -2142,7 +2650,10 @@ class FlowApp:
         if not flow_state:
             raise FileNotFoundError(f"flow not found: {flow_id}")
         action_name = str(getattr(args, "type", "") or "").strip()
-        payload = {"instruction": str(getattr(args, "instruction", "") or "").strip()}
+        payload = {
+            "instruction": str(getattr(args, "instruction", "") or "").strip(),
+            "repo_contract_path": str(getattr(args, "repo_contract_path", "") or "").strip(),
+        }
         receipt = self._runtime.apply_operator_action(
             cfg=cfg,
             flow_dir_path=flow_path,

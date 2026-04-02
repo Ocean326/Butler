@@ -208,10 +208,23 @@ def build_arg_parser() -> argparse.ArgumentParser:
     action_parser.add_argument(
         "--type",
         required=True,
-        choices=("pause", "resume", "append_instruction", "retry_current_phase", "abort"),
+        choices=(
+            "pause",
+            "resume",
+            "append_instruction",
+            "retry_current_phase",
+            "shrink_packet",
+            "broaden_packet",
+            "force_gate",
+            "force_doctor",
+            "bind_repo_contract",
+            "unbind_repo_contract",
+            "abort",
+        ),
         help="Operator action type",
     )
     action_parser.add_argument("--instruction", help="Instruction payload for append_instruction")
+    action_parser.add_argument("--repo-contract-path", help="Explicit repo contract path for bind_repo_contract")
 
     return parser
 

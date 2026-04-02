@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
@@ -153,30 +154,36 @@ class AgentsOsWave1Tests(unittest.TestCase):
                 },
             }
         }
-        with mock.patch.object(
-            cli_runner,
-            "_run_codex",
-            return_value={
-                "provider": "codex",
-                "output": "ok",
-                "ok": True,
-                "returncode": 0,
-                "usage": {"input_tokens": 11, "output_tokens": 7},
-                "external_session": {"provider": "codex", "thread_id": "thread-1", "resume_capable": True},
-                "command_events": [{"kind": "command", "text": "pytest -q", "status": "completed"}],
-            },
-        ), mock.patch.object(cli_runner, "cli_provider_available", return_value=True):
-            receipt = cli_runner.run_prompt_receipt(
-                "hello",
-                "c:/workspace",
-                30,
-                cfg,
-                {"cli": "codex", "_disable_runtime_fallback": True},
-            )
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = os.path.join(tmp, "workspace")
+            os.makedirs(workspace, exist_ok=True)
+            with mock.patch.object(
+                cli_runner,
+                "_run_codex",
+                return_value={
+                    "provider": "codex",
+                    "output": "ok",
+                    "ok": True,
+                    "returncode": 0,
+                    "usage": {"input_tokens": 11, "output_tokens": 7},
+                    "external_session": {"provider": "codex", "thread_id": "thread-1", "resume_capable": True},
+                    "command_events": [{"kind": "command", "text": "pytest -q", "status": "completed"}],
+                },
+            ), mock.patch.object(cli_runner, "cli_provider_available", return_value=True):
+                receipt = cli_runner.run_prompt_receipt(
+                    "hello",
+                    workspace,
+                    30,
+                    cfg,
+                    {"cli": "codex", "_disable_runtime_fallback": True},
+                )
         self.assertEqual(receipt.metadata["provider_returncode"], 0)
         self.assertEqual(receipt.metadata["external_session"]["thread_id"], "thread-1")
         self.assertEqual(receipt.metadata["cli_events"]["usage"]["input_tokens"], 11)
         self.assertEqual(receipt.metadata["cli_events"]["command_events"][0]["text"], "pytest -q")
+        self.assertEqual(receipt.metadata["requested_workspace"], os.path.abspath(workspace))
+        self.assertEqual(receipt.metadata["execution_workspace_root"], os.path.abspath(workspace))
+        self.assertEqual(receipt.metadata["execution_context"], "repo_bound")
 
     def test_run_prompt_receipt_preserves_durable_resume_metadata(self) -> None:
         cfg = {
@@ -216,6 +223,48 @@ class AgentsOsWave1Tests(unittest.TestCase):
         self.assertEqual(session["thread_id"], "thread-9")
         self.assertEqual(session["durable_resume_id"], "resume-9")
         self.assertNotEqual(session["thread_id"], session["durable_resume_id"])
+
+    def test_run_prompt_receipt_uses_isolated_execution_workspace_for_codex(self) -> None:
+        cfg = {
+            "cli_runtime": {
+                "active": "codex",
+                "providers": {
+                    "cursor": {"enabled": False},
+                    "codex": {"enabled": True},
+                    "claude": {"enabled": False},
+                },
+            }
+        }
+        requested_workspace = os.path.join(tempfile.gettempdir(), "butler_requested_workspace")
+        os.makedirs(requested_workspace, exist_ok=True)
+        with mock.patch.object(
+            cli_runner,
+            "_run_codex",
+            return_value={
+                "provider": "codex",
+                "output": "ok",
+                "ok": True,
+                "returncode": 0,
+            },
+        ) as mocked_codex, mock.patch.object(cli_runner, "cli_provider_available", return_value=True):
+            receipt = cli_runner.run_prompt_receipt(
+                "hello",
+                requested_workspace,
+                30,
+                cfg,
+                {
+                    "cli": "codex",
+                    "_disable_runtime_fallback": True,
+                    "execution_context": "isolated",
+                    "workflow_id": "flow-isolated",
+                },
+            )
+        execution_workspace = mocked_codex.call_args.args[1]
+        self.assertEqual(receipt.metadata["requested_workspace"], os.path.abspath(requested_workspace))
+        self.assertEqual(receipt.metadata["execution_context"], "isolated")
+        self.assertEqual(receipt.metadata["execution_workspace_root"], execution_workspace)
+        self.assertNotEqual(execution_workspace, os.path.abspath(requested_workspace))
+        self.assertTrue(execution_workspace.endswith(os.path.join("codex_exec_roots", "flow-isolated")))
 
     def test_file_runtime_state_store_smoke(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

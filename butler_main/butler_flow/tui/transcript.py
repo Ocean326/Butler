@@ -20,6 +20,8 @@ GROUP_TITLE_STYLE = f"dim {PALETTE_BLUE}"
 BODY_STYLE_BY_TONE = {
     "default": DEFAULT_BODY_STYLE,
     "system": PALETTE_BLUE,
+    "input": PALETTE_BLUE_SOFT,
+    "output": DEFAULT_BODY_STYLE,
     "workflow": DEFAULT_BODY_STYLE,
     "raw_output": DEFAULT_BODY_STYLE,
     "raw_meta": PALETTE_BLUE_SOFT,
