@@ -722,8 +722,8 @@ class ButlerFlowTuiApp(App[int]):
         payload = self._controller.status_payload(config=self._current_config, flow_id=target)
         return str(
             payload.get("effective_status")
-            or dict(payload.get("status") or {}).get("effective_status")
-            or dict(payload.get("status") or {}).get("status")
+            or _mapping_payload(payload.get("status")).get("effective_status")
+            or _mapping_payload(payload.get("status")).get("status")
             or payload.get("status")
             or ""
         ).strip()
@@ -910,7 +910,7 @@ class ButlerFlowTuiApp(App[int]):
         header = dict(supervisor_view.get("header") or {})
         pointers = dict(supervisor_view.get("pointers") or {})
         inspector = dict(payload.get("inspector") or {})
-        roles = dict(inspector.get("roles") or {})
+        roles = _mapping_payload(inspector.get("roles"))
         latest_handoff = dict(pointers.get("latest_handoff_summary") or roles.get("latest_handoff_summary") or {})
         lines = [
             f"flow_id={header.get('flow_id') or '-'}",
@@ -972,8 +972,8 @@ class ButlerFlowTuiApp(App[int]):
         if not self._inspector_open:
             return "Inspector", "closed"
         inspector = dict(payload.get("inspector") or {})
-        runtime = dict(inspector.get("runtime") or {})
-        roles = dict(inspector.get("roles") or {})
+        runtime = _mapping_payload(inspector.get("runtime"))
+        roles = _mapping_payload(inspector.get("roles"))
         latest_handoff = dict(roles.get("latest_handoff_summary") or {})
         runtime_plan = dict(runtime.get("runtime_plan") or {})
         strategy_trace = list(runtime.get("strategy_trace") or [])
@@ -1071,7 +1071,7 @@ class ButlerFlowTuiApp(App[int]):
         return self._controller.detail_payload(config=self._current_config, flow_id=target)
 
     def _render_history_detail(self, *, row: dict[str, Any], payload: dict[str, Any]) -> str:
-        status = dict(payload.get("status") or {})
+        status = _mapping_payload(payload.get("status"))
         flow_state = dict(status.get("flow_state") or {})
         flow_id = str(row.get("flow_id") or "").strip() or "-"
         effective_status = status.get("effective_status") or flow_state.get("status") or row.get("effective_status") or row.get("status") or "-"
@@ -1079,7 +1079,7 @@ class ButlerFlowTuiApp(App[int]):
         workflow_kind = flow_state.get("workflow_kind") or row.get("flow_kind") or "-"
         latest_judge = dict(flow_state.get("latest_judge_decision") or {})
         latest_operator = dict(flow_state.get("last_operator_action") or {})
-        role_payload = dict(payload.get("roles") or {})
+        role_payload = _mapping_payload(payload.get("roles"))
         handoffs = list(role_payload.get("handoffs") or [])
         latest_handoff = dict(payload.get("multi_agent", {}).get("latest_handoff_summary") or self._latest_handoff_summary(handoffs))
         payload_for_steps = _mapping_payload(payload)
@@ -2112,7 +2112,7 @@ class ButlerFlowTuiApp(App[int]):
 
     def _entry_role_context(self, entry: dict[str, Any]) -> tuple[str, str]:
         payload = _mapping_payload(entry.get("payload"))
-        decision = dict(payload.get("decision") or {})
+        decision = _mapping_payload(payload.get("decision"))
         role_id = str(
             payload.get("role_id")
             or payload.get("producer_role_id")

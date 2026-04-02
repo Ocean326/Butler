@@ -1258,6 +1258,60 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 transcript = _transcript_text(app)
                 self.assertIn("follow pending instruction from previous judge/recovery via role=implementer", transcript)
 
+    async def test_supervisor_event_with_string_decision_field_does_not_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            state = new_flow_state(
+                workflow_id="flow_supervisor_string_decision",
+                workflow_kind="project_loop",
+                workspace_root=str(root),
+                goal="alpha",
+                guard_condition="done",
+                max_attempts=4,
+                max_phase_attempts=2,
+            )
+            flow_path = flow_dir(root, "flow_supervisor_string_decision")
+            write_json_atomic(flow_path / "workflow_state.json", state)
+            _write_jsonl(
+                flow_events_path(flow_path),
+                [
+                    {
+                        "event_id": "evt_sup_string_decision",
+                        "kind": "supervisor_decided",
+                        "lane": "supervisor",
+                        "family": "decision",
+                        "flow_id": "flow_supervisor_string_decision",
+                        "phase": "synthesize",
+                        "attempt_no": 32,
+                        "created_at": "2026-04-02 10:00:00",
+                        "title": "",
+                        "message": "follow pending instruction from previous judge/recovery via role=implementer",
+                        "raw_text": "",
+                        "payload": {
+                            "decision": "execute",
+                            "active_role_id": "implementer",
+                            "next_action": "run_executor",
+                        },
+                    }
+                ],
+            )
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test(size=(120, 28)) as pilot:
+                await pilot.pause(0.2)
+                app._focus_flow("flow_supervisor_string_decision")
+                app._back_to_flow()
+                await pilot.pause(0.1)
+
+                transcript = _transcript_text(app)
+                self.assertIn("follow pending instruction from previous", transcript)
+                self.assertIn("judge/recovery via role=implementer", transcript)
+                self.assertIn("active_role=implementer", transcript)
+
     async def test_history_plain_text_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
