@@ -1,0 +1,15 @@
+[
+  {
+    "memory_id": "99ad8778-5c85-4b22-9a10-b8bbadd855aa",
+    "timestamp": "2026-03-26 03:12:33",
+    "topic": "请先运行命令 `pwd`，然后只告诉",
+    "summary": "用户：请先运行命令 `pwd`，然后只告诉我当前工作目录。；助手：`/home/ocean/Desktop/SuperButler`",
+    "user_prompt": "请先运行命令 `pwd`，然后只告诉我当前工作目录。",
+    "assistant_reply": "`/home/ocean/Desktop/SuperButler`",
+    "assistant_reply_visible": "`/home/ocean/Desktop/SuperButler`",
+    "assistant_reply_raw": "`/home/ocean/Desktop/SuperButler`",
+    "status": "completed",
+    "turn_seq": 1,
+    "session_scope_id": "cli:cli_session_25f3dc7e32"
+  }
+]

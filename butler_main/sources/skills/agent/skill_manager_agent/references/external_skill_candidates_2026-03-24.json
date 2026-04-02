@@ -1,0 +1,316 @@
+{
+  "generated_at": "2026-03-24",
+  "generated_by": "skill_manager_agent",
+  "purpose": "External upstream shortlist for Butler skill sourcing and skill-pool planning.",
+  "selection_policy": {
+    "goal": "Prefer mature, actively used upstreams that can be wrapped into Butler action skills or passive knowledge packs.",
+    "axes": [
+      "ecosystem maturity",
+      "official API availability",
+      "agent friendliness",
+      "forum or research signal density",
+      "implementation risk"
+    ],
+    "notes": [
+      "This file stores candidate upstreams, not installed Butler skills.",
+      "Popularity is judged primarily by ecosystem maturity and officialness because live GitHub metadata was partially unstable during collection.",
+      "Do not auto-expose imported skills to chat_default or codex_default without collection review."
+    ]
+  },
+  "candidates": [
+    {
+      "id": "trafilatura-web-extract",
+      "name": "Trafilatura",
+      "category": "general_information",
+      "priority": "P0",
+      "maturity": "high",
+      "upstream_type": "open_source_library",
+      "repo_url": "https://github.com/adbar/trafilatura",
+      "docs_url": "https://trafilatura.readthedocs.io/en/latest/",
+      "butler_skill_shape": "web article extraction, cleanup, metadata capture, source note generation",
+      "why_recommended": [
+        "Good fit for turning arbitrary pages into clean text for downstream summarization and archival.",
+        "Works well as a shared primitive under web-note, forum snapshot, and research ingestion skills."
+      ],
+      "risks": [
+        "Dynamic sites and login walls still need browser automation or a secondary fetch path.",
+        "Needs source attribution rules in Butler output."
+      ],
+      "suggested_collection_ids": [
+        "chat_content_share",
+        "codex_default"
+      ]
+    },
+    {
+      "id": "feedparser-rss-ingest",
+      "name": "feedparser",
+      "category": "general_information",
+      "priority": "P0",
+      "maturity": "high",
+      "upstream_type": "open_source_library",
+      "repo_url": "https://github.com/kurtmckee/feedparser",
+      "docs_url": "https://feedparser.readthedocs.io/en/latest/",
+      "butler_skill_shape": "RSS and Atom feed polling, digest generation, watchlist monitoring",
+      "why_recommended": [
+        "Low-friction way to cover blogs, changelogs, forums, and publication feeds with one abstraction.",
+        "Pairs naturally with automation-safe monitoring and periodic digests."
+      ],
+      "risks": [
+        "Only covers sources that expose feeds.",
+        "Needs deduplication and per-feed freshness logic."
+      ],
+      "suggested_collection_ids": [
+        "automation_safe",
+        "chat_content_share"
+      ]
+    },
+    {
+      "id": "reader-feed-workbench",
+      "name": "reader",
+      "category": "general_information",
+      "priority": "P1",
+      "maturity": "medium_high",
+      "upstream_type": "open_source_library",
+      "repo_url": "https://github.com/lemon24/reader",
+      "docs_url": "https://reader.readthedocs.io/",
+      "butler_skill_shape": "persistent feed workspace, read-state management, local feed review tool",
+      "why_recommended": [
+        "Stronger than raw feed parsing when Butler needs a durable watchlist or inbox model.",
+        "Can back a future research-monitor or forum-monitor workflow."
+      ],
+      "risks": [
+        "Heavier than feedparser for simple one-shot pulls.",
+        "Requires local state and lifecycle handling."
+      ],
+      "suggested_collection_ids": [
+        "automation_safe"
+      ]
+    },
+    {
+      "id": "praw-reddit-ingest",
+      "name": "PRAW",
+      "category": "forum_information",
+      "priority": "P0",
+      "maturity": "high",
+      "upstream_type": "open_source_library",
+      "repo_url": "https://github.com/praw-dev/praw",
+      "docs_url": "https://praw.readthedocs.io/en/stable/",
+      "butler_skill_shape": "Reddit thread search, subreddit watch, comment tree retrieval, discussion digest",
+      "why_recommended": [
+        "Most mature Python entrypoint for Reddit-based forum retrieval.",
+        "Strong fit for market sentiment, product feedback, and community monitoring."
+      ],
+      "risks": [
+        "Depends on Reddit API credentials and quota policy.",
+        "Moderation removals and NSFW boundaries need explicit handling."
+      ],
+      "suggested_collection_ids": [
+        "skill_ops"
+      ]
+    },
+    {
+      "id": "hackernews-api-ingest",
+      "name": "Hacker News API",
+      "category": "forum_information",
+      "priority": "P0",
+      "maturity": "high",
+      "upstream_type": "official_api",
+      "repo_url": "https://github.com/HackerNews/API",
+      "docs_url": "https://github.com/HackerNews/API",
+      "butler_skill_shape": "HN top/new/best story ingestion, comment-tree fetch, launch sentiment snapshots",
+      "why_recommended": [
+        "Official and lightweight. Easy to operationalize without complex auth.",
+        "Excellent source for engineering, startup, and tool ecosystem signals."
+      ],
+      "risks": [
+        "Thread trees can be large and noisy.",
+        "Needs rank-window and keyword filters to stay useful."
+      ],
+      "suggested_collection_ids": [
+        "automation_safe",
+        "skill_ops"
+      ]
+    },
+    {
+      "id": "stackexchange-api-ingest",
+      "name": "Stack Exchange API",
+      "category": "forum_information",
+      "priority": "P0",
+      "maturity": "high",
+      "upstream_type": "official_api",
+      "repo_url": "https://api.stackexchange.com/docs",
+      "docs_url": "https://api.stackexchange.com/docs",
+      "butler_skill_shape": "Stack Overflow and Stack Exchange query skill, accepted-answer retrieval, tag watch",
+      "why_recommended": [
+        "Covers high-signal technical Q and A across many domains.",
+        "Good candidate for implementation as a precise troubleshooting lookup skill."
+      ],
+      "risks": [
+        "Request throttling and backoff rules must be respected.",
+        "Needs site and tag scoping to avoid noisy matches."
+      ],
+      "suggested_collection_ids": [
+        "chat_default",
+        "codex_default"
+      ]
+    },
+    {
+      "id": "discourse-api-monitor",
+      "name": "Discourse API",
+      "category": "forum_information",
+      "priority": "P1",
+      "maturity": "high",
+      "upstream_type": "official_api",
+      "repo_url": "https://meta.discourse.org/t/discourse-rest-api-documentation/22706",
+      "docs_url": "https://meta.discourse.org/t/discourse-rest-api-documentation/22706",
+      "butler_skill_shape": "Discourse forum topic fetch, category watch, announcement ingestion, support-thread summarization",
+      "why_recommended": [
+        "A large number of product, devtool, and open-source communities run on Discourse.",
+        "One integration can unlock many vendor and community forums."
+      ],
+      "risks": [
+        "Each forum has its own auth and rate constraints.",
+        "Schema differences across versions need tolerant parsing."
+      ],
+      "suggested_collection_ids": [
+        "skill_ops"
+      ]
+    },
+    {
+      "id": "github-discussions-graphql",
+      "name": "GitHub Discussions GraphQL API",
+      "category": "forum_information",
+      "priority": "P1",
+      "maturity": "high",
+      "upstream_type": "official_api",
+      "repo_url": "https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions",
+      "docs_url": "https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions",
+      "butler_skill_shape": "GitHub Discussions retrieval, maintainer FAQ extraction, release-feedback watch",
+      "why_recommended": [
+        "Strong fit for open-source product support and maintainer communication channels.",
+        "Complements issues and changelog monitoring already common in coding workflows."
+      ],
+      "risks": [
+        "Requires GitHub token and GraphQL query discipline.",
+        "Per-repo permissions limit broad public crawling."
+      ],
+      "suggested_collection_ids": [
+        "codex_default"
+      ]
+    },
+    {
+      "id": "arxiv-py-paper-retrieval",
+      "name": "arxiv.py",
+      "category": "research_information",
+      "priority": "P0",
+      "maturity": "high",
+      "upstream_type": "open_source_library",
+      "repo_url": "https://github.com/lukasschwab/arxiv.py",
+      "docs_url": "https://lukasschwab.me/arxiv.py/",
+      "butler_skill_shape": "arXiv search, latest-paper watch, author/topic feed, paper metadata hydration",
+      "why_recommended": [
+        "Cleanest path to build an arXiv research-monitor skill for Butler.",
+        "High leverage for ML, CS, math, and physics paper discovery."
+      ],
+      "risks": [
+        "Coverage limited to arXiv-indexed papers.",
+        "Needs download and attachment policy if PDFs are fetched."
+      ],
+      "suggested_collection_ids": [
+        "chat_default",
+        "automation_safe"
+      ]
+    },
+    {
+      "id": "semantic-scholar-api",
+      "name": "Semantic Scholar API",
+      "category": "research_information",
+      "priority": "P0",
+      "maturity": "high",
+      "upstream_type": "official_api",
+      "repo_url": "https://www.semanticscholar.org/product/api",
+      "docs_url": "https://www.semanticscholar.org/product/api",
+      "butler_skill_shape": "paper lookup, citation graph hops, author impact summary, related-paper expansion",
+      "why_recommended": [
+        "Good balance between scholarly metadata richness and agent-friendly API shape.",
+        "Useful when Butler needs citation expansion instead of simple keyword search."
+      ],
+      "risks": [
+        "Quota and API-key policy must be checked before automation.",
+        "Coverage varies by field and source."
+      ],
+      "suggested_collection_ids": [
+        "chat_default",
+        "skill_ops"
+      ]
+    },
+    {
+      "id": "openalex-pyalex",
+      "name": "OpenAlex plus PyAlex",
+      "category": "research_information",
+      "priority": "P0",
+      "maturity": "high",
+      "upstream_type": "official_api_with_client",
+      "repo_url": "https://github.com/J535D165/pyalex",
+      "docs_url": "https://docs.openalex.org/",
+      "butler_skill_shape": "institution and author lookup, work graph traversal, topic and concept monitoring",
+      "why_recommended": [
+        "Broad and modern scholarly graph with practical Python wrapper support.",
+        "Best candidate when Butler needs research landscape mapping, not just single-paper lookup."
+      ],
+      "risks": [
+        "Recent API-key changes mean Butler should centralize credentials and retry policy.",
+        "Result richness can increase prompt noise if not post-filtered."
+      ],
+      "suggested_collection_ids": [
+        "skill_ops",
+        "automation_safe"
+      ]
+    },
+    {
+      "id": "crossref-rest-metadata",
+      "name": "Crossref REST API",
+      "category": "research_information",
+      "priority": "P1",
+      "maturity": "high",
+      "upstream_type": "official_api",
+      "repo_url": "https://www.crossref.org/documentation/retrieve-metadata/rest-api/",
+      "docs_url": "https://www.crossref.org/documentation/retrieve-metadata/rest-api/",
+      "butler_skill_shape": "DOI metadata enrichment, reference normalization, publisher-source backfill",
+      "why_recommended": [
+        "Excellent utility layer for cleaning and enriching paper metadata from other sources.",
+        "Very useful as a behind-the-scenes helper skill rather than a user-facing standalone skill."
+      ],
+      "risks": [
+        "Not ideal as the only search experience.",
+        "Needs polite client identification and cache discipline."
+      ],
+      "suggested_collection_ids": [
+        "skill_ops"
+      ]
+    },
+    {
+      "id": "europepmc-rest-biomed",
+      "name": "Europe PMC RESTful Web Service",
+      "category": "research_information",
+      "priority": "P1",
+      "maturity": "high",
+      "upstream_type": "official_api",
+      "repo_url": "https://europepmc.org/RestfulWebService",
+      "docs_url": "https://europepmc.org/RestfulWebService",
+      "butler_skill_shape": "biomedical literature retrieval, abstract fetch, grant and preprint monitoring",
+      "why_recommended": [
+        "Strong specialist source for biomedical and life-science research.",
+        "Good complement to Crossref and Semantic Scholar when domain specificity matters."
+      ],
+      "risks": [
+        "Domain-specific. Not necessary for a general research bundle.",
+        "Needs a separate retrieval profile from CS-first sources like arXiv."
+      ],
+      "suggested_collection_ids": [
+        "skill_ops"
+      ]
+    }
+  ]
+}
+

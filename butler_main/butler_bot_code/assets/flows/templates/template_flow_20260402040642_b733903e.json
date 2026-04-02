@@ -1,0 +1,189 @@
+{
+  "flow_id": "template_flow_20260402040642_b733903e",
+  "definition_id": "template_flow_20260402040642_b733903e",
+  "asset_kind": "template",
+  "label": "template_managed_research_delivery_v2",
+  "description": "面向探索与交付任务的托管模板（含改进闭环）",
+  "workflow_kind": "managed_flow",
+  "goal": "在给定约束下完成一次端到端探索与交付：先对齐目标与边界，再系统发现与整理信息，执行核心产出，完成质量审查与改进收口后定稿。",
+  "guard_condition": "仅当目标对齐、证据链完整、结构化产物可追溯且质量审查通过时结束；任一关键项不满足则回退到对应阶段补齐并复审。",
+  "phase_plan": [
+    {
+      "phase_id": "plan",
+      "title": "Plan",
+      "objective": "明确任务目标、范围、硬约束、验收标准，并产出当前flow讲解提纲与改进评估维度。",
+      "done_when": "目标与边界无歧义，且已形成可执行的讲解与优化检查清单。",
+      "retry_phase_id": "plan",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "discover"
+    },
+    {
+      "phase_id": "discover",
+      "title": "Discover",
+      "objective": "盘点现有flow阶段设计、输入输出、回退路径与风险点，建立证据清单。",
+      "done_when": "已完成现状说明并定位主要改进机会（复杂度、可观测性、回退效率、质量门槛）。",
+      "retry_phase_id": "discover",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "optimize"
+    },
+    {
+      "phase_id": "optimize",
+      "title": "Optimize",
+      "objective": "针对已识别问题优化阶段目标、完成条件与回退策略，形成精简且可执行的新版本定义。",
+      "done_when": "改进方案可落地，阶段衔接清晰，且未引入额外流程歧义。",
+      "retry_phase_id": "optimize",
+      "fallback_phase_id": "discover",
+      "next_phase_id": "quality_review"
+    },
+    {
+      "phase_id": "quality_review",
+      "title": "Quality Review",
+      "objective": "按质量rubric验证改进后flow在一致性、可操作性与风险控制上的达标情况。",
+      "done_when": "关键风险闭环，质量门槛达标，残余风险可接受且已说明。",
+      "retry_phase_id": "quality_review",
+      "fallback_phase_id": "optimize",
+      "next_phase_id": "finalize"
+    },
+    {
+      "phase_id": "finalize",
+      "title": "Finalize",
+      "objective": "定稿模板并输出用户可直接使用的操作说明与后续实例化建议。",
+      "done_when": "模板定稿可复用，附带改进说明、使用指引与后续建议。",
+      "retry_phase_id": "finalize",
+      "fallback_phase_id": "quality_review",
+      "next_phase_id": ""
+    }
+  ],
+  "default_role_pack": "coding_flow",
+  "allowed_execution_modes": [
+    "simple",
+    "medium"
+  ],
+  "launch_mode": "flow",
+  "catalog_flow_id": "",
+  "execution_mode": "simple",
+  "session_strategy": "shared",
+  "role_pack_id": "coding_flow",
+  "risk_level": "normal",
+  "autonomy_profile": "default",
+  "manager_handoff": {
+    "summary": "已将现有模板流收敛为可讲解、可优化、可复用的托管定义，保留端到端交付主线并强化改进闭环。",
+    "label": "template_managed_research_delivery_v2",
+    "description": "面向探索与交付任务的托管模板（含改进闭环）",
+    "goal": "在给定约束下完成一次端到端探索与交付：先对齐目标与边界，再系统发现与整理信息，执行核心产出，完成质量审查与改进收口后定稿。",
+    "guard_condition": "仅当目标对齐、证据链完整、结构化产物可追溯且质量审查通过时结束；任一关键项不满足则回退到对应阶段补齐并复审。",
+    "workflow_kind": "managed_flow",
+    "asset_kind": "template",
+    "mutation": "update",
+    "risk_level": "normal",
+    "autonomy_profile": "default",
+    "phase_plan": [
+      {
+        "phase_id": "plan",
+        "title": "Plan",
+        "objective": "明确任务目标、范围、硬约束、验收标准，并产出当前flow讲解提纲与改进评估维度。",
+        "done_when": "目标与边界无歧义，且已形成可执行的讲解与优化检查清单。",
+        "retry_phase_id": "plan",
+        "fallback_phase_id": "plan",
+        "next_phase_id": "discover"
+      },
+      {
+        "phase_id": "discover",
+        "title": "Discover",
+        "objective": "盘点现有flow阶段设计、输入输出、回退路径与风险点，建立证据清单。",
+        "done_when": "已完成现状说明并定位主要改进机会（复杂度、可观测性、回退效率、质量门槛）。",
+        "retry_phase_id": "discover",
+        "fallback_phase_id": "plan",
+        "next_phase_id": "optimize"
+      },
+      {
+        "phase_id": "optimize",
+        "title": "Optimize",
+        "objective": "针对已识别问题优化阶段目标、完成条件与回退策略，形成精简且可执行的新版本定义。",
+        "done_when": "改进方案可落地，阶段衔接清晰，且未引入额外流程歧义。",
+        "retry_phase_id": "optimize",
+        "fallback_phase_id": "discover",
+        "next_phase_id": "quality_review"
+      },
+      {
+        "phase_id": "quality_review",
+        "title": "Quality Review",
+        "objective": "按质量rubric验证改进后flow在一致性、可操作性与风险控制上的达标情况。",
+        "done_when": "关键风险闭环，质量门槛达标，残余风险可接受且已说明。",
+        "retry_phase_id": "quality_review",
+        "fallback_phase_id": "optimize",
+        "next_phase_id": "finalize"
+      },
+      {
+        "phase_id": "finalize",
+        "title": "Finalize",
+        "objective": "定稿模板并输出用户可直接使用的操作说明与后续实例化建议。",
+        "done_when": "模板定稿可复用，附带改进说明、使用指引与后续建议。",
+        "retry_phase_id": "finalize",
+        "fallback_phase_id": "quality_review",
+        "next_phase_id": ""
+      }
+    ],
+    "review_checklist": [],
+    "instance_defaults": {},
+    "lineage": {},
+    "asset_state": {},
+    "bundle_manifest": {
+      "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e",
+      "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/manager.md",
+      "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/supervisor.md",
+      "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/sources.json",
+      "manager_prompt": "manager.md",
+      "supervisor_prompt": "supervisor.md",
+      "sources_path": "sources.json",
+      "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/references",
+      "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/assets",
+      "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/derived",
+      "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+      "derived_supervisor_knowledge": "bundles/templates/template_flow_20260402040642_b733903e/derived/supervisor_knowledge.json",
+      "derived": {
+        "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/derived/supervisor_knowledge.json"
+      }
+    },
+    "operator_guidance": "下一步先用该模板做一次“讲解+优化”演练：在Plan补齐具体场景与验收口径，在Discover记录现状证据，在Optimize只保留高收益改动；若Quality Review未过，回退到Optimize迭代后再进入Finalize。",
+    "confirmation_prompt": "请确认按此更新模板流并进入一次讲解与改进演练。",
+    "managed_at": "2026-04-02 04:08:45",
+    "manage_stage": "commit",
+    "manager_session_id": ""
+  },
+  "asset_state": {
+    "status": "active",
+    "stage": "commit"
+  },
+  "lineage": {},
+  "instance_defaults": {
+    "execution_mode": "simple",
+    "session_strategy": "shared",
+    "role_pack_id": "coding_flow",
+    "launch_mode": "flow"
+  },
+  "review_checklist": [],
+  "bundle_manifest": {
+    "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e",
+    "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/manager.md",
+    "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/supervisor.md",
+    "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/sources.json",
+    "manager_prompt": "manager.md",
+    "supervisor_prompt": "supervisor.md",
+    "sources_path": "sources.json",
+    "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/references",
+    "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/assets",
+    "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/derived",
+    "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+    "derived_supervisor_knowledge": "bundles/templates/template_flow_20260402040642_b733903e/derived/supervisor_knowledge.json",
+    "derived": {
+      "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402040642_b733903e/derived/supervisor_knowledge.json"
+    }
+  },
+  "source_asset_key": "",
+  "source_asset_kind": "",
+  "source_asset_version": "",
+  "version": "1.3.0",
+  "created_at": "2026-04-02 04:07:12",
+  "updated_at": "2026-04-02 04:08:45"
+}

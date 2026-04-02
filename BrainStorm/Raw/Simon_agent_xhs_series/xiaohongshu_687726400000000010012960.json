@@ -1,0 +1,38 @@
+{
+  "platform": "xiaohongshu",
+  "status": "ok",
+  "source_url": "http://xhslink.com/o/29JtlVMX2jI",
+  "resolved_url": "https://www.xiaohongshu.com/discovery/item/687726400000000010012960?app_platform=android&ignoreEngage=true&app_version=9.21.0&share_from_user_hidden=true&xsec_source=app_share&type=normal&xsec_token=CBB6Ggl68XukFuxE9B4dmBALfZm2_pkYkCfSEjiN26f8Q%3D&author_share=1&shareRedId=N0o2N0RKSE42NzUyOTgwNjczOTpJNks6&apptime=1773683088&share_id=a8f5b2ebd1024b03b5a5f009198f25af&share_channel=copy_link&appuid=5d47aede000000001003e1e1&xhsshare=CopyLink",
+  "id": "687726400000000010012960",
+  "xsec_token": "CBB6Ggl68XukFuxE9B4dmBALfZm2_pkYkCfSEjiN26f8Q=",
+  "title": "Agent要实现好效果，架构设计原则有哪些？",
+  "title_note": "displayTitle 被 XHS 首屏替换为站点名，已修正为主页列表中的实际标题",
+  "author": "Simon",
+  "author_id": "649784a5000000002a034568",
+  "published_at": "2025-07-16T12:10:40+08:00",
+  "updated_at": "2025-07-16T12:29:51+08:00",
+  "ip_location": "",
+  "content_text": "Agent的基本流程设计就是这个模式:感知-规划-执行-反馈，要实现这样的一个agent，接入大模型做规划和反馈，集成几个工具，再创建一个记忆模块管理上下文和个性化信息，这样一个agent就基本搭出来了，而且用langraph,crewal,owl这样的框架会更容易实现。\n\t\n但是！这只是完成一次任务的执行过程，比如制定一个简单旅行计划，规划调用搜索工具搜索目的地，机票信息，然后llm来结合搜索信息来生成一个计划。这种只需要一次迭代就完成的任务，只能说做demo可以，在大部分现实场景基本不可用。\n\t\n那要实现一个好的agent，难度在哪里，结合上面描述，就是从单轮迭代到多轮迭代的跨越。什么意思呢？就是大部分任务不是一轮规划-执行-反馈的迭代就能完成的，而这个多轮不能靠写规则去驱动，否则就变成预定义工作流了。\n\t\nAgent的价值在于智能性和自主性，要做什么，用什么做，该怎么做，有没有做完都应该由agent本身来判断决策。如果大模型能力足够强，那似乎都交给大模型就行，然而现实是大模型还不具备这种完全自主能力。\n\t\n那自主能力不够，就需要靠架构和设计来弥补。关于Agent架构设计原则，个人认为有四点供大家参考:\n\t\n[一R]以提供给agent自由，自主条件为首要设计原则，让架构对agent更大的作用是发挥能力，而不是限制，然后再添加必要的human in loop;\n\t\n[二R]保持工具的原子性和通用性，不要为了完成复杂任务，给一个工具注入完成特定场景任务的业务逻辑\n\t\n[三R]在规划，执行，反馈的线性依赖之外，保持各模块之间解耦，业务适配不要直接硬编码到对应的通用模块，通过适配器解决适配和外部约束\n\t\n[四R]对于场景有更多自定义需求(不依赖第三方框架)，而且场景还需要使用multi-agent，那架构设计就需要放在技术方案设计的首位。而multi-agent架构设计的难度体现在，首先每个子agent已经有一个迭代循环，然后多agent之间通信该如何进行，多agent间的状态，迭代如何管理，这需要自底向上设计，从基础层的消息，状态，工具管理，到协调层的任务调度，交互策略管理，再到应用层的场景适配，业务流程管理，需要不断的设计-实践-优化来搞出一套生产可用的agent框架。\n\t\n当然agent在现实场景要发挥比较好的作用，除了架构问题，还包括工具链构建，模型使用策略(大，小模型，多模型集成)，模型优化(强化微调)，自动测评等等。\n\t\n关于agent架构设计的问题，也欢迎大家交流，指出观点不足之处[害羞R] #agent[话题]# #multi[话题]#-agent #大模型[话题]# #架构设计[话题]#",
+  "tags": [
+    "agent",
+    "multi",
+    "大模型",
+    "架构设计"
+  ],
+  "images": [
+    "http://sns-webpic-qc.xhscdn.com/202603181332/95635fa7d8ac6075816c3c4282f5484f/1040g00831k00kvi6ia205p4ngiiqmhb8gm71vbg!nd_dft_wlteh_jpg_3",
+    "http://sns-webpic-qc.xhscdn.com/202603181332/17a047f46ea54e84cfbca887fb83aa82/1040g00831k00kvi6ia1g5p4ngiiqmhb8pcla7d8!nd_dft_wgth_jpg_3",
+    "http://sns-webpic-qc.xhscdn.com/202603181332/0cdb79031ad7d39c1cfbebdc552435d7/1040g00831k00kvi6ia6g5p4ngiiqmhb8n5evua0!nd_dft_wgth_jpg_3",
+    "http://sns-webpic-qc.xhscdn.com/202603181332/03671e763ede73003c4afdfedbe10f0d/1040g00831k00kvi6ia0g5p4ngiiqmhb840gtup0!nd_dft_wgth_jpg_3"
+  ],
+  "engagement": {
+    "likes": "32",
+    "comments": "1",
+    "collects": "47",
+    "shares": "12"
+  },
+  "notes": [
+    "当前结果来自分享页 HTML 首屏数据。",
+    "默认不含完整评论；若后续要抓评论，可在依赖就绪后再接小红书 API 层。"
+  ]
+}

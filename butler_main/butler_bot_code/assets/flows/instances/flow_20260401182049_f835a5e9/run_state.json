@@ -1,0 +1,10 @@
+{
+  "updated_at": "2026-04-01 18:26:35",
+  "run_id": "flow_20260401182049_f835a5e9",
+  "state": "completed",
+  "phase": "free",
+  "pid": 0,
+  "note": "smoke 目标已完成，guard_condition=done，未见需继续重试、修复或重规划的信号。",
+  "error": "",
+  "traceback": ""
+}

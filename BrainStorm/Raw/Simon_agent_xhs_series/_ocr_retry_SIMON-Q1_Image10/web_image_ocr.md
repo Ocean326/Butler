@@ -1,0 +1,18 @@
+# Web Image OCR Result
+
+- created_at: 2026-03-20T13:57:31.212403+08:00
+
+## Image 1
+
+源地址: http://sns-webpic-qc.xhscdn.com/202603200753/c823fadcb07aa3a5570a6c3545866eb0/spectrum/1040g0k031tnjgktlmo405p4ngiiqmhb8aqjmrtg!nd_dft_wlteh_jpg_3
+本地文件: BrainStorm\Raw\Simon_agent_xhs_series\_ocr_retry_SIMON-Q1_Image10\images\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyMDA3NTMvYzgyM2ZhZGNiMDdhYTNhNTU3MGE2YzM1NDU4NjZlYjAvc3BlY3RydW0vMTA0MGcwazAzMXRuamdrdGxtbzQwNXA0bmdpaXFtaGI4YXFqbXJ0ZyFuZF9kZnRfd2x0ZWhfanBnXzM.jpg
+
+识别结果（`backend_used=readfile_vision`）：
+
+策略学习价值。
+
+三阶段演进：从预定到经验驱动
+
+在笔者实际构建 MAS 系统的过程中，有一次重构印象很深。一个项目在初期运行良好，但随着任务复杂度上升，系统开始出现一个典型的偏移：Orchestrator 里的 LLM 驱动决策逐渐被规则硬替代代码——遇到不确定场景就会触发半判断，边界情况也开始出现 if-else 的逻辑。表面上系统还在跑，但它已经不是一个 LLM 原生的 MAS，而是一个被部分规则渗透进分流决策的 MAS。如果不加以干预，就会滑向 more rules，less autonomous 的方向。
+
+复盘后定位到的根因是：Harness 工程上缺少多层治理的解耦设计。治理逻辑、安全约束、协调启发方式混在同一层里互相污染，导致每次遇到新的边界情况，AI coding 在处理这种复杂问题时倾向于「再加一条规则」，而不是分析系统架构是否存在不合理的设计。后面通过结构重组，将这类关切切分到各自属于的层，系统才重新回到 LLM 驱动的轨道。

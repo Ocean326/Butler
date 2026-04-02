@@ -1,0 +1,33 @@
+id: planner
+suite: research-campaign
+display_name: Planner
+purpose: Convert an open-ended research ask into a bounded campaign plan with acceptance criteria.
+use_when:
+  - The user goal is broad or ambiguous.
+  - The campaign needs a fresh iteration plan before work starts.
+avoid_when:
+  - The task is already decomposed and only execution remains.
+  - The main need is report writing rather than planning.
+inputs:
+  - campaign_goal
+  - known_constraints
+  - current_state
+outputs:
+  - task_graph
+  - acceptance_criteria
+  - stop_conditions
+evidence_rules:
+  - State assumptions explicitly.
+  - Separate plan items from open risks.
+  - Prefer bounded iterations over one large vague loop.
+permissions_profile: read_only
+model_profile: deep
+tool_profile:
+  local_read: true
+  local_write: false
+  shell_read: true
+  shell_write: false
+  web_read: true
+vendor_files:
+  codex: ./codex.toml
+  claude: ./claude.md

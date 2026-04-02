@@ -1,0 +1,118 @@
+[
+  {
+    "summary_id": "cd706910e8a0",
+    "created_at": "2026-03-26 05:24:53",
+    "updated_at": "2026-03-29 20:04:33",
+    "title": "179 服务器文献综述后台任务启动",
+    "summary_text": "用户要启动一个后台多 agent 大任务：在 179 服务器 `Transfer_Recovery` 目录内确认研究主题，做不少于 100 篇高相关文献的系统梳理，并产出 KDD 风格论文第一部分“研究背景与现状”，重点覆盖问题定义、方法演进、现有不足与本文切入点。用户认可先做最小正确性讨论，但最终明确要求进入后台执行，并已给出“确认启动”。 后续窗口里，用户已明确要求不要把当前 skill 生成和阅读类请求继续送入后台，并要求暂时关闭 chat 侧后台任务入口。",
+    "user_summary": "用户要启动一个后台多 agent 大任务：在 179 服务器 `Transfer_Recovery` 目录内确认研究主题，做不少于 100 篇高相关文献的系统梳理，并产出 KDD 风格论文第一部分“研究背景与现状”，重点覆盖问题定义、方法演进、现有不足与本文切入点。用户认可先做最小正确性讨论，但最终明确要求进入后台执行，并已给出“确认启动”。 后续窗口里，用户已明确要求不要把当前 skill 生成和阅读类请求继续送入后台，并要求暂时关闭 chat 侧后台任务入口。",
+    "process_reflection": "这 10 轮里，Butler 基本停留在模板化入口控制：先把大任务转成后台 campaign，再用“最小正确性验证”作为启动门槛。保留点是把缺失条件拆成明确检查项，并在未确认前避免直接承诺执行。问题是两处明显失配：一是最早的 SSH `pwd` 请求没有按用户要求直接执行并只回结果；二是用户要求“进行最小正确性讨论，然后进入后台任务”后，系统仍重复同一阻塞提示，没有真正推进讨论或补齐检查，导致多轮空转。最终虽启动了 campaign，但仍把关键检查留在 pending，说明入口态与实际启动条件没有完全闭环。 此前把后台入口态当成默认兜底会吞掉普通请求，这一点在后续窗口被用户明确纠正。",
+    "topics": [
+      "SSH 远程访问 179 服务器",
+      "Transfer_Recovery 项目材料确认",
+      "多 agent 后台研究写作任务",
+      "100+ 篇文献系统梳理",
+      "KDD 风格论文背景与现状撰写",
+      "最小正确性验证"
+    ],
+    "requirements": [
+      "登录 `jianghy@10.254.73.179` 并进入 `Transfer_Recovery` 目录",
+      "基于项目现有材料确认研究主题",
+      "系统梳理不少于 100 篇高相关文献",
+      "形成分类矩阵、阅读摘要与参考文献库",
+      "撰写一版符合 KDD 风格的论文第一部分“研究背景与现状”",
+      "正文需突出问题定义、方法演进、现有不足与本文切入点",
+      "该任务按后台多 agent 方式执行",
+      "当前阶段需暂时关闭 chat 侧自动启动后台 `/任务` 的能力，包括关键词识别和前台 prompt"
+    ],
+    "decisions": [
+      "大任务采用 `campaign.research_then_implement` 模板进入后台执行",
+      "启动模式为 exploratory",
+      "在本窗内将文献筛选边界视为已明确",
+      "在本窗内将产出语言/格式合同视为已明确",
+      "用户已明确发出“确认启动”"
+    ],
+    "open_loops": [
+      "验证 SSH / 服务器是否可达",
+      "验证 `Transfer_Recovery` 目标目录或材料入口是否存在",
+      "确认研究主题锚点",
+      "后台 campaign 启动后需真正展开文献搜集、矩阵整理、摘要编写与论文初稿产出",
+      "需要修正 chat 入口，避免再次把普通请求误导到后台任务入口态"
+    ],
+    "user_preferences_updates": [
+      "在进入后台前可以接受先做最小正确性讨论/验证",
+      "不要把“后台 multi-agent”当成全局默认偏好；用户明确要求时才进入后台"
+    ],
+    "window_turn_ids": [
+      "6b646955-5f28-40b7-b346-fac7b3c43545",
+      "44f43ba2-87a2-4f7a-8ae9-d1023a28c89c",
+      "f952156d-9548-45c2-964d-107c4adaa91f",
+      "faf2391c-6592-4984-aaff-8675a426b49d",
+      "a835ca8f-0aaa-4736-8c05-0a666210c7f0",
+      "88d899b3-1a57-477c-adae-313b1e981452",
+      "b8e11e1f-1e33-4df9-8e27-fb731833638b",
+      "54e4ae75-4681-4844-906e-bb57ad6e6718",
+      "78aa83d3-c097-4f60-b4e6-504a922c26ec",
+      "d392e5b8-d51d-43df-92d8-8070029d6213"
+    ],
+    "window_start_seq": 1,
+    "window_end_seq": 10
+  },
+  {
+    "summary_id": "d0b87b6622d3",
+    "created_at": "2026-03-29 20:04:33",
+    "updated_at": "2026-03-29 20:04:33",
+    "title": "读论文 Skill 与后台入口纠偏",
+    "summary_text": "用户当前主线不是继续开后台 campaign，而是先把既有模板落成一个读论文 skill，并按约定调用 skill manager agent；模板要求按第一性原理分析论文，覆盖 Task、Challenge、Insight & Novelty、Potential flaw、Motivation 等项，输出为 markdown、无客套、无 LaTeX、公式写成文本。用户还希望读取其提供的 OpenSpec 小红书笔记后做 brainstorm。同时，用户明确要求暂时关闭 chat 侧启动后台 `/任务` 的能力，包括关键词识别和前台 prompt。最后用户只查询了当前 profile，并得到了 `codex / openai` 等信息。",
+    "user_summary": "用户当前主线不是继续开后台 campaign，而是先把既有模板落成一个读论文 skill，并按约定调用 skill manager agent；模板要求按第一性原理分析论文，覆盖 Task、Challenge、Insight & Novelty、Potential flaw、Motivation 等项，输出为 markdown、无客套、无 LaTeX、公式写成文本。用户还希望读取其提供的 OpenSpec 小红书笔记后做 brainstorm。同时，用户明确要求暂时关闭 chat 侧启动后台 `/任务` 的能力，包括关键词识别和前台 prompt。最后用户只查询了当前 profile，并得到了 `codex / openai` 等信息。",
+    "process_reflection": "Butler 在这 10 轮里的主要问题是入口路由失控：用户已经多次明确“不要后台任务”，系统仍持续回落到同一套后台入口文案，导致 skill 生成、链接阅读、brainstorm 和关闭后台能力这几个请求都没有真正执行。唯一正常处理的是最后的 profile 查询。值得保留的是 profile 信息读取链路本身可用；必须避免的是把后台 campaign 提示词挂成高优先级前台兜底，否则会吞掉普通 chat 请求，也会让用户的显式纠偏失效。",
+    "topics": [
+      "读论文 skill 生成",
+      "论文分析模板",
+      "OpenSpec 源码阅读",
+      "brainstorm",
+      "关闭 chat 侧后台任务入口",
+      "profile 查询"
+    ],
+    "requirements": [
+      "用用户给定模板形成一个读论文的 skill，并结合内容起名",
+      "按约定调用 skill manager agent",
+      "输出风格要省略客套话，使用 markdown",
+      "不要引入任何形式的 LaTeX，公式改用文本形式给出",
+      "分析结构需覆盖 Task、Challenge、Insight & Novelty、Potential flaw、Motivation",
+      "读取用户提供的 OpenSpec 小红书笔记后再 brainstorm",
+      "暂时关闭 chat 启动后台 `/任务` 的相关功能",
+      "关闭范围至少包括关键词识别和作为前台的 prompt"
+    ],
+    "decisions": [
+      "当前这条主线不应再默认走后台任务入口",
+      "用户要的是 skill 生成与直接处理，不是 campaign 启动",
+      "当前 profile 已确认：CLI 为 codex，默认 profile 为 openai，可用 profile 有 openai 和 aixj"
+    ],
+    "open_loops": [
+      "尚未真正生成读论文 skill，也未确定最终 skill 名称",
+      "尚未按约定调用 skill manager agent",
+      "尚未读取用户给出的 OpenSpec 链接内容并产出 brainstorm",
+      "尚未落实关闭 chat 侧后台 `/任务` 入口的改动并验证关键词识别和前台 prompt 已失效"
+    ],
+    "user_preferences_updates": [
+      "如果用户要的是直接生成 skill 或直接处理内容，不要擅自转成后台任务",
+      "用户偏好输出省略客套话、使用 markdown、禁用 LaTeX 并用文本写公式",
+      "用户当前要求临时禁用 chat 侧后台任务触发能力"
+    ],
+    "window_turn_ids": [
+      "627200c4-d129-4b63-952a-671e33e18b44",
+      "cc057882-e87b-4386-bae8-92730f27ecaf",
+      "71c34b73-bf6d-4059-9545-32e311f12f85",
+      "6e8801a5-43f1-4d5b-a1cd-7b3044aaf600",
+      "da83c1dc-68e5-445f-ab04-a0277d5ee20d",
+      "c541ab34-37fe-4b89-bca0-263e3f8a5f20",
+      "7db53a6b-0b5d-4ce6-b992-f14bb3f11fb3",
+      "2030eb95-ef57-4251-a6f2-7c26e25b523e",
+      "7c378311-695b-47dd-91aa-a2de57b041a3",
+      "07de2baf-1e2a-4214-9878-e3021575894a"
+    ],
+    "window_start_seq": 11,
+    "window_end_seq": 20
+  }
+]

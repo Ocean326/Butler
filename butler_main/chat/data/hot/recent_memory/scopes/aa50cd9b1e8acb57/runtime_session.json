@@ -1,0 +1,49 @@
+{
+  "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f",
+  "updated_at": "2026-04-01 20:16:38",
+  "providers": {
+    "cursor": {
+      "provider": "cursor",
+      "updated_at": "2026-04-01 19:33:33",
+      "thread_id": "",
+      "resume_capable": false,
+      "resume_durable": false,
+      "external_session": {},
+      "recovery_state": {},
+      "runtime_request": {
+        "cli": "cursor",
+        "model": "auto",
+        "profile": ""
+      }
+    },
+    "codex": {
+      "provider": "codex",
+      "updated_at": "2026-04-01 20:16:38",
+      "thread_id": "019d48f7-d6f1-7050-b1f9-75975c7dbb46",
+      "resume_capable": true,
+      "resume_durable": true,
+      "external_session": {
+        "provider": "codex",
+        "thread_id": "019d48f7-d6f1-7050-b1f9-75975c7dbb46",
+        "resume_capable": true,
+        "resume_durable": true,
+        "mode": "exec",
+        "requested_session_id": "",
+        "durable_resume_id": "019d48f7-d6f1-7050-b1f9-75975c7dbb46",
+        "session_persistence": "codex_home",
+        "session_store_path": "/home/ocean/.codex",
+        "session_store_fingerprint": "/home/ocean/.codex|1775045499|4096",
+        "cli_binary_path": "/home/ocean/.local/bin/codex",
+        "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1774590842|6659",
+        "vendor_session_state": "started",
+        "recovery_state": {}
+      },
+      "recovery_state": {},
+      "runtime_request": {
+        "cli": "codex",
+        "model": "auto",
+        "profile": ""
+      }
+    }
+  }
+}

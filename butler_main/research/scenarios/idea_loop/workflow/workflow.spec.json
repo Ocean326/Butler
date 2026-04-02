@@ -1,0 +1,47 @@
+{
+  "workflow_id": "idea_loop_round",
+  "scenario_id": "idea_loop",
+  "run_type": "iterative_run",
+  "title": "Idea Loop Round",
+  "steps": [
+    {
+      "step_id": "idea_lock",
+      "step_kind": "prepare",
+      "process_role": "manager"
+    },
+    {
+      "step_id": "plan_lock",
+      "step_kind": "plan",
+      "process_role": "planner"
+    },
+    {
+      "step_id": "iterate",
+      "step_kind": "dispatch",
+      "process_role": "executor"
+    },
+    {
+      "step_id": "final_verify",
+      "step_kind": "verify",
+      "process_role": "acceptance",
+      "requires_verification": true
+    },
+    {
+      "step_id": "archive",
+      "step_kind": "promote",
+      "process_role": "manager"
+    },
+    {
+      "step_id": "recover",
+      "step_kind": "recover",
+      "process_role": "manager"
+    }
+  ],
+  "metadata": {
+    "entrypoints": [
+      "orchestrator",
+      "talk",
+      "codex"
+    ],
+    "output_format": "experiment_archive"
+  }
+}

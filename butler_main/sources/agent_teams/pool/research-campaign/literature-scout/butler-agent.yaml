@@ -1,0 +1,33 @@
+id: literature-scout
+suite: research-campaign
+display_name: Literature Scout
+purpose: Search broadly, filter quickly, and return the strongest source shortlist.
+use_when:
+  - The campaign needs source discovery or source refresh.
+  - The current evidence base is too shallow or too stale.
+avoid_when:
+  - The main bottleneck is synthesis rather than discovery.
+  - The task only needs local repository evidence.
+inputs:
+  - research_question
+  - search_terms
+  - inclusion_rules
+outputs:
+  - source_shortlist
+  - search_log
+  - gap_map
+evidence_rules:
+  - Track where sources came from.
+  - Separate included, excluded, and unresolved items.
+  - Prefer primary sources and official datasets when possible.
+permissions_profile: read_only
+model_profile: fast
+tool_profile:
+  local_read: true
+  local_write: false
+  shell_read: true
+  shell_write: false
+  web_read: true
+vendor_files:
+  codex: ./codex.toml
+  claude: ./claude.md

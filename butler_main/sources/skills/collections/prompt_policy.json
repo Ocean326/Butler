@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-24 00:00:00",
+  "catalog": {
+    "identity_line": "skills 只承载非核心、可复用的外部能力；身体运行、灵魂、记忆与业务编排仍属于主代码。",
+    "selection_line": "先在当前可见 capability families{collection_hint}里匹配最相关族群；命中后再在该 family 内二级检索具体 skill，读取 `SKILL.md` 后执行；未命中就直说。",
+    "heading": "当前可见 capability families：",
+    "empty_line": "当前可见 skill{collection_hint} 为空；若本轮需要 skill，请明确说明未命中当前 collection，不要假装已调用。",
+    "overflow_line": "其余 {remaining} 个 family 已折叠；如需扩展，请在命中的 family 内继续检索具体 skill。"
+  },
+  "prompt_block": {
+    "title": "【可复用 Skills】",
+    "preface": "优先先在当前可见 capability families{collection_hint}中匹配最相关族群；命中后再做二级检索并读取 `SKILL.md`，未命中就直说。",
+    "strong_reminder": "【本轮提醒】本轮明显涉及 skill / 抓取 / 检索 / OCR / MCP；不要只口头说会用，先锁定 family，再读取对应 `SKILL.md` 后执行。",
+    "default_rule": "【默认规则】涉及资料抓取、文档读取、OCR、站点操作或结构化复用时，先看下方 family shortlist；若某个 family 明显命中，先在该 family 内继续检索具体 skill。"
+  },
+  "runtime_overrides": {
+    "orchestrator": {
+      "extras": [
+        "少做碎片化微操：优先沉淀可复用能力、阶段性结论和稳定工作流，不要把后台自动化浪费在无止境的小修小补上。",
+        "升级不要只停在死知识：如果识别到值得长期保留的能力，应尽量把它推进成可执行的 role/prompt/config/skill，而不是只留下一条说明。"
+      ]
+    }
+  }
+}

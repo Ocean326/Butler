@@ -1,0 +1,29 @@
+{
+  "candidate": {
+    "id": "feedparser-rss-ingest",
+    "name": "feedparser",
+    "category": "general_information",
+    "priority": "P0",
+    "maturity": "high",
+    "upstream_type": "open_source_library",
+    "repo_url": "https://github.com/kurtmckee/feedparser",
+    "docs_url": "https://feedparser.readthedocs.io/en/latest/",
+    "butler_skill_shape": "RSS and Atom feed polling, digest generation, watchlist monitoring",
+    "why_recommended": [
+      "Low-friction way to cover blogs, changelogs, forums, and publication feeds with one abstraction.",
+      "Pairs naturally with automation-safe monitoring and periodic digests."
+    ],
+    "risks": [
+      "Only covers sources that expose feeds.",
+      "Needs deduplication and per-feed freshness logic."
+    ],
+    "suggested_collection_ids": [
+      "automation_safe",
+      "chat_content_share"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/sources/skills/pool/incubating/general/feedparser-rss-ingest",
+  "review_state": "imported_for_review"
+}

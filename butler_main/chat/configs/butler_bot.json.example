@@ -1,0 +1,92 @@
+{
+  "app_id": "cli_xxxxxxxx",
+  "app_secret": "xxxxxxxx",
+  "workspace_root": "..\\..",
+  "agent_model": "auto",
+  "cli_runtime": {
+    "active": "cursor",
+    "allow_runtime_override": true,
+    "defaults": {
+      "model": "auto",
+      "profile": "",
+      "speed": "",
+      "config_overrides": [],
+      "extra_args": []
+    },
+    "codex_cursor_switchover": {
+      "enabled": true,
+      "cooldown_seconds": 3600,
+      "probes_per_hour": 2,
+      "state_path": "~/.butler/codex_cursor_switchover_state.json"
+    },
+    "cursor_continue_after_codex_cancel": {
+      "enabled": true,
+      "prompt_prefix": ""
+    },
+    "codex_stall_detection": {
+      "enabled": true,
+      "abort_on_reconnect_exhausted": true,
+      "abort_on_child_process_timeout_message": true,
+      "stall_wall_seconds": 150,
+      "min_reconnect_markers_for_stall": 4,
+      "poll_interval_seconds": 0.35
+    },
+    "providers": {
+      "cursor": {
+        "type": "cursor",
+        "enabled": true,
+        "path": "",
+        "known_models": [],
+        "extra_args": []
+      },
+      "codex": {
+        "type": "codex",
+        "enabled": true,
+        "path": "codex",
+        "profile": "",
+        "inherit_proxy_env": true,
+        "sandbox": "danger-full-access",
+        "ask_for_approval": "never",
+        "skip_git_repo_check": true,
+        "ephemeral": false,
+        "search": true,
+        "known_models": [],
+        "config_overrides_map": {
+          "speed": "model_reasoning_effort"
+        },
+        "config_overrides": [],
+        "extra_args": []
+      }
+    }
+  },
+  "model_aliases": {
+    "fast": "auto",
+    "quick": "auto"
+  },
+  "agent_timeout": 300,
+  "max_reply_len": 4000,
+  "_comment_cursor_cli": "可选 cursor_cli_path 指定 Cursor CLI 可执行文件路径；不设则自动解析 versions 下最新版本或 dist-package",
+  "features": {
+    "chat_frontdoor_tasks_enabled": true,
+    "task_ledger": true,
+    "memory_service": true,
+    "governor": true
+  },
+  "logging": {
+    "level": "info",
+    "check_interval_seconds": 2,
+    "timestamp": true
+  },
+  "startup_notify_open_id": "",
+  "startup_notify_receive_id_type": "open_id",
+  "tell_user_receive_id": "",
+  "tell_user_receive_id_type": "open_id",
+  "orchestrator": {
+    "tick_seconds": 30,
+    "auto_dispatch": true,
+    "auto_execute": true,
+    "max_dispatch_per_tick": 1,
+    "stale_seconds": 180
+  },
+  "_comment_startup_notify": "open_id 须为本应用获取，否则会报 open_id cross app；可改用 user_id + receive_id_type=user_id"
+}

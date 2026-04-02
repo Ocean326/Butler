@@ -1,0 +1,28 @@
+{
+  "candidate": {
+    "id": "discourse-api-monitor",
+    "name": "Discourse API",
+    "category": "forum_information",
+    "priority": "P1",
+    "maturity": "high",
+    "upstream_type": "official_api",
+    "repo_url": "https://meta.discourse.org/t/discourse-rest-api-documentation/22706",
+    "docs_url": "https://meta.discourse.org/t/discourse-rest-api-documentation/22706",
+    "butler_skill_shape": "Discourse forum topic fetch, category watch, announcement ingestion, support-thread summarization",
+    "why_recommended": [
+      "A large number of product, devtool, and open-source communities run on Discourse.",
+      "One integration can unlock many vendor and community forums."
+    ],
+    "risks": [
+      "Each forum has its own auth and rate constraints.",
+      "Schema differences across versions need tolerant parsing."
+    ],
+    "suggested_collection_ids": [
+      "skill_ops"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/sources/skills/pool/incubating/forum/discourse-api-monitor",
+  "review_state": "imported_for_review"
+}

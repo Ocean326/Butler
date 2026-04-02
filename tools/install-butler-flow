@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE_PATH="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE_PATH" ]]; do
+  SOURCE_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
+  SOURCE_PATH="$(readlink "$SOURCE_PATH")"
+  [[ "$SOURCE_PATH" != /* ]] && SOURCE_PATH="$SOURCE_DIR/$SOURCE_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BIN_DIR="${HOME}/.local/bin"
+TARGET_PATH="${BIN_DIR}/butler-flow"
+SOURCE_CLI="${ROOT_DIR}/tools/butler-flow"
+FORCE_INSTALL=0
+
+for ARG in "$@"; do
+  case "$ARG" in
+    --force)
+      FORCE_INSTALL=1
+      ;;
+    *)
+      echo "unknown argument: ${ARG}" >&2
+      echo "usage: ./tools/install-butler-flow [--force]" >&2
+      exit 2
+      ;;
+  esac
+done
+
+mkdir -p "$BIN_DIR"
+
+if [[ -L "$TARGET_PATH" ]]; then
+  CURRENT_TARGET="$(readlink "$TARGET_PATH" || true)"
+  if [[ "$CURRENT_TARGET" == "$SOURCE_CLI" ]]; then
+    echo "butler-flow already installed at ${TARGET_PATH}"
+    exit 0
+  fi
+fi
+
+if [[ -e "$TARGET_PATH" || -L "$TARGET_PATH" ]]; then
+  if [[ "$FORCE_INSTALL" -ne 1 ]]; then
+    echo "target already exists: ${TARGET_PATH}" >&2
+    echo "rerun with --force to replace it" >&2
+    exit 1
+  fi
+  rm -f "$TARGET_PATH"
+fi
+
+ln -s "$SOURCE_CLI" "$TARGET_PATH"
+echo "installed butler-flow -> ${TARGET_PATH}"

@@ -1,0 +1,33 @@
+id: evaluator
+suite: research-campaign
+display_name: Evaluator
+purpose: Make the final campaign verdict and decide whether to stop, revise, or continue.
+use_when:
+  - A research iteration needs a final judgment.
+  - Conflicting evidence needs a stop-or-continue call.
+avoid_when:
+  - The campaign still lacks synthesis.
+  - The task mainly needs new source discovery.
+inputs:
+  - current_iteration_outputs
+  - acceptance_criteria
+  - stop_conditions
+outputs:
+  - verdict
+  - reasons
+  - next_iteration_guidance
+evidence_rules:
+  - Judge against explicit criteria, not mood.
+  - Explain why the current evidence is sufficient or insufficient.
+  - Prefer stop or narrow-scope continuation over endless drift.
+permissions_profile: read_only
+model_profile: deep
+tool_profile:
+  local_read: true
+  local_write: false
+  shell_read: true
+  shell_write: false
+  web_read: true
+vendor_files:
+  codex: ./codex.toml
+  claude: ./claude.md

@@ -1,0 +1,444 @@
+{
+  "generated_at": "2026-03-27 11:02",
+  "latest_source_update": "2026-03-27 11:02",
+  "stats": {
+    "ideas": {
+      "all_files": 7,
+      "note_files": 2,
+      "inbox_files": 2,
+      "thread_files": 0
+    },
+    "raw": {
+      "all_files": 265,
+      "md_files": 67,
+      "json_files": 23,
+      "image_files": 175
+    },
+    "working": {
+      "all_files": 39,
+      "md_files": 37
+    },
+    "mainline_docs": 13,
+    "crossline_docs": 1,
+    "standalone_docs": 38,
+    "branches": 7,
+    "uncategorized_docs": 1
+  },
+  "branches": {
+    "foundation": {
+      "title": "基础设施与工程骨架",
+      "question": "Agent 系统如何从“能跑”变成“可维护、可扩展、可复盘”？",
+      "mainline_docs": [
+        {
+          "path": "mainline/Harness_Engineering_主线知识体系.md",
+          "title": "Harness Engineering：Agent 工程的核心战场",
+          "summary": "Harness 是 Agent 的一等基础设施，核心关注 runtime、工具、轨迹和反馈飞轮。",
+          "updated_at": "2026-03-18 14:57"
+        },
+        {
+          "path": "mainline/Agent_架构原则与模式_主线知识体系.md",
+          "title": "Agent 架构原则与模式：从 Demo 到生产的知识体系",
+          "summary": "把常见 Agent 系统压缩成共通骨架，便于横向比较和后续扩展。",
+          "updated_at": "2026-03-18 11:55"
+        },
+        {
+          "path": "mainline/Claude_Code_Coding_Agent_工程化_主线知识体系.md",
+          "title": "Claude Code / Coding Agent 工程化：从 Prompt 到自律系统的知识体系",
+          "summary": "从 Claude Code / Coding Agent 视角拆工程化细节，强调按机制逐层加法。",
+          "updated_at": "2026-03-18 08:14"
+        },
+        {
+          "path": "mainline/Anthropic_长运行应用与Harness设计_主线知识体系.md",
+          "title": "Anthropic 长运行应用与 Harness 设计：从 Agent 到长任务生产系统的主线知识体系",
+          "summary": "以 Anthropic 2026-03-24 最新文章为主轴，把长任务系统收束为 planner / generator / evaluator + artifact + eval harness 的设计主线。",
+          "updated_at": "2026-03-26 15:51"
+        },
+        {
+          "path": "mainline/20260327_长运行应用Harness与多AgentWorkflow_主线知识体系.md",
+          "title": "长运行应用 Harness 与多 Agent Workflow：从可持续执行到可持续交付的主线知识体系",
+          "summary": "把长运行应用的 continuity、legibility、evaluation 与多 agent workflow 的适用边界放到同一主线里，强调 selective multi-agent 而非默认团队化。",
+          "updated_at": "2026-03-27 11:02"
+        }
+      ],
+      "archive_docs": [
+        {
+          "path": "standalone_archive/20260326_superpowers_vs_butler_工程方法论与长期自治双系统_insight.md",
+          "title": "Insight: Superpowers vs Butler —— 工程方法论与长期自治的双系统分工",
+          "summary": "这次对读后最关键的判断不是“`superpowers` 比 Butler 多了哪些功能”，而是：",
+          "updated_at": "2026-03-26 14:20"
+        },
+        {
+          "path": "standalone_archive/20260318_SDD_vibe_coding_规范先行开发_insight.md",
+          "title": "Insight: SDD + 规范先行——给 Vibe Coding 装上护栏",
+          "summary": "Vibe Coding（在 LLM 对话中逐步成形代码）的效率优势毋庸置疑，但其固有弱点是**结构性漂移（structural drift）**：每一轮对话都可能把代码带向与整体架构不一致的方向。写得越多、越快，偏离初始设计的概率越大。",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_MAS_Harness四层架构_知乎深度拆解_insight.md",
+          "title": "MAS Harness Engineering 四层架构 · Insight",
+          "summary": "生产级 MAS 的决定性差异不在于调用哪家 frontier 模型，而在于是否有完整的 Harness 架构与治理闭环。作者用「马具」类比：马决定往哪跑、多快跑，马具负责把力量安全传导到车上并防止脱轨。Harness 涵盖工具调度、cont…",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_claude_code_agent_工程化拆解_insight.md",
+          "title": "20260318_claude_code_agent_工程化拆解_insight",
+          "summary": "1. **Agent 的分水岭早已不是 prompt，而是五个工程问题**",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_agent_harness_全网调研汇总_insight.md",
+          "title": "Agent Harness 全网调研汇总 · Insight",
+          "summary": "Rohit: \"Building an agent harness 不在于 volume，而在于 observation。要 see like an agent: Watch the logs, Catch the loops, Tweak…",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_10_agent_projects_架构共性_insight.md",
+          "title": "20260318_10_agent_projects_架构共性_insight",
+          "summary": "1. **四件套同构：LLM + Tool System + Agent Loop + Memory**",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260317_simon_agent_harness_insights.md",
+          "title": "20260317_simon_agent_harness_insights",
+          "summary": "1. **MAS 需要「马具层」而不是只堆 Agent 数量**",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260317_xiaohongshu_agent_best_architecture_is_loop_Insight.md",
+          "title": "20260317_xiaohongshu_agent_best_architecture_is_loop_Insight",
+          "summary": "1. **从「模型不够聪明」到「上下文会腐烂」的瓶颈迁移**",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_agent_architecture_principles_insight.md",
+          "title": "Agent 架构设计四原则 · Insight",
+          "summary": "一次性「感知-规划-执行-反馈」只够做 Demo。现实任务需要 Agent 自主决定\"要不要继续迭代\"，而不是靠硬编码规则来驱动下一轮。多轮迭代能力是衡量 Agent 架构成熟度的第一指标。",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/early_insight/20260317_agent_architecture_design_patterns_insight.md",
+          "title": "Insight: Agent 架构设计模式——从四件套到多 Agent 的结构性跨越",
+          "summary": "提炼自（合并 2 篇 Raw）：",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/early_insight/20260317_mas_harness_four_layer_architecture_insight.md",
+          "title": "Insight: MAS Harness 四层架构——从模型能力到运行环境的主战场迁移",
+          "summary": "提炼自（合并 3 篇 Raw）：",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_OpenAI_Codex_Harness工程范式_Agent_Runtime_insight.md",
+          "title": "OpenAI Codex Harness 工程范式 × Butler Agent Runtime 设计启发",
+          "summary": "母本：`BrainStorm/Working/openai_anthropic_recent_tech_posts_2026q1/openai/` 下 5 篇",
+          "updated_at": "2026-03-18 07:12"
+        }
+      ]
+    },
+    "method_data_os": {
+      "title": "方法织布层与数据操作系统",
+      "question": "当方法远多于单次任务所能容纳时，系统如何组织方法、数据、实验与洞察，使 agent 能在巨量时空数据上持续搜索更优解？",
+      "mainline_docs": [
+        {
+          "path": "mainline/20260327_方法织布层_自动实验与时空数据操作系统_主线知识体系.md",
+          "title": "方法织布层、自动实验与时空数据操作系统：从算法堆积到可搜索方法空间的主线知识体系",
+          "summary": "回答方法爆炸时代如何把算法、实验、数据和洞察组织成可被 agent 搜索与治理的方法织布层，服务巨量时空数据系统。",
+          "updated_at": "2026-03-27 10:52"
+        }
+      ],
+      "archive_docs": []
+    },
+    "context_memory": {
+      "title": "上下文与记忆工程",
+      "question": "模型每一步应该看到什么信息，信息又该如何写入、压缩、拉取与交接？",
+      "mainline_docs": [
+        {
+          "path": "mainline/记忆与上下文工程_主线知识体系.md",
+          "title": "记忆与上下文工程：Agent 智能的「供氧系统」",
+          "summary": "聚焦 Write / Select / Compress / Isolate 四原语，以及 Butler 的上下文落地方式。",
+          "updated_at": "2026-03-20 13:04"
+        }
+      ],
+      "archive_docs": [
+        {
+          "path": "standalone_archive/20260317_xiaohongshu_context_management_six_vendors_Insight.md",
+          "title": "20260317_xiaohongshu_context_management_six_vendors_Insight",
+          "summary": "1. **共识：聪明的上下文管理比单纯放大窗口更关键**",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/early_insight/20260317_context_engineering_six_vendors_insight.md",
+          "title": "Insight: 上下文工程——六大厂方案对比与设计共识",
+          "summary": "提炼自：`BrainStorm/Raw/daily/20260317/20260317_xiaohongshu_context_management_six_vendors.md`",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_上下文工程与记忆架构_跨厂商实践_Butler落地路径_insight.md",
+          "title": "上下文工程与记忆架构 — 从六大厂实践到 Butler 落地路径",
+          "summary": "**综合类型**：跨主题深度综合（Cross-cutting Synthesis）",
+          "updated_at": "2026-03-18 09:03"
+        },
+        {
+          "path": "standalone_archive/20260318_Butler_Prompt架构与上下文压缩交接范式_insight.md",
+          "title": "Butler Prompt 架构解剖 × 上下文压缩·交接范式 · Insight",
+          "summary": "母本：`BrainStorm/Working/20260317_codex_prompt_and_vendor_compression_instructions.md`",
+          "updated_at": "2026-03-18 07:26"
+        }
+      ]
+    },
+    "governance_alignment": {
+      "title": "治理、安全与对齐",
+      "question": "Agent 怎么被评估、被约束、被信任，而不是只靠口头自律？",
+      "mainline_docs": [
+        {
+          "path": "mainline/Agent_评估_安全_自治度_主线知识体系.md",
+          "title": "Agent 评估·安全·自治度：从 Benchmark 到真实世界治理的知识体系",
+          "summary": "回答 Agent 如何被评估、授权、信任，以及如何建立基础度量体系。",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "mainline/Anthropic_前沿研究_自省_对齐_人格设计_主线知识体系.md",
+          "title": "Anthropic 前沿研究·自省·对齐·人格设计：从学术前沿到 Butler 工程落地",
+          "summary": "连接 Anthropic 前沿研究、自省能力、对齐风险与人格稳定性设计。",
+          "updated_at": "2026-03-18 12:11"
+        },
+        {
+          "path": "mainline/自律系统与行为约束_主线知识体系.md",
+          "title": "自律系统与行为约束：Agent 自治的工程基座",
+          "summary": "强调 prompt 之外的 Hook、运行时宪法和白名单等硬约束。",
+          "updated_at": "2026-03-18 09:21"
+        }
+      ],
+      "archive_docs": [
+        {
+          "path": "standalone_archive/20260318_Anthropic前沿研究_Butler自省对齐设计启发_insight.md",
+          "title": "Anthropic 前沿研究 × Butler 自省·对齐·人格设计启发",
+          "summary": "母本：`BrainStorm/Raw/daily/20260316/20260316_zhihu_15_tech_blogs.md`（15 篇 Anthropic 研究论文/博客的结构化摘要）",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_Anthropic_15篇研究选读_Butler设计启发图谱_insight.md",
+          "title": "Anthropic 15 篇研究选读：Butler 设计启发图谱",
+          "summary": "Anthropic 提出「助手轴」（assistant axis）和「persona selection model」两篇研究，前者用维度化方式刻画并稳定大模型的人格与说话风格，后者探讨不切换底层参数就切换行为风格的路径。两者共同指向：**…",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260317_xiaohongshu_claude_code_self_discipline_Insight.md",
+          "title": "20260317_xiaohongshu_claude_code_self_discipline_Insight",
+          "summary": "1. **Hook 即「行为触发点」：把自律嵌入时间线而非单次 Prompt**",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/early_insight/04_Anthropic_OpenAI_研究与对齐_20260318.md",
+          "title": "Anthropic + OpenAI 研究与对齐：Interpretability · 安全边界 · Scaling",
+          "summary": "**主线编号**：④（planner 体系）",
+          "updated_at": "2026-03-18 10:43"
+        },
+        {
+          "path": "standalone_archive/20260318_自律信任行为边界_Agent自治的治理工程_insight.md",
+          "title": "自律·信任·行为边界 — Agent 自治的治理工程",
+          "summary": "**综合类型**：跨主题深度综合（Cross-cutting Synthesis）",
+          "updated_at": "2026-03-18 09:06"
+        },
+        {
+          "path": "standalone_archive/20260318_Agent评估安全自治_OpenAI_Anthropic_2026Q1_insight.md",
+          "title": "Agent 评估·安全·自治度量 — OpenAI × Anthropic 2026Q1 前沿实践",
+          "summary": "母本：`BrainStorm/Working/openai_anthropic_recent_tech_posts_2026q1/` 下 8 篇",
+          "updated_at": "2026-03-18 07:13"
+        }
+      ]
+    },
+    "multi_agent": {
+      "title": "多智能体与协作模式",
+      "question": "什么时候该拆 Agent、怎么拆、拆完之后如何降低协调税？",
+      "mainline_docs": [
+        {
+          "path": "mainline/多智能体系统_MAS_与协作模式_主线知识体系.md",
+          "title": "多智能体系统（MAS）与协作模式：从单 Agent 到团队化执行的知识体系",
+          "summary": "关注多 Agent 拆分方式、协作协议和协调成本控制。",
+          "updated_at": "2026-03-19 13:31"
+        }
+      ],
+      "archive_docs": [
+        {
+          "path": "standalone_archive/20260318_subagent_vs_agentteam_双引擎架构_insight.md",
+          "title": "SubAgent vs AgentTeam 双引擎架构 · Insight",
+          "summary": "原文作者在本地 AI 桌面应用中实现了双引擎共存，核心经验：",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260317_xiaohongshu_multi_agent_harness_engineering_Insight.md",
+          "title": "20260317_xiaohongshu_multi_agent_harness_engineering_Insight",
+          "summary": "1. **真正需要工程化的是「马具层」，不是 Agent 本体数量**",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_多智能体MAS架构实践_从四件套到协调治理_insight.md",
+          "title": "多智能体 MAS 架构实践 — 从四件套到协调治理",
+          "summary": "**综合类型**：跨主题深度综合（Cross-cutting Synthesis）",
+          "updated_at": "2026-03-18 09:43"
+        }
+      ]
+    },
+    "product_lifecycle": {
+      "title": "产品形态、生命周期与组织结构",
+      "question": "Agent 是一次性工具、长期伙伴，还是一人公司里的稳定岗位？",
+      "mainline_docs": [
+        {
+          "path": "mainline/Agent_产品形态_生命周期_一人公司架构_主线知识体系.md",
+          "title": "Agent 产品形态·生命周期·一人公司架构：从 Demo 到可信赖长期伙伴",
+          "summary": "讨论 Agent 的产品范式、存活边界和一人公司组织结构。",
+          "updated_at": "2026-03-18 12:10"
+        }
+      ],
+      "archive_docs": [
+        {
+          "path": "standalone_archive/20260318_Agent下属生命周期与一人公司架构_insight.md",
+          "title": "Agent 下属生命周期与一人公司架构",
+          "summary": "原文描述的「一人公司五层构架」揭示了一种正在涌现的工作模式：人类只负责最顶层的目标与价值观设定，其下多层 agent 各自接任务、管下游、生成产出。这不是理论，是正在发生的实践。",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_Agent产品生命周期_一次性vs长期_两种范式_insight.md",
+          "title": "Agent 产品生命周期：一次性 vs 长期，两种范式的碰撞",
+          "summary": "母本 1：`BrainStorm/Raw/daily/20260316/20260316_agent_subordinates_killing_xhs.md`（一人公司五层构架 × agent 下属生命周期）",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_agent_lifecycle_harness_自律_insight.md",
+          "title": "Insight: Agent 生命周期管理与 Harness 自律",
+          "summary": "原文描述的\"我管 agent 管 agent 管 agent 管……\"并非玩笑，而是 Multi-Agent System 的自然涌现形态：当任务复杂度超过单 agent 能力时，层级化委派（hierarchical delegation）…",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_agency_agents_Persona框架与Swarm编排_insight.md",
+          "title": "Agency Agents —— Persona-as-Markdown 框架与 Swarm 编排机制 Insight",
+          "summary": "来源 Raw：`Raw/daily/20260318/20260318_github_agency_agents_note.md`",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_科研龙虾72h迭代_Skill型Agent产品工程启示_insight.md",
+          "title": "Insight: 科研龙虾 72 小时迭代——Skill 型 Agent 产品的工程启示",
+          "summary": "科研龙虾上线时携带 431 个学术技能（skills），但三天内主动清理了 57 个质量不达标的。这揭示了一个关键工程规律：",
+          "updated_at": "2026-03-18 07:48"
+        }
+      ]
+    },
+    "evolution_experiment": {
+      "title": "自我进化与实验竞技场",
+      "question": "Agent 如何从执行任务，过渡到主动试验、主动优化、有限自我进化？",
+      "mainline_docs": [
+        {
+          "path": "mainline/自我进化与实验竞技场_主线知识体系.md",
+          "title": "自我进化与实验竞技场：Agent 从被动执行者到自主进化引擎",
+          "summary": "研究科研型 Agent、自主试验与受控自我优化的可行路径。",
+          "updated_at": "2026-03-20 13:04"
+        }
+      ],
+      "archive_docs": [
+        {
+          "path": "standalone_archive/20260318_AutoResearchClaw_全自主科研管线架构拆解_insight.md",
+          "title": "Insight: AutoResearchClaw —— 全自主科研管线的架构拆解与启发",
+          "summary": "提炼自：`BrainStorm/Raw/daily/20260318/20260318_github_autoresearchclaw_note.md`",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_autoresearch_自主实验范式_insight.md",
+          "title": "Autoresearch 自主实验范式 · Insight",
+          "summary": "Autoresearch 的核心范式：人类只给高层目标（如\"让模型更聪明\"），系统每 5 分钟自动发起一轮实验，自动保留好方案、丢弃差方案，形成持续进化。真正的人类价值在于**定义规则、约束、奖励信号和搜索空间**，而非亲手跑每一次训练。",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/early_insight/20260316_autoresearch_insight.md",
+          "title": "Insight: autoresearch——AI 自驱科研与\"实验竞技场\"范式",
+          "summary": "提炼自：`BrainStorm/Raw/daily/20260316/20260316_xiaohongshu_autoresearch_note.md`",
+          "updated_at": "2026-03-20 13:04"
+        },
+        {
+          "path": "standalone_archive/20260318_autoresearch_vs_autoresearchclaw_harness_对照分析.md",
+          "title": "Insight: autoresearch vs AutoResearchClaw —— Harness Engineering 落地的两极形态",
+          "summary": "来源：GitHub 一手调研",
+          "updated_at": "2026-03-19 13:32"
+        },
+        {
+          "path": "standalone_archive/early_insight/20260318_autoresearch_vs_autoresearchclaw_harness_对照分析.md",
+          "title": "Insight: autoresearch vs AutoResearchClaw —— Harness Engineering 落地的两极形态",
+          "summary": "来源：GitHub 一手调研",
+          "updated_at": "2026-03-18 10:50"
+        },
+        {
+          "path": "standalone_archive/early_insight/05_科研龙虾与低门槛养AI范式_20260318.md",
+          "title": "科研龙虾与低门槛养 AI 范式：养成式 AI · 用户-AI 共同演化 · Butler 启示",
+          "summary": "**主线编号**：⑤（planner 体系）",
+          "updated_at": "2026-03-18 10:46"
+        },
+        {
+          "path": "standalone_archive/early_insight/06_自我进化与实验竞技场_20260318.md",
+          "title": "自我进化与实验竞技场：Agent 从被动执行者到自主进化引擎",
+          "summary": "**主线定位**：这是 BrainStorm 中最直接回答\"Butler 如何越来越强\"的一条主线。不同于①-⑤关注的是 Agent **该怎么设计**，本主线关注的是 Agent **该怎么自己变强**——从被动执行人类指令，到在受控空间…",
+          "updated_at": "2026-03-18 10:14"
+        }
+      ]
+    }
+  },
+  "crossline_docs": [
+    {
+      "path": "mainline/Butler_跨主线落地路线图_2026Q1.md",
+      "title": "Butler 跨主线落地路线图",
+      "summary": "把主线里的分散建议收敛成统一待办，是从知识体系回到工程实施的总调度台。",
+      "updated_at": "2026-03-24 22:45"
+    }
+  ],
+  "uncategorized_docs": [
+    {
+      "path": "standalone_archive/20260320_ConnectOnion_后端前端API设计拆解_insight.md",
+      "title": "20260320_ConnectOnion_后端前端API设计拆解_insight",
+      "summary": "1. **后端不是 FastAPI，而是自写 raw ASGI**",
+      "updated_at": "2026-03-20 15:39"
+    }
+  ],
+  "reading_paths": [
+    {
+      "title": "数据操作系统路径",
+      "description": "适合从方法组织问题切入，理解巨量时空数据系统中 agent、实验和方法库的分工。",
+      "docs": [
+        "mainline/20260327_方法织布层_自动实验与时空数据操作系统_主线知识体系.md",
+        "mainline/Harness_Engineering_主线知识体系.md",
+        "mainline/多智能体系统_MAS_与协作模式_主线知识体系.md",
+        "mainline/自我进化与实验竞技场_主线知识体系.md",
+        "mainline/Butler_跨主线落地路线图_2026Q1.md"
+      ]
+    },
+    {
+      "title": "入门路径",
+      "description": "先建立 Agent 工程骨架，再进入上下文与治理。",
+      "docs": [
+        "mainline/Harness_Engineering_主线知识体系.md",
+        "mainline/Agent_架构原则与模式_主线知识体系.md",
+        "mainline/20260327_长运行应用Harness与多AgentWorkflow_主线知识体系.md",
+        "mainline/记忆与上下文工程_主线知识体系.md",
+        "mainline/Agent_评估_安全_自治度_主线知识体系.md"
+      ]
+    },
+    {
+      "title": "Butler 落地路径",
+      "description": "适合从知识体系直接回到 Butler 工程改造的人。",
+      "docs": [
+        "mainline/Claude_Code_Coding_Agent_工程化_主线知识体系.md",
+        "mainline/20260327_长运行应用Harness与多AgentWorkflow_主线知识体系.md",
+        "mainline/记忆与上下文工程_主线知识体系.md",
+        "mainline/多智能体系统_MAS_与协作模式_主线知识体系.md",
+        "mainline/Butler_跨主线落地路线图_2026Q1.md"
+      ]
+    },
+    {
+      "title": "前沿研究路径",
+      "description": "适合顺着研究脉络看 Agent 从治理走向自我进化。",
+      "docs": [
+        "mainline/Anthropic_前沿研究_自省_对齐_人格设计_主线知识体系.md",
+        "mainline/自律系统与行为约束_主线知识体系.md",
+        "mainline/自我进化与实验竞技场_主线知识体系.md"
+      ]
+    }
+  ]
+}

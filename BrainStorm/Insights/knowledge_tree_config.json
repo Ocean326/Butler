@@ -1,0 +1,219 @@
+{
+  "branch_order": [
+    "foundation",
+    "method_data_os",
+    "context_memory",
+    "governance_alignment",
+    "multi_agent",
+    "product_lifecycle",
+    "evolution_experiment"
+  ],
+  "branches": {
+    "foundation": {
+      "title": "基础设施与工程骨架",
+      "question": "Agent 系统如何从“能跑”变成“可维护、可扩展、可复盘”？",
+      "mainline": [
+        "mainline/Harness_Engineering_主线知识体系.md",
+        "mainline/Agent_架构原则与模式_主线知识体系.md",
+        "mainline/Claude_Code_Coding_Agent_工程化_主线知识体系.md",
+        "mainline/Anthropic_长运行应用与Harness设计_主线知识体系.md",
+        "mainline/20260327_长运行应用Harness与多AgentWorkflow_主线知识体系.md"
+      ],
+      "archive_keywords": [
+        "harness",
+        "architecture",
+        "10_agent_projects",
+        "架构共性",
+        "claude_code",
+        "codex",
+        "superpowers",
+        "方法论",
+        "sdd",
+        "agent_architecture",
+        "工程化",
+        "四层架构",
+        "四件套"
+      ]
+    },
+    "method_data_os": {
+      "title": "方法织布层与数据操作系统",
+      "question": "当方法远多于单次任务所能容纳时，系统如何组织方法、数据、实验与洞察，使 agent 能在巨量时空数据上持续搜索更优解？",
+      "mainline": [
+        "mainline/20260327_方法织布层_自动实验与时空数据操作系统_主线知识体系.md"
+      ],
+      "archive_keywords": [
+        "automl",
+        "cash",
+        "algorithm_selection",
+        "autofolio",
+        "data_os",
+        "world_model",
+        "method_fabric",
+        "spatiotemporal",
+        "trajectory",
+        "时空",
+        "轨迹",
+        "方法",
+        "数据操作系统",
+        "world",
+        "方法织布层"
+      ]
+    },
+    "context_memory": {
+      "title": "上下文与记忆工程",
+      "question": "模型每一步应该看到什么信息，信息又该如何写入、压缩、拉取与交接？",
+      "mainline": [
+        "mainline/记忆与上下文工程_主线知识体系.md"
+      ],
+      "archive_keywords": [
+        "context",
+        "memory",
+        "prompt",
+        "compression",
+        "上下文",
+        "记忆",
+        "压缩",
+        "session"
+      ]
+    },
+    "governance_alignment": {
+      "title": "治理、安全与对齐",
+      "question": "Agent 怎么被评估、被约束、被信任，而不是只靠口头自律？",
+      "mainline": [
+        "mainline/Agent_评估_安全_自治度_主线知识体系.md",
+        "mainline/Anthropic_前沿研究_自省_对齐_人格设计_主线知识体系.md",
+        "mainline/自律系统与行为约束_主线知识体系.md"
+      ],
+      "archive_keywords": [
+        "评估",
+        "安全",
+        "自治",
+        "anthropic",
+        "自律",
+        "对齐",
+        "信任",
+        "alignment",
+        "self_discipline"
+      ]
+    },
+    "multi_agent": {
+      "title": "多智能体与协作模式",
+      "question": "什么时候该拆 Agent、怎么拆、拆完之后如何降低协调税？",
+      "mainline": [
+        "mainline/多智能体系统_MAS_与协作模式_主线知识体系.md"
+      ],
+      "archive_keywords": [
+        "mas",
+        "multi_agent",
+        "subagent",
+        "agentteam",
+        "swarm",
+        "协作",
+        "多智能体",
+        "subordinates"
+      ]
+    },
+    "product_lifecycle": {
+      "title": "产品形态、生命周期与组织结构",
+      "question": "Agent 是一次性工具、长期伙伴，还是一人公司里的稳定岗位？",
+      "mainline": [
+        "mainline/Agent_产品形态_生命周期_一人公司架构_主线知识体系.md"
+      ],
+      "archive_keywords": [
+        "lifecycle",
+        "产品",
+        "persona",
+        "agency_agents",
+        "一人公司",
+        "下属",
+        "长期",
+        "一次性",
+        "skill型agent"
+      ]
+    },
+    "evolution_experiment": {
+      "title": "自我进化与实验竞技场",
+      "question": "Agent 如何从执行任务，过渡到主动试验、主动优化、有限自我进化？",
+      "mainline": [
+        "mainline/自我进化与实验竞技场_主线知识体系.md"
+      ],
+      "archive_keywords": [
+        "autoresearch",
+        "autonomous_science",
+        "科研龙虾",
+        "自主实验",
+        "自我进化",
+        "竞技场",
+        "gödel",
+        "godel",
+        "autoresearchclaw"
+      ]
+    }
+  },
+  "crossline_docs": [
+    {
+      "path": "mainline/Butler_跨主线落地路线图_2026Q1.md",
+      "title": "Butler 跨主线落地路线图",
+      "summary": "把主线里的分散建议收敛成统一待办，是从知识体系回到工程实施的总调度台。"
+    }
+  ],
+  "mainline_summaries": {
+    "mainline/Harness_Engineering_主线知识体系.md": "Harness 是 Agent 的一等基础设施，核心关注 runtime、工具、轨迹和反馈飞轮。",
+    "mainline/Agent_架构原则与模式_主线知识体系.md": "把常见 Agent 系统压缩成共通骨架，便于横向比较和后续扩展。",
+    "mainline/Claude_Code_Coding_Agent_工程化_主线知识体系.md": "从 Claude Code / Coding Agent 视角拆工程化细节，强调按机制逐层加法。",
+    "mainline/Anthropic_长运行应用与Harness设计_主线知识体系.md": "以 Anthropic 2026-03-24 最新文章为主轴，把长任务系统收束为 planner / generator / evaluator + artifact + eval harness 的设计主线。",
+    "mainline/20260327_长运行应用Harness与多AgentWorkflow_主线知识体系.md": "把长运行应用的 continuity、legibility、evaluation 与多 agent workflow 的适用边界放到同一主线里，强调 selective multi-agent 而非默认团队化。",
+    "mainline/20260327_方法织布层_自动实验与时空数据操作系统_主线知识体系.md": "回答方法爆炸时代如何把算法、实验、数据和洞察组织成可被 agent 搜索与治理的方法织布层，服务巨量时空数据系统。",
+    "mainline/记忆与上下文工程_主线知识体系.md": "聚焦 Write / Select / Compress / Isolate 四原语，以及 Butler 的上下文落地方式。",
+    "mainline/Agent_评估_安全_自治度_主线知识体系.md": "回答 Agent 如何被评估、授权、信任，以及如何建立基础度量体系。",
+    "mainline/Anthropic_前沿研究_自省_对齐_人格设计_主线知识体系.md": "连接 Anthropic 前沿研究、自省能力、对齐风险与人格稳定性设计。",
+    "mainline/自律系统与行为约束_主线知识体系.md": "强调 prompt 之外的 Hook、运行时宪法和白名单等硬约束。",
+    "mainline/多智能体系统_MAS_与协作模式_主线知识体系.md": "关注多 Agent 拆分方式、协作协议和协调成本控制。",
+    "mainline/Agent_产品形态_生命周期_一人公司架构_主线知识体系.md": "讨论 Agent 的产品范式、存活边界和一人公司组织结构。",
+    "mainline/自我进化与实验竞技场_主线知识体系.md": "研究科研型 Agent、自主试验与受控自我优化的可行路径。"
+  },
+  "reading_paths": [
+    {
+      "title": "数据操作系统路径",
+      "description": "适合从方法组织问题切入，理解巨量时空数据系统中 agent、实验和方法库的分工。",
+      "docs": [
+        "mainline/20260327_方法织布层_自动实验与时空数据操作系统_主线知识体系.md",
+        "mainline/Harness_Engineering_主线知识体系.md",
+        "mainline/多智能体系统_MAS_与协作模式_主线知识体系.md",
+        "mainline/自我进化与实验竞技场_主线知识体系.md",
+        "mainline/Butler_跨主线落地路线图_2026Q1.md"
+      ]
+    },
+    {
+      "title": "入门路径",
+      "description": "先建立 Agent 工程骨架，再进入上下文与治理。",
+      "docs": [
+        "mainline/Harness_Engineering_主线知识体系.md",
+        "mainline/Agent_架构原则与模式_主线知识体系.md",
+        "mainline/20260327_长运行应用Harness与多AgentWorkflow_主线知识体系.md",
+        "mainline/记忆与上下文工程_主线知识体系.md",
+        "mainline/Agent_评估_安全_自治度_主线知识体系.md"
+      ]
+    },
+    {
+      "title": "Butler 落地路径",
+      "description": "适合从知识体系直接回到 Butler 工程改造的人。",
+      "docs": [
+        "mainline/Claude_Code_Coding_Agent_工程化_主线知识体系.md",
+        "mainline/20260327_长运行应用Harness与多AgentWorkflow_主线知识体系.md",
+        "mainline/记忆与上下文工程_主线知识体系.md",
+        "mainline/多智能体系统_MAS_与协作模式_主线知识体系.md",
+        "mainline/Butler_跨主线落地路线图_2026Q1.md"
+      ]
+    },
+    {
+      "title": "前沿研究路径",
+      "description": "适合顺着研究脉络看 Agent 从治理走向自我进化。",
+      "docs": [
+        "mainline/Anthropic_前沿研究_自省_对齐_人格设计_主线知识体系.md",
+        "mainline/自律系统与行为约束_主线知识体系.md",
+        "mainline/自我进化与实验竞技场_主线知识体系.md"
+      ]
+    }
+  ]
+}

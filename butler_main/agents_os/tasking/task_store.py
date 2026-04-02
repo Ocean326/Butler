@@ -1,0 +1,13 @@
+from __future__ import annotations
+
+from typing import Protocol
+
+
+class TaskStore(Protocol):
+    def load(self) -> dict: ...
+
+    def save(self, payload: dict) -> dict: ...
+
+    def bootstrap(self, *, short_tasks: list[dict] | None = None, long_tasks: list[dict] | None = None) -> dict: ...
+
+    def apply_runtime_result(self, plan: dict, execution_result: str, branch_results: list[dict]) -> dict: ...

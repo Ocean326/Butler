@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Butler Visual Console</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">BUTLER VISUAL CONSOLE</p>
+          <h1>Control, observe, and steer long-running work.</h1>
+          <p id="runtime-badge" class="subhead">Runtime loading...</p>
+        </div>
+        <div class="top-actions">
+          <form id="workspace-form" class="workspace-form">
+            <label>
+              <span>Workspace</span>
+              <input id="workspace-input" name="workspace" type="text" value="." spellcheck="false">
+            </label>
+            <label class="checkbox">
+              <input id="autorefresh-input" type="checkbox" checked>
+              <span>Auto refresh</span>
+            </label>
+            <button type="submit">Reload</button>
+          </form>
+          <div class="theme-toggle" role="radiogroup" aria-label="Theme">
+            <button type="button" class="theme-button" data-theme="auto">Auto</button>
+            <button type="button" class="theme-button" data-theme="day">Day</button>
+            <button type="button" class="theme-button" data-theme="night">Night</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="column left-column">
+          <section class="panel nav-panel">
+            <div class="section-head">
+              <h2>Navigator</h2>
+              <button id="refresh-all-button" type="button">Refresh</button>
+            </div>
+            <button id="global-item" class="nav-item" data-scope="global" type="button">
+              <div>
+                <strong>Global Scheduler</strong>
+                <div class="muted">Cross-project queue + runtime</div>
+              </div>
+              <span class="pill subtle">Queue</span>
+            </button>
+            <div id="project-list" class="stack panel-scroll"></div>
+          </section>
+
+          <section class="panel agents-panel">
+            <div class="section-head">
+              <h2>Agent Cards</h2>
+              <span id="agent-summary" class="muted">Select a project.</span>
+            </div>
+            <div id="agent-list" class="stack panel-scroll"></div>
+          </section>
+        </aside>
+
+        <section class="column center-column">
+          <section class="panel board-panel">
+            <div class="section-head board-head">
+              <div>
+                <h2 id="board-title">Global Scheduler</h2>
+                <p id="board-subtitle" class="muted">Queue view across active campaigns.</p>
+              </div>
+              <div class="board-controls">
+                <div class="segmented" id="board-mode-toggle">
+                  <button type="button" class="segmented-button active" data-board-mode="graph">Graph</button>
+                  <button type="button" class="segmented-button" data-board-mode="preview">Preview</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="board-shell">
+              <div class="board-body">
+                <div id="board-graph" class="board-view">
+                  <div id="canvas" class="canvas">
+                    <div id="canvas-transform" class="canvas-transform">
+                      <svg id="edge-layer" class="edge-layer" aria-hidden="true"></svg>
+                      <div id="node-layer" class="node-layer"></div>
+                    </div>
+                    <div id="graph-empty" class="empty-state board-empty">No graph data yet.</div>
+                    <div class="zoom-controls zoom-controls-vertical">
+                      <button id="zoom-in" type="button" title="Zoom in">+</button>
+                      <button id="zoom-out" type="button" title="Zoom out">-</button>
+                      <button id="zoom-fit" type="button" title="Fit to view">Fit</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="board-preview" class="board-view hidden">
+                  <div id="preview-pane" class="preview-pane">
+                    <div class="preview-empty">Select an artifact or record to preview.</div>
+                  </div>
+                </div>
+              </div>
+
+              <section id="timeline-drawer" class="timeline-drawer collapsed">
+                <button id="toggle-timeline-button" class="timeline-toggle-handle" type="button" aria-expanded="false" aria-label="Toggle timeline">▲</button>
+                <div class="timeline-head">
+                  <div>
+                    <h3>Run Timeline</h3>
+                    <p class="muted">Drag the ruler to scrub past activity and upcoming queue.</p>
+                  </div>
+                  <div class="timeline-actions">
+                    <button id="refresh-events-button" class="icon-button" type="button" aria-label="Refresh timeline" title="Refresh timeline">↻</button>
+                  </div>
+                </div>
+                <div id="events-list" class="timeline empty-state">No campaign events yet.</div>
+              </section>
+            </div>
+          </section>
+        </section>
+
+        <aside class="column right-column">
+          <section class="panel info-panel">
+            <div class="tab-row" id="right-tabs">
+              <button type="button" class="tab-button" data-tab="artifacts">Artifacts</button>
+              <button type="button" class="tab-button" data-tab="docs">Docs/Records</button>
+              <button type="button" class="tab-button" data-tab="skills">Skills</button>
+              <button type="button" class="tab-button" data-tab="runtime">Runtime/Agents</button>
+            </div>
+            <div class="tab-body">
+              <div id="tab-artifacts" class="tab-panel">
+                <div id="artifact-list" class="stack panel-scroll"></div>
+              </div>
+              <div id="tab-docs" class="tab-panel hidden">
+                <div id="docs-panel" class="stack panel-scroll"></div>
+              </div>
+              <div id="tab-skills" class="tab-panel hidden">
+                <div id="skills-panel" class="stack panel-scroll"></div>
+              </div>
+              <div id="tab-runtime" class="tab-panel hidden">
+                <div id="runtime-panel" class="stack panel-scroll"></div>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <div id="agent-detail-overlay" class="agent-detail-overlay hidden" aria-hidden="true">
+      <div id="agent-detail-backdrop" class="agent-detail-backdrop"></div>
+      <section class="agent-detail-shell" role="dialog" aria-modal="true" aria-labelledby="agent-detail-title">
+        <header class="agent-detail-head">
+          <div>
+            <p class="eyebrow">AGENT DETAIL</p>
+            <h2 id="agent-detail-title">Agent Detail</h2>
+            <p id="agent-detail-subtitle" class="muted">Loading...</p>
+          </div>
+          <button id="agent-detail-close" class="icon-button agent-detail-close" type="button" aria-label="Close detail">✕</button>
+        </header>
+        <div class="agent-detail-body">
+          <aside class="agent-detail-aside">
+            <div id="agent-detail-status-row" class="agent-detail-status-row"></div>
+            <div id="agent-detail-overview" class="agent-detail-overview stack"></div>
+          </aside>
+          <section class="agent-detail-main">
+            <div id="agent-detail-tabs" class="tab-row agent-detail-tabs">
+              <button type="button" class="tab-button active" data-agent-tab="records">Run Records</button>
+              <button type="button" class="tab-button" data-agent-tab="planned">Planned Input</button>
+              <button type="button" class="tab-button" data-agent-tab="artifacts">Artifacts</button>
+              <button type="button" class="tab-button" data-agent-tab="raw">Raw Records</button>
+            </div>
+            <div id="agent-detail-scroll" class="agent-detail-scroll">
+              <div id="agent-detail-records" class="agent-detail-panel"></div>
+              <div id="agent-detail-planned" class="agent-detail-panel hidden"></div>
+              <div id="agent-detail-artifacts" class="agent-detail-panel hidden"></div>
+              <div id="agent-detail-raw" class="agent-detail-panel hidden"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

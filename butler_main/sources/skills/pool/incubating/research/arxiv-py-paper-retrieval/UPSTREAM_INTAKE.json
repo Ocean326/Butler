@@ -1,0 +1,29 @@
+{
+  "candidate": {
+    "id": "arxiv-py-paper-retrieval",
+    "name": "arxiv.py",
+    "category": "research_information",
+    "priority": "P0",
+    "maturity": "high",
+    "upstream_type": "open_source_library",
+    "repo_url": "https://github.com/lukasschwab/arxiv.py",
+    "docs_url": "https://lukasschwab.me/arxiv.py/",
+    "butler_skill_shape": "arXiv search, latest-paper watch, author/topic feed, paper metadata hydration",
+    "why_recommended": [
+      "Cleanest path to build an arXiv research-monitor skill for Butler.",
+      "High leverage for ML, CS, math, and physics paper discovery."
+    ],
+    "risks": [
+      "Coverage limited to arXiv-indexed papers.",
+      "Needs download and attachment policy if PDFs are fetched."
+    ],
+    "suggested_collection_ids": [
+      "chat_default",
+      "automation_safe"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/sources/skills/pool/incubating/research/arxiv-py-paper-retrieval",
+  "review_state": "imported_for_review"
+}

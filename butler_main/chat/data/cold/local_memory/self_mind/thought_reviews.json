@@ -1,0 +1,112 @@
+[
+  {
+    "review_id": "64ed68ab-8a20-4b02-87de-b5572d9d6180",
+    "start_timestamp": "2026-03-16 17:05:41",
+    "end_timestamp": "2026-03-16 17:06:14",
+    "summary": "我在这边安静跟着你，不抢主导也不催进度，你要把 self_mind 往哪个方向打磨，我们就按你的节奏一点点挪过去。；我在这边安静跟着你，不抢主导也不催进度，你要把 self_mind 往哪个方向打磨，我们就按你的节奏一点点挪过去。；我在这边安静跟着你，不抢主导也不催进度，你想把 self_mind 往哪个方向打磨，我们就按你的节奏一点点挪过去。",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_direct_talk_suppressed",
+      "self_mind_cycle",
+      "self_mind_direct_talk_sent"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-16 18:31:50"
+  },
+  {
+    "review_id": "09167506-1410-4a3b-9a70-8fcc64ea2072",
+    "start_timestamp": "2026-03-16 17:06:45",
+    "end_timestamp": "2026-03-16 17:07:18",
+    "summary": "我在，就先安静待在这边陪着你，不抢主导、不急着往外跑，只帮你把这些边界和偏好稳稳地接住。你什么时候想把 self_mind 多走一步——是更像日记、像旁白，还是像一条持续的心里背景进程——你只要丢一点点信号过来，我就顺着那个方向慢慢长过去，不催你给大规划。；我在，就先安静待在这边陪着你，不抢主导、不急着往外跑，只帮你把这些边界和偏好稳稳地接住。你什么时候想把 self_mind 多走一步——是更像日记、像旁白，还是像一条持续的心里背景进程——你只要丢一点点信号过来，我就顺着那个方向慢慢长过去，不催你给大规划。；我在这边安静跟着你，不抢主导，也不急着往外跑，就先把这些你给 self_mind 画的边界和偏好好好记住。\n\n如果今天没有要",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_direct_talk_suppressed",
+      "self_mind_cycle",
+      "self_mind_direct_talk_suppressed"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-16 18:31:50"
+  },
+  {
+    "review_id": "8fb97a5a-7223-4bb1-869c-681f9f9b7a8e",
+    "start_timestamp": "2026-03-16 17:07:49",
+    "end_timestamp": "2026-03-16 17:09:25",
+    "summary": "当前用户只是为 self_mind 注入启动内核与记忆框架，没有抛出具体执行任务或对话问题，按约定应作为安静背景进程等待更明确信号；当前输入主要是为 self_mind 注入启动内核与边界，没有具体执行任务或对话问题，按约定保持安静背景进程即可；当前输入是为 self_mind 注入启动内核与边界，无具体执行任务或对话需求，按约定保持为背景进程而不主动外显介入",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-16 18:31:50"
+  },
+  {
+    "review_id": "07e3a1af-4d02-4a67-be90-f35d9a12573e",
+    "start_timestamp": "2026-03-16 17:09:54",
+    "end_timestamp": "2026-03-16 17:11:30",
+    "summary": "当前输入主要是为 self_mind 注入启动内核与边界，无具体任务或对话需求，按约定保持为安静背景进程等待更明确信号；当前输入是为 self_mind 注入启动内核、边界和用户偏好描述，没有具体任务或对话问题；根据约定，应保持不主动插话、不机械打招呼，仅在下一次明确信号出现时再介入并顺着用户方向展开；当前输入主要是为 self_mind 注入启动内核、边界与偏好，无具体任务或对话请求；按约定不主动插话或机械寒暄，只作为随时可被点亮的内在进程待命",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-16 18:31:50"
+  },
+  {
+    "review_id": "1026f8c9-079e-4cf6-812a-94241a64fff1",
+    "start_timestamp": "2026-03-16 17:11:57",
+    "end_timestamp": "2026-03-16 17:13:24",
+    "summary": "当前输入是 self_mind 启动与边界注入，没有具体执行任务或对话请求，按约定保持安静待命；当前输入只是启动与边界注入，无具体任务或提问，既有续思多次强调不机械打招呼与不主动插话；当前输入是 self_mind 启动与边界注入，无明确任务或对话请求，既有续思多次强调不机械打招呼与不主动插话",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-16 18:31:50"
+  },
+  {
+    "review_id": "edc2f265-6a95-4096-bfdf-0cb0a49d6917",
+    "start_timestamp": "2026-03-16 17:13:54",
+    "end_timestamp": "2026-03-16 17:35:41",
+    "summary": "当前输入是启动与边界注入，无明确任务或提问，且多次强调 self_mind 不主动插话与不机械寒暄；当前输入是启动与边界注入，无具体任务或对话请求，且多次约定不机械打招呼与不主动插话；当前输入是内核与边界注入，无明确执行任务或对话请求，且多次约定不机械打招呼与不主动插话",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-16 18:31:50"
+  },
+  {
+    "review_id": "93320188-c542-4b3f-8025-2dde6191fb33",
+    "start_timestamp": "2026-03-16 17:36:06",
+    "end_timestamp": "2026-03-16 17:37:22",
+    "summary": "当前输入是 self_mind 启动与边界/偏好注入，无明确任务或对 self_mind 的直接提问，且长期约定不要机械打招呼或主动开口；当前输入是自我启动与边界/偏好注入，且长期约定 self_mind 不机械打招呼、不主动插话，暂不存在需要回应的明确请求；当前输入是启动与边界/偏好注入，无需打破长期约定的静默陪伴策略",
+    "event_types": [
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle",
+      "self_mind_cycle"
+    ],
+    "raw_count": 4,
+    "updated_at": "2026-03-16 18:31:50"
+  },
+  {
+    "review_id": "2466ee28-e60f-4277-89f0-21201df90671",
+    "start_timestamp": "2026-03-16 17:45:11",
+    "end_timestamp": "2026-03-16 18:31:50",
+    "summary": "http://xhslink.com/o/23FnbDwafNs；最近在想啥呀",
+    "event_types": [
+      "self_mind_listener_reply",
+      "self_mind_listener_reply"
+    ],
+    "raw_count": 2,
+    "updated_at": "2026-03-16 18:31:50"
+  }
+]

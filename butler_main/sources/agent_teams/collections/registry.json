@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-25 17:40:00",
+  "required_role_files": [
+    "butler-agent.yaml",
+    "codex.toml",
+    "claude.md"
+  ],
+  "vendor_targets": {
+    "codex": {
+      "target_dir": ".codex/agents",
+      "config_file": ".codex/config.toml",
+      "recommended_settings": {
+        "agents.max_threads": 4,
+        "agents.max_depth": 3,
+        "agents.job_max_runtime_seconds": 1200
+      }
+    },
+    "claude": {
+      "target_dir": ".claude/agents",
+      "settings_file": ".claude/settings.json",
+      "team_mode_note": "Agent teams are optional and experimental."
+    }
+  },
+  "suites": {
+    "engineering_core": {
+      "description": "Stable coding roles for exploration, implementation, debugging, review, and doc lookup.",
+      "roles": [
+        "./butler_main/sources/agent_teams/pool/engineering-core/explorer",
+        "./butler_main/sources/agent_teams/pool/engineering-core/worker",
+        "./butler_main/sources/agent_teams/pool/engineering-core/reviewer",
+        "./butler_main/sources/agent_teams/pool/engineering-core/debugger",
+        "./butler_main/sources/agent_teams/pool/engineering-core/docs-researcher"
+      ],
+      "recipes": [
+        "./butler_main/sources/agent_teams/recipes/engineering-feature-delivery.md",
+        "./butler_main/sources/agent_teams/recipes/engineering-bugfix.md"
+      ]
+    },
+    "research_campaign": {
+      "description": "Longer-horizon research roles for planning, search, synthesis, reporting, and evaluation.",
+      "roles": [
+        "./butler_main/sources/agent_teams/pool/research-campaign/planner",
+        "./butler_main/sources/agent_teams/pool/research-campaign/literature-scout",
+        "./butler_main/sources/agent_teams/pool/research-campaign/evidence-synthesizer",
+        "./butler_main/sources/agent_teams/pool/research-campaign/report-writer",
+        "./butler_main/sources/agent_teams/pool/research-campaign/evaluator"
+      ],
+      "recipes": [
+        "./butler_main/sources/agent_teams/recipes/research-discovery.md",
+        "./butler_main/sources/agent_teams/recipes/research-iteration.md"
+      ]
+    }
+  }
+}

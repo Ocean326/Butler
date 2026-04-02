@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REMOTE_HOST="${BUTLER_CONSOLE_RELAY_REMOTE:-jianghy@10.254.73.179}"
+LOCAL_HOST="${BUTLER_CONSOLE_RELAY_LOCAL_HOST:-127.0.0.1}"
+LOCAL_PORT="${BUTLER_CONSOLE_RELAY_LOCAL_PORT:-8765}"
+REMOTE_LOOPBACK_PORT="${BUTLER_CONSOLE_RELAY_REMOTE_LOOPBACK_PORT:-18765}"
+REMOTE_PUBLIC_PORT="${BUTLER_CONSOLE_RELAY_REMOTE_PUBLIC_PORT:-18766}"
+REMOTE_PROXY_PID_FILE="${BUTLER_CONSOLE_RELAY_REMOTE_PID_FILE:-~/.butler_console_proxy_179.pid}"
+REMOTE_PROXY_LOG_FILE="${BUTLER_CONSOLE_RELAY_REMOTE_LOG_FILE:-/tmp/butler_console_proxy_179.log}"
+
+SSH_OPTS=(
+  -o BatchMode=yes
+  -o ExitOnForwardFailure=yes
+  -o ServerAliveInterval=30
+  -o ServerAliveCountMax=3
+  -o StrictHostKeyChecking=no
+)
+
+find_tunnel_pids() {
+  python3 - <<PY
+import subprocess
+
+remote_host = ${REMOTE_HOST@Q}
+remote_loopback_port = ${REMOTE_LOOPBACK_PORT@Q}
+local_host = ${LOCAL_HOST@Q}
+local_port = ${LOCAL_PORT@Q}
+
+needle_plain = f"-R {remote_loopback_port}:{local_host}:{local_port}"
+needle_bound = f"-R 0.0.0.0:{remote_loopback_port}:{local_host}:{local_port}"
+
+output = subprocess.check_output(["ps", "-eo", "pid=,args="], text=True)
+for line in output.splitlines():
+    line = line.strip()
+    if not line:
+        continue
+    pid, _, args = line.partition(" ")
+    if "ssh " not in args:
+        continue
+    if remote_host not in args:
+        continue
+    if needle_plain in args or needle_bound in args:
+        print(pid)
+PY
+}
+
+remote_url() {
+  printf 'http://%s:%s/console/\n' "${REMOTE_HOST#*@}" "$REMOTE_PUBLIC_PORT"
+}
+
+run_remote() {
+  ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" "$@"
+}
+
+ensure_local_console() {
+  curl -fsS --max-time 5 "http://${LOCAL_HOST}:${LOCAL_PORT}/console/api/access" >/dev/null
+}
+
+start_tunnel() {
+  if [[ -n "$(find_tunnel_pids)" ]]; then
+    return 0
+  fi
+  ssh -fN \
+    "${SSH_OPTS[@]}" \
+    -R "${REMOTE_LOOPBACK_PORT}:${LOCAL_HOST}:${LOCAL_PORT}" \
+    "$REMOTE_HOST"
+}
+
+start_remote_proxy() {
+  run_remote "bash -lc '
+set -euo pipefail
+PID_FILE=${REMOTE_PROXY_PID_FILE@Q}
+LOG_FILE=${REMOTE_PROXY_LOG_FILE@Q}
+if [[ -f \"\$PID_FILE\" ]]; then
+  existing_pid=\$(cat \"\$PID_FILE\" 2>/dev/null || true)
+  if [[ -n \"\$existing_pid\" ]] && kill -0 \"\$existing_pid\" 2>/dev/null; then
+    exit 0
+  fi
+fi
+nohup python3 -u - <<\"PY\" >\"\$LOG_FILE\" 2>&1 &
+import socket
+import threading
+
+LISTEN_HOST = \"0.0.0.0\"
+LISTEN_PORT = ${REMOTE_PUBLIC_PORT}
+TARGET_HOST = \"127.0.0.1\"
+TARGET_PORT = ${REMOTE_LOOPBACK_PORT}
+
+def pipe(src, dst):
+    try:
+        while True:
+            data = src.recv(65536)
+            if not data:
+                break
+            dst.sendall(data)
+    except Exception:
+        pass
+    finally:
+        for stream in (src, dst):
+            try:
+                stream.close()
+            except Exception:
+                pass
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind((LISTEN_HOST, LISTEN_PORT))
+server.listen(128)
+print(f\"proxy listening on {LISTEN_HOST}:{LISTEN_PORT} -> {TARGET_HOST}:{TARGET_PORT}\", flush=True)
+while True:
+    client, _ = server.accept()
+    upstream = socket.create_connection((TARGET_HOST, TARGET_PORT))
+    threading.Thread(target=pipe, args=(client, upstream), daemon=True).start()
+    threading.Thread(target=pipe, args=(upstream, client), daemon=True).start()
+PY
+proxy_pid=\$!
+printf \"%s\" \"\$proxy_pid\" >\"\$PID_FILE\"
+sleep 1
+'"
+}
+
+stop_tunnel() {
+  find_tunnel_pids | xargs -r kill
+}
+
+stop_remote_proxy() {
+  run_remote "bash -lc '
+set -euo pipefail
+PID_FILE=${REMOTE_PROXY_PID_FILE@Q}
+if [[ -f \"\$PID_FILE\" ]]; then
+  proxy_pid=\$(cat \"\$PID_FILE\" 2>/dev/null || true)
+  if [[ -n \"\$proxy_pid\" ]]; then
+    kill \"\$proxy_pid\" 2>/dev/null || true
+  fi
+  rm -f \"\$PID_FILE\"
+fi
+'"
+}
+
+status_all() {
+  echo "remote_url=$(remote_url)"
+  if curl -fsS --max-time 5 "$(remote_url)api/access" >/dev/null 2>&1; then
+    echo "relay_health=ok"
+  else
+    echo "relay_health=down"
+  fi
+  if [[ -n "$(find_tunnel_pids)" ]]; then
+    echo "local_tunnel=running"
+  else
+    echo "local_tunnel=stopped"
+  fi
+  run_remote "bash -lc '
+if ss -ltn | rg -q \":${REMOTE_LOOPBACK_PORT}\\\\b\"; then
+  echo remote_loopback=running
+else
+  echo remote_loopback=stopped
+fi
+if ss -ltn | rg -q \":${REMOTE_PUBLIC_PORT}\\\\b\"; then
+  echo remote_public=running
+else
+  echo remote_public=stopped
+fi
+'"
+}
+
+case "${1:-status}" in
+  start)
+    ensure_local_console
+    start_tunnel
+    start_remote_proxy
+    status_all
+    ;;
+  stop)
+    stop_remote_proxy
+    stop_tunnel
+    status_all || true
+    ;;
+  restart)
+    stop_remote_proxy || true
+    stop_tunnel || true
+    ensure_local_console
+    start_tunnel
+    start_remote_proxy
+    status_all
+    ;;
+  status)
+    status_all
+    ;;
+  url)
+    remote_url
+    ;;
+  *)
+    echo "usage: tools/console-relay-179 [start|stop|restart|status|url]" >&2
+    exit 1
+    ;;
+esac

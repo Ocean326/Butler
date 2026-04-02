@@ -1,0 +1,22 @@
+{
+  "query": "openai api sdk",
+  "sources": [
+    "github"
+  ],
+  "results": [
+    {
+      "source": "github",
+      "name": "BerriAI/litellm",
+      "description": "Python SDK, Proxy Server (AI Gateway) to call 100+ LLM APIs in OpenAI (or native) format, with cost tracking, guardrails, loadbalancing and logging. [Bedrock, Azure, OpenAI, VertexAI, Cohere, Anthropi",
+      "url": "https://github.com/BerriAI/litellm",
+      "popularity": 40099,
+      "license": "NOASSERTION",
+      "last_updated": "2026-03-24T03:24:37Z",
+      "last_updated_label": "0d ago (active)",
+      "language": "Python",
+      "safety_notes": [
+        "初筛无明显风险"
+      ]
+    }
+  ]
+}

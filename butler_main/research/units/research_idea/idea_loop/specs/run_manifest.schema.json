@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "idea_loop run manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "task_slug",
+    "status",
+    "baseline_ref",
+    "primary_metric"
+  ],
+  "properties": {
+    "run_id": { "type": "string" },
+    "task_slug": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["initialized", "running", "blocked", "completed", "archived"]
+    },
+    "baseline_ref": { "type": "string" },
+    "primary_metric": { "type": "string" },
+    "current_iteration": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "best_iteration": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "best_artifact_path": {
+      "type": "string"
+    }
+  }
+}

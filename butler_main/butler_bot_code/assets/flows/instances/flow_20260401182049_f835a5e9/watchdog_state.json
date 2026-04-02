@@ -1,0 +1,10 @@
+{
+  "updated_at": "2026-04-01 18:26:35",
+  "state": "completed",
+  "pid": 0,
+  "cooldown_until_epoch": 0.0,
+  "cooldown_until": "",
+  "restart_inhibit_until_epoch": 0.0,
+  "restart_inhibit_until": "",
+  "note": "smoke 目标已完成，guard_condition=done，未见需继续重试、修复或重规划的信号。"
+}

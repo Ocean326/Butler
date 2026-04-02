@@ -1,0 +1,103 @@
+{
+  "flow_id": "flow_20260402040927_4f5f067d",
+  "definition_id": "flow_20260402040927_4f5f067d",
+  "asset_kind": "instance",
+  "label": "improvement-discussion-flow",
+  "description": "面向当前项目的可改进点发现与讨论流程实例",
+  "workflow_kind": "managed_flow",
+  "goal": "识别项目中最值得优先改进的事项，并与用户达成一份清晰、可执行的改进清单与下一步行动顺序。",
+  "guard_condition": "仅输出基于现状的改进建议与讨论结论，不进行大规模实现或破坏性变更；如需改代码，必须先得到用户明确确认。",
+  "phase_plan": [
+    {
+      "phase_id": "scan",
+      "title": "Scan",
+      "objective": "快速审视当前代码与结构，汇总高价值改进机会（架构、可维护性、测试、文档、流程）。",
+      "done_when": "形成一份按影响与成本分级的候选改进项清单。",
+      "retry_phase_id": "scan",
+      "fallback_phase_id": "scan",
+      "next_phase_id": "discuss"
+    },
+    {
+      "phase_id": "discuss",
+      "title": "Discuss",
+      "objective": "与用户逐项讨论候选改进点，明确取舍、优先级与预期收益。",
+      "done_when": "确定最终优先改进列表，并为每项给出建议动作与验证方式。",
+      "retry_phase_id": "discuss",
+      "fallback_phase_id": "scan",
+      "next_phase_id": ""
+    }
+  ],
+  "default_role_pack": "coding_flow",
+  "allowed_execution_modes": [
+    "simple",
+    "medium"
+  ],
+  "launch_mode": "flow",
+  "catalog_flow_id": "free",
+  "execution_mode": "simple",
+  "session_strategy": "shared",
+  "role_pack_id": "coding_flow",
+  "risk_level": "normal",
+  "autonomy_profile": "default",
+  "manager_handoff": {
+    "summary": "已整理为一次可执行的改进评审流：先盘点可改进点，再与您逐项讨论优先级和落地方式。",
+    "label": "improvement-discussion-flow",
+    "description": "面向当前项目的可改进点发现与讨论流程实例",
+    "goal": "识别项目中最值得优先改进的事项，并与用户达成一份清晰、可执行的改进清单与下一步行动顺序。",
+    "guard_condition": "仅输出基于现状的改进建议与讨论结论，不进行大规模实现或破坏性变更；如需改代码，必须先得到用户明确确认。",
+    "workflow_kind": "managed_flow",
+    "asset_kind": "instance",
+    "mutation": "create",
+    "risk_level": "normal",
+    "autonomy_profile": "default",
+    "phase_plan": [
+      {
+        "phase_id": "scan",
+        "title": "Scan",
+        "objective": "快速审视当前代码与结构，汇总高价值改进机会（架构、可维护性、测试、文档、流程）。",
+        "done_when": "形成一份按影响与成本分级的候选改进项清单。",
+        "retry_phase_id": "scan",
+        "fallback_phase_id": "scan",
+        "next_phase_id": "discuss"
+      },
+      {
+        "phase_id": "discuss",
+        "title": "Discuss",
+        "objective": "与用户逐项讨论候选改进点，明确取舍、优先级与预期收益。",
+        "done_when": "确定最终优先改进列表，并为每项给出建议动作与验证方式。",
+        "retry_phase_id": "discuss",
+        "fallback_phase_id": "scan",
+        "next_phase_id": ""
+      }
+    ],
+    "review_checklist": [],
+    "instance_defaults": {},
+    "lineage": {},
+    "asset_state": {},
+    "bundle_manifest": {},
+    "operator_guidance": "先确认是否按该流程启动；启动后优先看候选清单的前3项，逐项拍板“现在做/稍后做/不做”，最后把已确认项转成可执行任务。",
+    "confirmation_prompt": "是否按这个两阶段改进讨论流开始，我先给你一版优先级清单？",
+    "managed_at": "2026-04-02 04:09:48",
+    "manage_stage": "commit",
+    "manager_session_id": ""
+  },
+  "asset_state": {
+    "status": "active",
+    "stage": "commit"
+  },
+  "lineage": {},
+  "instance_defaults": {
+    "execution_mode": "simple",
+    "session_strategy": "shared",
+    "role_pack_id": "coding_flow",
+    "launch_mode": "flow"
+  },
+  "review_checklist": [],
+  "bundle_manifest": {},
+  "source_asset_key": "",
+  "source_asset_kind": "",
+  "source_asset_version": "",
+  "version": "1.3.0",
+  "created_at": "2026-04-02 04:09:27",
+  "updated_at": "2026-04-02 04:09:48"
+}

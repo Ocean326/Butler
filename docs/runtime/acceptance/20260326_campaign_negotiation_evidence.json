@@ -1,0 +1,277 @@
+{
+  "evidence_generated_on": "2026-03-26",
+  "scenarios": [
+    {
+      "name": "template_auto_start",
+      "campaign_id": "campaign_781f7020dab3",
+      "summary": "campaign started: campaign_781f7020dab3",
+      "workspace": "/tmp/tmpz_9yc06m",
+      "materials": [
+        "docs/plan.md"
+      ],
+      "template_contract": {
+        "template_origin": "campaign.single_repo_delivery",
+        "composition_mode": "template",
+        "skeleton_changed": false,
+        "composition_plan": {
+          "base_template_id": "campaign.single_repo_delivery",
+          "phase_plan": [
+            "discover",
+            "implement",
+            "evaluate",
+            "iterate"
+          ],
+          "role_plan": [
+            "campaign_supervisor",
+            "campaign_reviewer"
+          ],
+          "governance_plan": {},
+          "diff_summary": [],
+          "skeleton_changed": false,
+          "composition_mode": "template"
+        },
+        "created_from": "campaign_negotiation",
+        "negotiation_session_id": "accept_auto"
+      },
+      "spec_contract": {
+        "top_level_goal": "我想长期持续推进项目A，进行多阶段迭代。材料: docs/plan.md",
+        "materials": [
+          "docs/plan.md"
+        ],
+        "hard_constraints": [],
+        "workspace_root": "/tmp/tmpz_9yc06m",
+        "repo_root": "/tmp/tmpz_9yc06m",
+        "campaign_title": "我想长期持续推进项目A，进行多阶段迭代。材料: docs/plan.md",
+        "template_origin": "campaign.single_repo_delivery",
+        "composition_mode": "template",
+        "skeleton_changed": false,
+        "composition_plan": {
+          "base_template_id": "campaign.single_repo_delivery",
+          "phase_plan": [
+            "discover",
+            "implement",
+            "evaluate",
+            "iterate"
+          ],
+          "role_plan": [
+            "campaign_supervisor",
+            "campaign_reviewer"
+          ],
+          "governance_plan": {},
+          "diff_summary": [],
+          "skeleton_changed": false,
+          "composition_mode": "template"
+        },
+        "created_from": "campaign_negotiation",
+        "negotiation_session_id": "accept_auto",
+        "iteration_budget": {
+          "max_iterations": 3,
+          "max_minutes": 120,
+          "max_file_changes": 12
+        },
+        "metadata": {
+          "template_origin": "campaign.single_repo_delivery",
+          "composition_mode": "template",
+          "skeleton_changed": false,
+          "composition_plan": {
+            "base_template_id": "campaign.single_repo_delivery",
+            "phase_plan": [
+              "discover",
+              "implement",
+              "evaluate",
+              "iterate"
+            ],
+            "role_plan": [
+              "campaign_supervisor",
+              "campaign_reviewer"
+            ],
+            "governance_plan": {},
+            "diff_summary": [],
+            "skeleton_changed": false,
+            "composition_mode": "template"
+          },
+          "created_from": "campaign_negotiation",
+          "negotiation_session_id": "accept_auto",
+          "template_contract": {
+            "template_origin": "campaign.single_repo_delivery",
+            "composition_mode": "template",
+            "skeleton_changed": false,
+            "composition_plan": {
+              "base_template_id": "campaign.single_repo_delivery",
+              "phase_plan": [
+                "discover",
+                "implement",
+                "evaluate",
+                "iterate"
+              ],
+              "role_plan": [
+                "campaign_supervisor",
+                "campaign_reviewer"
+              ],
+              "governance_plan": {},
+              "diff_summary": [],
+              "skeleton_changed": false,
+              "composition_mode": "template"
+            },
+            "created_from": "campaign_negotiation",
+            "negotiation_session_id": "accept_auto"
+          }
+        }
+      }
+    },
+    {
+      "name": "composition_confirmation_start",
+      "campaign_id": "campaign_b848f36ffb00",
+      "draft_summary": "campaign draft requires confirmation",
+      "summary": "campaign started: campaign_b848f36ffb00",
+      "workspace": "/tmp/tmpmbzq6ns0",
+      "draft_path": "/tmp/tmpmbzq6ns0/butler_main/butler_bot_code/run/orchestrator/negotiations/campaign/accept_confirm.json",
+      "draft_exists": true,
+      "template_contract": {
+        "template_origin": "campaign.single_repo_delivery",
+        "composition_mode": "composition",
+        "skeleton_changed": true,
+        "composition_plan": {
+          "base_template_id": "campaign.single_repo_delivery",
+          "phase_plan": [
+            "discover",
+            "implement",
+            "evaluate",
+            "iterate"
+          ],
+          "role_plan": [
+            "campaign_supervisor",
+            "campaign_reviewer"
+          ],
+          "governance_plan": {},
+          "diff_summary": [
+            "composition_requested",
+            "custom_skeleton_requested"
+          ],
+          "skeleton_changed": true,
+          "composition_mode": "composition"
+        },
+        "created_from": "campaign_negotiation",
+        "negotiation_session_id": "accept_confirm"
+      },
+      "spec_contract": {
+        "top_level_goal": "我要长期推进项目B，但要改阶段顺序并新增角色。",
+        "materials": [],
+        "hard_constraints": [],
+        "workspace_root": "/tmp/tmpmbzq6ns0",
+        "repo_root": "/tmp/tmpmbzq6ns0",
+        "campaign_title": "我要长期推进项目B，但要改阶段顺序并新增角色。",
+        "template_origin": "campaign.single_repo_delivery",
+        "composition_mode": "composition",
+        "skeleton_changed": true,
+        "composition_plan": {
+          "base_template_id": "campaign.single_repo_delivery",
+          "phase_plan": [
+            "discover",
+            "implement",
+            "evaluate",
+            "iterate"
+          ],
+          "role_plan": [
+            "campaign_supervisor",
+            "campaign_reviewer"
+          ],
+          "governance_plan": {},
+          "diff_summary": [
+            "composition_requested",
+            "custom_skeleton_requested"
+          ],
+          "skeleton_changed": true,
+          "composition_mode": "composition"
+        },
+        "created_from": "campaign_negotiation",
+        "negotiation_session_id": "accept_confirm",
+        "iteration_budget": {
+          "max_iterations": 3,
+          "max_minutes": 120,
+          "max_file_changes": 12
+        },
+        "metadata": {
+          "template_origin": "campaign.single_repo_delivery",
+          "composition_mode": "composition",
+          "skeleton_changed": true,
+          "composition_plan": {
+            "base_template_id": "campaign.single_repo_delivery",
+            "phase_plan": [
+              "discover",
+              "implement",
+              "evaluate",
+              "iterate"
+            ],
+            "role_plan": [
+              "campaign_supervisor",
+              "campaign_reviewer"
+            ],
+            "governance_plan": {},
+            "diff_summary": [
+              "composition_requested",
+              "custom_skeleton_requested"
+            ],
+            "skeleton_changed": true,
+            "composition_mode": "composition"
+          },
+          "created_from": "campaign_negotiation",
+          "negotiation_session_id": "accept_confirm",
+          "template_contract": {
+            "template_origin": "campaign.single_repo_delivery",
+            "composition_mode": "composition",
+            "skeleton_changed": true,
+            "composition_plan": {
+              "base_template_id": "campaign.single_repo_delivery",
+              "phase_plan": [
+                "discover",
+                "implement",
+                "evaluate",
+                "iterate"
+              ],
+              "role_plan": [
+                "campaign_supervisor",
+                "campaign_reviewer"
+              ],
+              "governance_plan": {},
+              "diff_summary": [
+                "composition_requested",
+                "custom_skeleton_requested"
+              ],
+              "skeleton_changed": true,
+              "composition_mode": "composition"
+            },
+            "created_from": "campaign_negotiation",
+            "negotiation_session_id": "accept_confirm"
+          }
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "name": "auto_start_campaign_created",
+      "ok": true
+    },
+    {
+      "name": "auto_start_template_mode",
+      "ok": true
+    },
+    {
+      "name": "auto_start_materials_preserved",
+      "ok": true
+    },
+    {
+      "name": "confirmation_requires_draft",
+      "ok": true
+    },
+    {
+      "name": "confirmation_campaign_created",
+      "ok": true
+    },
+    {
+      "name": "confirmation_composition_mode",
+      "ok": true
+    }
+  ]
+}

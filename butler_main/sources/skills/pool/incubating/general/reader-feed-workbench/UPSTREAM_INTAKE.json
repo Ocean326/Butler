@@ -1,0 +1,28 @@
+{
+  "candidate": {
+    "id": "reader-feed-workbench",
+    "name": "reader",
+    "category": "general_information",
+    "priority": "P1",
+    "maturity": "medium_high",
+    "upstream_type": "open_source_library",
+    "repo_url": "https://github.com/lemon24/reader",
+    "docs_url": "https://reader.readthedocs.io/",
+    "butler_skill_shape": "persistent feed workspace, read-state management, local feed review tool",
+    "why_recommended": [
+      "Stronger than raw feed parsing when Butler needs a durable watchlist or inbox model.",
+      "Can back a future research-monitor or forum-monitor workflow."
+    ],
+    "risks": [
+      "Heavier than feedparser for simple one-shot pulls.",
+      "Requires local state and lifecycle handling."
+    ],
+    "suggested_collection_ids": [
+      "automation_safe"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/sources/skills/pool/incubating/general/reader-feed-workbench",
+  "review_state": "imported_for_review"
+}

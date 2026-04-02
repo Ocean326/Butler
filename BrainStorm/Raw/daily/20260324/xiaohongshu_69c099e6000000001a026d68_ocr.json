@@ -1,0 +1,83 @@
+{
+  "status": "ok",
+  "created_at": "2026-03-24T00:28:44.790343+08:00",
+  "source": {
+    "type": "web-note-capture-cn",
+    "capture_json_path": "工作区\\temp_xhs_capture_20260324_retry\\xiaohongshu_69c099e6000000001a026d68.json",
+    "platform": "xiaohongshu",
+    "id": "69c099e6000000001a026d68",
+    "title": "搜索小红书"
+  },
+  "backend_requested": "auto",
+  "backend_resolved": "none",
+  "warnings": [
+    "backend=auto 未检测到可用的 OpenAI 或 PaddleOCR，当前仅下载图片并记录失败原因。"
+  ],
+  "images": [
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/cb67ae9e6e7fe47f3d367e062dd7368a/spectrum/1040g34o31u1ou1k5had05nl6hc7g850mvjaiipg!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvY2I2N2FlOWU2ZTdmZTQ3ZjNkMzY3ZTA2MmRkNzM2OGEvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWQwNW5sNmhjN2c4NTBtdmphaWlwZyFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/97c2a59f57d8c994719f4464e0a5e6cc/spectrum/1040g34o31u1ou1k5hadg5nl6hc7g850mo9hejlo!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvOTdjMmE1OWY1N2Q4Yzk5NDcxOWY0NDY0ZTBhNWU2Y2Mvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWRnNW5sNmhjN2c4NTBtbzloZWpsbyFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/48ca1edbac65f3dc252effd0eaafebc8/spectrum/1040g34o31u1ou1k5hae05nl6hc7g850m8143o68!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvNDhjYTFlZGJhYzY1ZjNkYzI1MmVmZmQwZWFhZmViYzgvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWUwNW5sNmhjN2c4NTBtODE0M282OCFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/e2aa1cae31e22f93dc2c8ccf13f6d1c8/spectrum/1040g34o31u1ou1k5haeg5nl6hc7g850mjpgro6g!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvZTJhYTFjYWUzMWUyMmY5M2RjMmM4Y2NmMTNmNmQxYzgvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWVnNW5sNmhjN2c4NTBtanBncm82ZyFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/60c2c5616c0bd5d9a6ac71e9accf7ef6/spectrum/1040g34o31u1ou1k5haf05nl6hc7g850mjfv90po!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvNjBjMmM1NjE2YzBiZDVkOWE2YWM3MWU5YWNjZjdlZjYvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWYwNW5sNmhjN2c4NTBtamZ2OTBwbyFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/76b7f1bce6505083ef76e1c4ee943110/spectrum/1040g34o31u1ou1k5hafg5nl6hc7g850mbbucnk8!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvNzZiN2YxYmNlNjUwNTA4M2VmNzZlMWM0ZWU5NDMxMTAvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWZnNW5sNmhjN2c4NTBtYmJ1Y25rOCFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/4a121f067c585d5da6c36adc633af627/spectrum/1040g34o31u1ou1k5hag05nl6hc7g850mb7f101g!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvNGExMjFmMDY3YzU4NWQ1ZGE2YzM2YWRjNjMzYWY2Mjcvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWcwNW5sNmhjN2c4NTBtYjdmMTAxZyFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/ca51b44a45857346a0deb306eac33008/spectrum/1040g34o31u1ou1k5hagg5nl6hc7g850m2oes1k0!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvY2E1MWI0NGE0NTg1NzM0NmEwZGViMzA2ZWFjMzMwMDgvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWdnNW5sNmhjN2c4NTBtMm9lczFrMCFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/3eb16b8db36a0b7d98c96da105597608/spectrum/1040g34o31u1ou1k5hah05nl6hc7g850muqf8i40!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvM2ViMTZiOGRiMzZhMGI3ZDk4Yzk2ZGExMDU1OTc2MDgvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWgwNW5sNmhjN2c4NTBtdXFmOGk0MCFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/b30db949c00c78ea3e432120623e31df/spectrum/1040g34o31u1ou1k5hahg5nl6hc7g850m6o3f0u0!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvYjMwZGI5NDljMDBjNzhlYTNlNDMyMTIwNjIzZTMxZGYvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWhnNW5sNmhjN2c4NTBtNm8zZjB1MCFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/92efd834d6e4a46d7e6e8422f0df4d81/spectrum/1040g34o31u1ou1k5hai05nl6hc7g850msu41560!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvOTJlZmQ4MzRkNmU0YTQ2ZDdlNmU4NDIyZjBkZjRkODEvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWkwNW5sNmhjN2c4NTBtc3U0MTU2MCFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/ea482640bf8011623578954203ec16f3/spectrum/1040g34o31u1ou1k5haig5nl6hc7g850mbloptq0!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvZWE0ODI2NDBiZjgwMTE2MjM1Nzg5NTQyMDNlYzE2ZjMvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWlnNW5sNmhjN2c4NTBtYmxvcHRxMCFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603240026/ba6c5b90057bbb8c33cac140471b2179/spectrum/1040g34o31u1ou1k5haj05nl6hc7g850m26vqnv8!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\daily\\20260324\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMyNDAwMjYvYmE2YzViOTAwNTdiYmI4YzMzY2FjMTQwNDcxYjIxNzkvc3BlY3RydW0vMTA0MGczNG8zMXUxb3UxazVoYWowNW5sNmhjN2c4NTBtMjZ2cW52OCFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    }
+  ]
+}

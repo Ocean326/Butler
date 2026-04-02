@@ -1,0 +1,58 @@
+{
+  "status": "ok",
+  "created_at": "2026-03-16T20:03:14.791038+08:00",
+  "source": {
+    "type": "web-note-capture-cn",
+    "capture_json_path": "工作区\\网页抓取验证\\zhihu_1994463393139151039.json",
+    "platform": "zhihu",
+    "id": "1994463393139151039",
+    "title": "如果不读 Anthropic 这 15 篇技术博客，你的 Agent 开发可能正在走弯路"
+  },
+  "warnings": [],
+  "images": [
+    {
+      "url": "https://pic1.zhimg.com/v2-abed1a8c04700ba7d72b45195223e0ff_l.jpeg",
+      "saved_path": "BrainStorm\\Raw\\images\\img_aHR0cHM6Ly9waWMxLnpoaW1nLmNvbS92Mi1hYmVkMWE4YzA0NzAwYmE3ZDcyYjQ1MTk1MjIzZTBmZl9sLmpwZWc.jpeg",
+      "error": "OCR 调用失败: 无法导入 PaddleOCR，请先在当前虚拟环境中安装：\n  pip install \"paddlepaddle>=2.0.0\" paddleocr\n原始错误：No module named 'paddleocr'"
+    },
+    {
+      "url": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+      "error": "图片下载失败或超时。"
+    },
+    {
+      "url": "https://pica.zhimg.com/v2-42e3f6120ebe552386373eb30d194a71_l.jpg?source=172ae18b",
+      "saved_path": "BrainStorm\\Raw\\images\\img_aHR0cHM6Ly9waWNhLnpoaW1nLmNvbS92Mi00MmUzZjYxMjBlYmU1NTIzODYzNzNlYjMwZDE5NGE3MV9sLmpwZz9zb3VyY2U9MTcyYWUxOGI.jpg",
+      "error": "OCR 调用失败: 无法导入 PaddleOCR，请先在当前虚拟环境中安装：\n  pip install \"paddlepaddle>=2.0.0\" paddleocr\n原始错误：No module named 'paddleocr'"
+    },
+    {
+      "url": "https://pic1.zhimg.com/v2-2ddc5cc683982648f6f123616fb4ec09_l.png?source=32738c0c",
+      "saved_path": "BrainStorm\\Raw\\images\\img_aHR0cHM6Ly9waWMxLnpoaW1nLmNvbS92Mi0yZGRjNWNjNjgzOTgyNjQ4ZjZmMTIzNjE2ZmI0ZWMwOV9sLnBuZz9zb3VyY2U9MzI3MzhjMGM.jpg",
+      "error": "OCR 调用失败: 无法导入 PaddleOCR，请先在当前虚拟环境中安装：\n  pip install \"paddlepaddle>=2.0.0\" paddleocr\n原始错误：No module named 'paddleocr'"
+    },
+    {
+      "url": "https://pica.zhimg.com/v2-4812630bc27d642f7cafcd6cdeca3d7a.jpg?source=88ceefae",
+      "saved_path": "BrainStorm\\Raw\\images\\img_aHR0cHM6Ly9waWNhLnpoaW1nLmNvbS92Mi00ODEyNjMwYmMyN2Q2NDJmN2NhZmNkNmNkZWNhM2Q3YS5qcGc_c291cmNlPTg4Y2VlZmFl.jpg",
+      "error": "OCR 调用失败: 无法导入 PaddleOCR，请先在当前虚拟环境中安装：\n  pip install \"paddlepaddle>=2.0.0\" paddleocr\n原始错误：No module named 'paddleocr'"
+    },
+    {
+      "url": "https://picx.zhimg.com/v2-57fe7feb4813331d5eca02ef731e12c9.jpg?source=88ceefae",
+      "saved_path": "BrainStorm\\Raw\\images\\img_aHR0cHM6Ly9waWN4LnpoaW1nLmNvbS92Mi01N2ZlN2ZlYjQ4MTMzMzFkNWVjYTAyZWY3MzFlMTJjOS5qcGc_c291cmNlPTg4Y2VlZmFl.jpg",
+      "error": "OCR 调用失败: 无法导入 PaddleOCR，请先在当前虚拟环境中安装：\n  pip install \"paddlepaddle>=2.0.0\" paddleocr\n原始错误：No module named 'paddleocr'"
+    },
+    {
+      "url": "https://picx.zhimg.com/v2-0ea815466e0a54068a498a27c815eee9_1440w.jpg",
+      "saved_path": "BrainStorm\\Raw\\images\\img_aHR0cHM6Ly9waWN4LnpoaW1nLmNvbS92Mi0wZWE4MTU0NjZlMGE1NDA2OGE0OThhMjdjODE1ZWVlOV8xNDQwdy5qcGc.jpg",
+      "error": "OCR 调用失败: 无法导入 PaddleOCR，请先在当前虚拟环境中安装：\n  pip install \"paddlepaddle>=2.0.0\" paddleocr\n原始错误：No module named 'paddleocr'"
+    },
+    {
+      "url": "https://pic2.zhimg.com/v2-9863a3579dfcf5a6b8dfdc7de4234309_1440w.jpg",
+      "saved_path": "BrainStorm\\Raw\\images\\img_aHR0cHM6Ly9waWMyLnpoaW1nLmNvbS92Mi05ODYzYTM1NzlkZmNmNWE2YjhkZmRjN2RlNDIzNDMwOV8xNDQwdy5qcGc.jpg",
+      "error": "OCR 调用失败: 无法导入 PaddleOCR，请先在当前虚拟环境中安装：\n  pip install \"paddlepaddle>=2.0.0\" paddleocr\n原始错误：No module named 'paddleocr'"
+    },
+    {
+      "url": "https://pic4.zhimg.com/v2-5fd466122381a4e166f4e1e04d271caf_1440w.jpg",
+      "saved_path": "BrainStorm\\Raw\\images\\img_aHR0cHM6Ly9waWM0LnpoaW1nLmNvbS92Mi01ZmQ0NjYxMjIzODFhNGUxNjZmNGUxZTA0ZDI3MWNhZl8xNDQwdy5qcGc.jpg",
+      "error": "OCR 调用失败: 无法导入 PaddleOCR，请先在当前虚拟环境中安装：\n  pip install \"paddlepaddle>=2.0.0\" paddleocr\n原始错误：No module named 'paddleocr'"
+    }
+  ]
+}

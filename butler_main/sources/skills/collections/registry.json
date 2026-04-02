@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-24 02:30:00",
+  "collections": {
+    "chat_default": {
+      "owner": "butler",
+      "status": "active",
+      "allowed_runtimes": ["chat", "console"],
+      "default_injection_mode": "shortlist",
+      "ui_visibility": "visible",
+      "description": "普通 chat 对话默认可见的 action skills。",
+      "skills": [
+        "./butler_main/sources/skills/pool/chat/feishu_doc_read",
+        "./butler_main/sources/skills/pool/chat/feishu-doc-sync",
+        "./butler_main/sources/skills/pool/chat/feishu_chat_history",
+        "./butler_main/sources/skills/pool/chat/web-note-capture-cn",
+        "./butler_main/sources/skills/pool/chat/skill-library-explore",
+        "./butler_main/sources/skills/pool/ops/skill-github-import",
+        "./butler_main/sources/skills/pool/general/rss-feed-watch",
+        "./butler_main/sources/skills/pool/forum/hackernews-thread-watch",
+        "./butler_main/sources/skills/pool/forum/stackexchange-search",
+        "./butler_main/sources/skills/pool/research/arxiv-search",
+        "./butler_main/sources/skills/pool/research/paper-first-principles-review"
+      ]
+    },
+    "chat_content_share": {
+      "owner": "butler",
+      "status": "active",
+      "allowed_runtimes": ["chat"],
+      "default_injection_mode": "shortlist",
+      "ui_visibility": "visible",
+      "description": "面向链接分享、内容抓取与图文整理的最小 skills 集。",
+      "skills": [
+        "./butler_main/sources/skills/pool/chat/web-note-capture-cn",
+        "./butler_main/sources/skills/pool/chat/feishu_doc_read",
+        "./butler_main/sources/skills/pool/chat/feishu-doc-sync"
+      ]
+    },
+    "codex_default": {
+      "owner": "butler",
+      "status": "active",
+      "allowed_runtimes": ["chat", "campaign", "console"],
+      "default_injection_mode": "shortlist",
+      "phase_tags": ["discover", "implement", "iterate"],
+      "ui_visibility": "visible",
+      "description": "codex chat 路线默认暴露的 skills。",
+      "skills": [
+        "./butler_main/sources/skills/pool/chat/feishu_doc_read",
+        "./butler_main/sources/skills/pool/chat/feishu_chat_history",
+        "./butler_main/sources/skills/pool/chat/web-note-capture-cn",
+        "./butler_main/sources/skills/pool/chat/skill-library-explore",
+        "./butler_main/sources/skills/pool/ops/skill-github-import",
+        "./butler_main/sources/skills/pool/ops/skill-incubating-promote",
+        "./butler_main/sources/skills/pool/ops/skill-upstream-intake-review",
+        "./butler_main/sources/skills/pool/ops/skill-pool-maintain",
+        "./butler_main/sources/skills/pool/ops/skill-pool-verify",
+        "./butler_main/sources/skills/pool/ops/memory-curation",
+        "./butler_main/sources/skills/pool/general/web-article-extract",
+        "./butler_main/sources/skills/pool/general/rss-feed-watch",
+        "./butler_main/sources/skills/pool/forum/reddit-thread-read",
+        "./butler_main/sources/skills/pool/forum/hackernews-thread-watch",
+        "./butler_main/sources/skills/pool/forum/stackexchange-search",
+        "./butler_main/sources/skills/pool/forum/discourse-topic-read",
+        "./butler_main/sources/skills/pool/forum/github-discussions-read",
+        "./butler_main/sources/skills/pool/research/arxiv-search",
+        "./butler_main/sources/skills/pool/research/paper-first-principles-review",
+        "./butler_main/sources/skills/pool/research/semantic-scholar-search",
+        "./butler_main/sources/skills/pool/research/openalex-search",
+        "./butler_main/sources/skills/pool/research/crossref-doi-enrich",
+        "./butler_main/sources/skills/pool/research/europepmc-search"
+      ]
+    },
+    "automation_safe": {
+      "owner": "butler",
+      "status": "active",
+      "allowed_runtimes": ["orchestrator", "campaign", "console"],
+      "default_injection_mode": "shortlist",
+      "risk_budget": "low",
+      "ui_visibility": "internal",
+      "description": "仅对 orchestrator / 后台自动化执行开放的低风险可审计 skills。",
+      "skills": [
+        "./butler_main/sources/skills/pool/chat/daily-inspection",
+        "./butler_main/sources/skills/pool/chat/feishu-webhook-tools",
+        "./butler_main/sources/skills/pool/chat/proactive-talk",
+        "./butler_main/sources/skills/pool/chat/skill-library-explore",
+        "./butler_main/sources/skills/pool/general/rss-feed-watch",
+        "./butler_main/sources/skills/pool/forum/hackernews-thread-watch",
+        "./butler_main/sources/skills/pool/research/arxiv-search",
+        "./butler_main/sources/skills/pool/research/crossref-doi-enrich",
+        "./butler_main/sources/skills/pool/research/europepmc-search"
+      ]
+    },
+    "skill_ops": {
+      "owner": "butler",
+      "status": "active",
+      "allowed_runtimes": ["console", "campaign"],
+      "default_injection_mode": "shortlist",
+      "ui_visibility": "internal",
+      "description": "面向 skill 资产导入、维护、校验的运维类 skills。",
+      "skills": [
+        "./butler_main/sources/skills/pool/ops/skill-github-import",
+        "./butler_main/sources/skills/pool/ops/skill-incubating-promote",
+        "./butler_main/sources/skills/pool/ops/skill-upstream-intake-review",
+        "./butler_main/sources/skills/pool/ops/skill-pool-maintain",
+        "./butler_main/sources/skills/pool/ops/skill-pool-verify",
+        "./butler_main/sources/skills/pool/ops/memory-curation"
+      ]
+    },
+    "upstream_active": {
+      "owner": "butler",
+      "status": "active",
+      "allowed_runtimes": ["campaign", "console"],
+      "default_injection_mode": "passive_index",
+      "ui_visibility": "visible",
+      "description": "由 incubating 候选提升出来的 active 外部信息源 skills。",
+      "skills": [
+        "./butler_main/sources/skills/pool/general/web-article-extract",
+        "./butler_main/sources/skills/pool/general/rss-feed-watch",
+        "./butler_main/sources/skills/pool/forum/reddit-thread-read",
+        "./butler_main/sources/skills/pool/forum/hackernews-thread-watch",
+        "./butler_main/sources/skills/pool/forum/stackexchange-search",
+        "./butler_main/sources/skills/pool/forum/discourse-topic-read",
+        "./butler_main/sources/skills/pool/forum/github-discussions-read",
+        "./butler_main/sources/skills/pool/research/arxiv-search",
+        "./butler_main/sources/skills/pool/research/semantic-scholar-search",
+        "./butler_main/sources/skills/pool/research/openalex-search",
+        "./butler_main/sources/skills/pool/research/crossref-doi-enrich",
+        "./butler_main/sources/skills/pool/research/europepmc-search"
+      ]
+    }
+  }
+}
+

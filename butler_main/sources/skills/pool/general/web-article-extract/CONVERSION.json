@@ -1,0 +1,8 @@
+{
+  "candidate_id": "trafilatura-web-extract",
+  "active_skill_name": "web-article-extract",
+  "active_skill_path": "./butler_main/sources/skills/pool/general/web-article-extract",
+  "promoted_at": "2026-03-24",
+  "promotion_mode": "auto_template",
+  "upstream_name": "Trafilatura"
+}

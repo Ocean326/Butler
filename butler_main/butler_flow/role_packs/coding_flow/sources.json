@@ -1,0 +1,16 @@
+{
+  "pack_id": "coding_flow",
+  "captured_at": "2026-03-31",
+  "sources": [
+    {
+      "source_repo": "codeoutin/claude-code-agency",
+      "source_type": "prompt_seed",
+      "adaptation": "Converted coding multi-role prompts into Butler foreground role files with lighter constraints and explicit handoff/artifact sections."
+    },
+    {
+      "source_repo": "vizra-ai/claude-code-agents",
+      "source_type": "prompt_seed",
+      "adaptation": "Used as a secondary seed for reviewer/fixer specialization and concise role contracts."
+    }
+  ]
+}

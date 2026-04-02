@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Butler Visual Console</title>
+    <meta name="theme-color" content="#efe7da" />
+    <meta
+      name="description"
+      content="Butler Visual Console for observing, steering, and launching long-running work."
+    />
+    <script>
+      (() => {
+        const key = "butler-console-theme";
+        let theme = "light";
+        try {
+          const stored = window.localStorage.getItem(key);
+          if (stored === "light" || stored === "dark") {
+            theme = stored;
+          } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            theme = "dark";
+          }
+        } catch {
+          theme = "light";
+        }
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>

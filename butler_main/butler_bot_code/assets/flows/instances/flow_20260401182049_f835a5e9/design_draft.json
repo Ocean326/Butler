@@ -1,0 +1,18 @@
+{
+  "flow_id": "flow_20260401182049_f835a5e9",
+  "workflow_kind": "single_goal",
+  "goal": "smoke",
+  "guard_condition": "done",
+  "phase_plan": [
+    {
+      "phase_id": "free",
+      "title": "Execute",
+      "objective": "Continue the foreground task until the primary goal and guard condition are satisfied.",
+      "done_when": "The goal is satisfied or clearly blocked.",
+      "retry_phase_id": "free",
+      "fallback_phase_id": "free",
+      "next_phase_id": ""
+    }
+  ],
+  "updated_at": "2026-04-01 18:20:49"
+}

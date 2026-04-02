@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Curation"
+  short_description: "Curate Butler memory assets safely."
+  default_prompt: "Use $memory-curation to audit and clean Butler chat memory assets."

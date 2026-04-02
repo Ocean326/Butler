@@ -1,0 +1,8 @@
+{"created_at": "2026-04-02 02:41:56", "asset_kind": "template", "asset_id": "academic_paper_review_v1", "mutation": "update", "summary": "已按提交阶段完成模板流交接：保留论文四维评估主线，并将执行收敛为5个顺序阶段，确保每步都有可回溯证据与可回退路径。"}
+{"created_at": "2026-04-02 02:48:35", "asset_kind": "template", "asset_id": "academic_paper_review_v1", "mutation": "update", "summary": "模板流已完成提交阶段交接：当前为可复用的论文四维评估 managed flow，采用5个顺序阶段并带回退与重试控制。"}
+{"created_at": "2026-04-02 03:52:30", "asset_kind": "instance", "asset_id": "flow_20260402035204_699d41c4", "mutation": "create", "summary": "已按你的指令提交一个可直接运行的托管流实例，采用计划-实现-复核三阶段推进。"}
+{"created_at": "2026-04-02 03:55:18", "asset_kind": "template", "asset_id": "template_flow_20260402035457_a942afd7", "mutation": "create", "summary": "已整理为可复用的模板流：先明确范围与目标，再实施并补齐验证，最后完成结果复核后交付。"}
+{"created_at": "2026-04-02 04:04:23", "asset_kind": "instance", "asset_id": "flow_20260402040358_cbcf0170", "mutation": "create", "summary": "已整理为可执行的托管流程：先固化 goal/guard_condition/review_checklist，再同步更新 `supervisor.md` 与通用 quality rubric，并在收尾阶段完成一致性复核。"}
+{"created_at": "2026-04-02 04:07:12", "asset_kind": "template", "asset_id": "template_flow_20260402040642_b733903e", "mutation": "create", "summary": "已将你的需求收敛为一个可复用的通用托管模板流，覆盖探索、整理、执行到质量收口，适配研究综述与写作交付类任务。"}
+{"created_at": "2026-04-02 04:08:45", "asset_kind": "template", "asset_id": "template_flow_20260402040642_b733903e", "mutation": "update", "summary": "已将现有模板流收敛为可讲解、可优化、可复用的托管定义，保留端到端交付主线并强化改进闭环。"}
+{"created_at": "2026-04-02 04:09:48", "asset_kind": "instance", "asset_id": "flow_20260402040927_4f5f067d", "mutation": "create", "summary": "已整理为一次可执行的改进评审流：先盘点可改进点，再与您逐项讨论优先级和落地方式。"}

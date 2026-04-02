@@ -1,0 +1,22 @@
+{
+  "main_mode": "project",
+  "project_phase": "review",
+  "project_next_phase": "review",
+  "active_role": "project_reviewer",
+  "injection_tier": "extended",
+  "auto_route_reason": "sticky_mode_continuation",
+  "last_explicit_override": "sticky_mode",
+  "mode_artifacts": {
+    "project": {
+      "goal": "请总结今天的升级计划",
+      "current_phase": "review",
+      "next_phase": "review",
+      "latest_conclusion": "route=chat; agent=butler.chat",
+      "latest_user_prompt": "请总结今天的升级计划",
+      "open_question": "",
+      "next_action": "",
+      "updated_at": "2026-04-02 01:52:06"
+    }
+  },
+  "updated_at": "2026-04-02 01:52:06"
+}

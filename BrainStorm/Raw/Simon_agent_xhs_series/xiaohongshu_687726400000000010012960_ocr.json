@@ -1,0 +1,38 @@
+{
+  "status": "ok",
+  "created_at": "2026-03-18T07:40:06.656972+08:00",
+  "source": {
+    "type": "web-note-capture-cn",
+    "capture_json_path": "BrainStorm\\Raw\\Simon_agent_xhs_series\\xiaohongshu_687726400000000010012960.json",
+    "platform": "xiaohongshu",
+    "id": "687726400000000010012960",
+    "title": "搜索小红书"
+  },
+  "backend_requested": "auto",
+  "backend_resolved": "none",
+  "warnings": [
+    "backend=auto 未检测到可用的 OpenAI 或 PaddleOCR，当前仅下载图片并记录失败原因。"
+  ],
+  "images": [
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603180739/da31e5633efb97f2a1a8da0796d61267/1040g00831k00kvi6ia205p4ngiiqmhb8gm71vbg!nd_dft_wlteh_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\Simon_agent_xhs_series\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMxODA3MzkvZGEzMWU1NjMzZWZiOTdmMmExYThkYTA3OTZkNjEyNjcvMTA0MGcwMDgzMWswMGt2aTZpYTIwNXA0bmdpaXFtaGI4Z203MXZiZyFuZF9kZnRfd2x0ZWhfanBnXzM.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603180739/65667ddee89239f29bf65d2067029f0d/1040g00831k00kvi6ia1g5p4ngiiqmhb8pcla7d8!nd_dft_wgth_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\Simon_agent_xhs_series\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMxODA3MzkvNjU2NjdkZGVlODkyMzlmMjliZjY1ZDIwNjcwMjlmMGQvMTA0MGcwMDgzMWswMGt2aTZpYTFnNXA0bmdpaXFtaGI4cGNsYTdkOCFuZF9kZnRfd2d0aF9qcGdfMw.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603180739/46f2331d9fca95133b89a4057f2fbc23/1040g00831k00kvi6ia6g5p4ngiiqmhb8n5evua0!nd_dft_wgth_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\Simon_agent_xhs_series\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMxODA3MzkvNDZmMjMzMWQ5ZmNhOTUxMzNiODlhNDA1N2YyZmJjMjMvMTA0MGcwMDgzMWswMGt2aTZpYTZnNXA0bmdpaXFtaGI4bjVldnVhMCFuZF9kZnRfd2d0aF9qcGdfMw.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    },
+    {
+      "url": "http://sns-webpic-qc.xhscdn.com/202603180739/8a08673193aad92928b77b0ce7e03b67/1040g00831k00kvi6ia0g5p4ngiiqmhb840gtup0!nd_dft_wgth_jpg_3",
+      "saved_path": "BrainStorm\\Raw\\Simon_agent_xhs_series\\images\\img_aHR0cDovL3Nucy13ZWJwaWMtcWMueGhzY2RuLmNvbS8yMDI2MDMxODA3MzkvOGEwODY3MzE5M2FhZDkyOTI4Yjc3YjBjZTdlMDNiNjcvMTA0MGcwMDgzMWswMGt2aTZpYTBnNXA0bmdpaXFtaGI4NDBndHVwMCFuZF9kZnRfd2d0aF9qcGdfMw.jpg",
+      "error": "未执行 OCR（当前环境无可用后端）。"
+    }
+  ]
+}

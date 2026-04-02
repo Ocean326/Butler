@@ -1,0 +1,137 @@
+{
+  "flow_id": "template_flow_20260402035457_a942afd7",
+  "definition_id": "template_flow_20260402035457_a942afd7",
+  "asset_kind": "template",
+  "label": "managed_template_plan-imp-review",
+  "description": "用于通用开发任务的三阶段可编辑模板（规划-实现-复核）。",
+  "workflow_kind": "managed_flow",
+  "goal": "创建一个可复用的 managed_flow 模板，在可控风险下完成从计划到实现再到验证复核的闭环交付。",
+  "guard_condition": "不执行破坏性操作，不跳过验证步骤；当实现与目标不一致或验证失败时，必须回退到实现阶段修复后再复核。",
+  "phase_plan": [
+    {
+      "phase_id": "plan",
+      "title": "Plan",
+      "objective": "澄清目标、边界、影响范围与改动清单，确定代码与测试落点。",
+      "done_when": "形成可执行的实施计划，并明确下一步实现与验证对象。",
+      "retry_phase_id": "plan",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "imp"
+    },
+    {
+      "phase_id": "imp",
+      "title": "Implement",
+      "objective": "按计划实施代码与文档改动，并同步补充或更新测试。",
+      "done_when": "核心改动已完成且仓库状态可进入验证复核。",
+      "retry_phase_id": "imp",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "review"
+    },
+    {
+      "phase_id": "review",
+      "title": "Review",
+      "objective": "执行验证、审查结果、修复实际问题并总结剩余风险。",
+      "done_when": "验证结果可接受，产出可交付结论或明确后续动作。",
+      "retry_phase_id": "imp",
+      "fallback_phase_id": "imp",
+      "next_phase_id": ""
+    }
+  ],
+  "default_role_pack": "coding_flow",
+  "allowed_execution_modes": [
+    "simple",
+    "medium"
+  ],
+  "launch_mode": "flow",
+  "catalog_flow_id": "",
+  "execution_mode": "simple",
+  "session_strategy": "shared",
+  "role_pack_id": "coding_flow",
+  "risk_level": "normal",
+  "autonomy_profile": "default",
+  "manager_handoff": {
+    "summary": "已整理为可复用的模板流：先明确范围与目标，再实施并补齐验证，最后完成结果复核后交付。",
+    "label": "managed_template_plan-imp-review",
+    "description": "用于通用开发任务的三阶段可编辑模板（规划-实现-复核）。",
+    "goal": "创建一个可复用的 managed_flow 模板，在可控风险下完成从计划到实现再到验证复核的闭环交付。",
+    "guard_condition": "不执行破坏性操作，不跳过验证步骤；当实现与目标不一致或验证失败时，必须回退到实现阶段修复后再复核。",
+    "workflow_kind": "managed_flow",
+    "asset_kind": "template",
+    "mutation": "create",
+    "risk_level": "normal",
+    "autonomy_profile": "default",
+    "phase_plan": [
+      {
+        "phase_id": "plan",
+        "title": "Plan",
+        "objective": "澄清目标、边界、影响范围与改动清单，确定代码与测试落点。",
+        "done_when": "形成可执行的实施计划，并明确下一步实现与验证对象。",
+        "retry_phase_id": "plan",
+        "fallback_phase_id": "plan",
+        "next_phase_id": "imp"
+      },
+      {
+        "phase_id": "imp",
+        "title": "Implement",
+        "objective": "按计划实施代码与文档改动，并同步补充或更新测试。",
+        "done_when": "核心改动已完成且仓库状态可进入验证复核。",
+        "retry_phase_id": "imp",
+        "fallback_phase_id": "plan",
+        "next_phase_id": "review"
+      },
+      {
+        "phase_id": "review",
+        "title": "Review",
+        "objective": "执行验证、审查结果、修复实际问题并总结剩余风险。",
+        "done_when": "验证结果可接受，产出可交付结论或明确后续动作。",
+        "retry_phase_id": "imp",
+        "fallback_phase_id": "imp",
+        "next_phase_id": ""
+      }
+    ],
+    "review_checklist": [],
+    "instance_defaults": {},
+    "lineage": {},
+    "asset_state": {},
+    "bundle_manifest": {},
+    "operator_guidance": "下一步请确认该模板名称与适用场景；确认后可直接基于此模板实例化运行，若任务风险升高可将 autonomy_profile 调整为 guarded。",
+    "confirmation_prompt": "请确认是否按此三阶段 managed_flow 模板创建。",
+    "managed_at": "2026-04-02 03:55:18",
+    "manage_stage": "commit",
+    "manager_session_id": ""
+  },
+  "asset_state": {
+    "status": "active",
+    "stage": "commit"
+  },
+  "lineage": {},
+  "instance_defaults": {
+    "execution_mode": "simple",
+    "session_strategy": "shared",
+    "role_pack_id": "coding_flow",
+    "launch_mode": "flow"
+  },
+  "review_checklist": [],
+  "bundle_manifest": {
+    "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402035457_a942afd7",
+    "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402035457_a942afd7/manager.md",
+    "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402035457_a942afd7/supervisor.md",
+    "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402035457_a942afd7/sources.json",
+    "manager_prompt": "manager.md",
+    "supervisor_prompt": "supervisor.md",
+    "sources_path": "sources.json",
+    "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402035457_a942afd7/references",
+    "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402035457_a942afd7/assets",
+    "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402035457_a942afd7/derived",
+    "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+    "derived_supervisor_knowledge": "bundles/templates/template_flow_20260402035457_a942afd7/derived/supervisor_knowledge.json",
+    "derived": {
+      "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/template_flow_20260402035457_a942afd7/derived/supervisor_knowledge.json"
+    }
+  },
+  "source_asset_key": "",
+  "source_asset_kind": "",
+  "source_asset_version": "",
+  "version": "1.3.0",
+  "created_at": "2026-04-02 03:55:18",
+  "updated_at": "2026-04-02 03:55:18"
+}

@@ -1,0 +1,163 @@
+{
+  "generated_at": "2026-03-26 18:00:00",
+  "status": "draft_audit_baseline",
+  "scope": "long_task_chain_audit",
+  "baseline_docs": [
+    "docs/daily-upgrade/0326/00_当日总纲.md",
+    "docs/daily-upgrade/0326/03_Harness全系统稳定态运行梳理.md",
+    "docs/daily-upgrade/0326/04_稳定Harness之后的下一阶段主线_Anthropic长运行Harness吸收版.md",
+    "docs/project-map/06_system_audit_and_upgrade_loop.md"
+  ],
+  "runtime_snapshot": {
+    "orchestrator_run_state": "running",
+    "orchestrator_phase": "idle",
+    "run_note": "missions=3 | activated=0 | dispatched=0 | ready_nodes=0 | running_nodes=0 | executed=0 | completed=0 | failed=0 | non_terminal=0 | feedback_docs=0 | feedback_pushes=0"
+  },
+  "cases": [
+    {
+      "case_id": "campaign_transfer_recovery",
+      "source_invocation_id": "",
+      "route_decision": "campaign",
+      "mission_id": "mission_ca4ffdcca385",
+      "mission_type": "campaign",
+      "campaign_id": "campaign_1d10b299c5cb",
+      "workflow_session_id": "workflow_session_e76f52158d9b",
+      "status": "completed",
+      "visible_outcome": "campaign converged after 3 iterations",
+      "feedback_contract_state": "missing_or_not_observed",
+      "feedback_doc_state": "not_observed",
+      "feedback_push_state": "0 observed in run summary",
+      "evidence_refs": [
+        "butler_main/butler_bot_code/run/orchestrator/missions/mission_ca4ffdcca385.json",
+        "butler_main/butler_bot_code/run/orchestrator/campaigns/campaign_1d10b299c5cb/instance.json",
+        "butler_main/butler_bot_code/run/orchestrator/orchestrator_run_state.json"
+      ]
+    },
+    {
+      "case_id": "talk_ingress_transfer_recovery",
+      "source_invocation_id": "invocation_e38ae92a5159",
+      "route_decision": "talk_ingress",
+      "mission_id": "mission_7929ee3e7881",
+      "mission_type": "talk_ingress",
+      "campaign_id": "",
+      "workflow_session_id": "workflow_session_35b6183343d5",
+      "status": "completed",
+      "visible_outcome": "talk_ingress session summary contains literature refresh, matrix, and writing output",
+      "feedback_contract_state": "not_applicable_or_not_observed",
+      "feedback_doc_state": "not_observed",
+      "feedback_push_state": "not_observed",
+      "evidence_refs": [
+        "butler_main/butler_bot_code/run/orchestrator/missions/mission_7929ee3e7881.json",
+        "butler_main/butler_bot_code/run/orchestrator/workflow_sessions/workflow_session_35b6183343d5/session.json"
+      ]
+    },
+    {
+      "case_id": "ssh_probe_pwd",
+      "source_invocation_id": "invocation_73294b555e2b",
+      "route_decision": "talk_ingress",
+      "mission_id": "mission_9502f7af440b",
+      "mission_type": "talk_ingress",
+      "campaign_id": "",
+      "workflow_session_id": "workflow_session_e9248c031bda",
+      "status": "completed",
+      "visible_outcome": "summary only returned /home/jianghy",
+      "feedback_contract_state": "not_applicable_or_not_observed",
+      "feedback_doc_state": "not_observed",
+      "feedback_push_state": "not_observed",
+      "evidence_refs": [
+        "butler_main/butler_bot_code/run/orchestrator/missions/mission_9502f7af440b.json",
+        "butler_main/butler_bot_code/run/orchestrator/workflow_sessions/workflow_session_e9248c031bda/session.json"
+      ]
+    },
+    {
+      "case_id": "anthropic_chat_only_research",
+      "source_invocation_id": "",
+      "route_decision": "chat_only_or_unpersisted",
+      "mission_id": "",
+      "mission_type": "",
+      "campaign_id": "",
+      "workflow_session_id": "",
+      "status": "terminated_in_chat_context",
+      "visible_outcome": "assistant produced long analysis, then /observe returned terminated",
+      "feedback_contract_state": "not_applicable",
+      "feedback_doc_state": "not_observed",
+      "feedback_push_state": "not_observed",
+      "evidence_refs": [
+        "butler_main/chat/data/hot/recent_memory/scopes/aa50cd9b1e8acb57/recent_raw_turns.json"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "P0-1",
+      "classification": "routing_or_identity_mismatch",
+      "severity": "P0",
+      "summary": "A long-running intent appears in both campaign and talk_ingress surfaces.",
+      "affected_cases": [
+        "campaign_transfer_recovery",
+        "talk_ingress_transfer_recovery"
+      ]
+    },
+    {
+      "finding_id": "P0-2",
+      "classification": "chat_only_execution_for_backend_candidate",
+      "severity": "P0",
+      "summary": "A research-style task was analyzed in chat without durable backend persistence.",
+      "affected_cases": [
+        "anthropic_chat_only_research"
+      ]
+    },
+    {
+      "finding_id": "P1-1",
+      "classification": "feedback_contract_gap",
+      "severity": "P1",
+      "summary": "Live campaign evidence does not show an attached Feishu feedback contract or doc/push activity.",
+      "affected_cases": [
+        "campaign_transfer_recovery"
+      ]
+    },
+    {
+      "finding_id": "P1-2",
+      "classification": "user_visible_status_gap",
+      "severity": "P1",
+      "summary": "Internal counters expose zero feedback activity but do not explain the contract state to the user.",
+      "affected_cases": [
+        "campaign_transfer_recovery"
+      ]
+    },
+    {
+      "finding_id": "P2-1",
+      "classification": "documentation_overclaim",
+      "severity": "P2",
+      "summary": "Stable-state docs describe feedback as established, while live evidence still depends on contract attachment.",
+      "affected_cases": [
+        "campaign_transfer_recovery"
+      ]
+    }
+  ],
+  "upgrade_loop": {
+    "wave_1_parallel_lanes": [
+      "routing-lane",
+      "campaign-feedback-lane",
+      "observe-lane",
+      "docs-lane"
+    ],
+    "replan_checkpoint": "rerun fixed cases, reclassify findings, keep only P0/P1 in the next wave",
+    "wave_2_parallel_bundles": [
+      "identity-bundle",
+      "delivery-bundle",
+      "artifact-bundle",
+      "acceptance-bundle"
+    ],
+    "final_required_outputs": [
+      "problem list",
+      "remediation plan",
+      "acceptance evidence",
+      "docs index updates"
+    ]
+  },
+  "known_limits": [
+    "Feishu external doc and push visibility was not directly reverified from outside the repo during this pass.",
+    "Current evidence is sufficient to classify gaps, but not yet sufficient to prove external delivery success."
+  ]
+}

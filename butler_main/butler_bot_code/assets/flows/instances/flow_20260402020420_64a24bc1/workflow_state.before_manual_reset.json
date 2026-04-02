@@ -1,0 +1,1150 @@
+{
+  "workflow_id": "flow_20260402020420_64a24bc1",
+  "workflow_kind": "project_loop",
+  "launch_mode": "flow",
+  "catalog_flow_id": "project_loop",
+  "workspace_root": "/home/ocean/Desktop/SuperButler",
+  "goal": "去调研一下 hermes agent，在github上搜索，然后下载源码（压缩包+解压）到 targetproject，然后对照butler，的三个产品：flow、chat、campain，各生成一版本详细的参考学习资料+启发式的资料到docs 0402",
+  "guard_condition": "确保任务整个完成，并且资料质量、位置、内容符合要求",
+  "status": "running",
+  "current_phase": "plan",
+  "attempt_count": 3,
+  "phase_attempt_count": 0,
+  "max_attempts": 18,
+  "max_phase_attempts": 6,
+  "codex_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+  "pending_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+  "last_cursor_decision": {
+    "decision": "RETRY",
+    "next_phase": "plan",
+    "reason": "本轮执行超时且失败，未产出可执行计划交付物。",
+    "next_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+    "completion_summary": "仅完成部分检索与定位，未形成完整可执行计划、路径清单和最小验证项。",
+    "issue_kind": "agent_cli_fault",
+    "followup_kind": "fix"
+  },
+  "last_completion_summary": "auto-fix limit reached (2); operator input required before continuing",
+  "last_codex_receipt": {
+    "execution_id": "execution_85a792ddfa91",
+    "workflow_id": "flow_20260402020420_64a24bc1",
+    "agent_id": "butler_flow.codex_executor",
+    "status": "failed",
+    "summary": "文档基线拿到了；现在补 Hermes 仓库候选和 Butler 三个产品真源目录。",
+    "output_text": "文档基线拿到了；现在补 Hermes 仓库候选和 Butler 三个产品真源目录。",
+    "metadata": {
+      "workspace": "/home/ocean/Desktop/SuperButler",
+      "provider": "codex",
+      "provider_returncode": -9,
+      "returncode": -9,
+      "failure_class": "timeout",
+      "runtime_request": {
+        "model": "auto",
+        "profile": "",
+        "speed": "",
+        "config_overrides": [
+          "mcp_servers.stripe={enabled=false,transport=\"streamable_http\",url=\"https://mcp.stripe.com\"}",
+          "mcp_servers.supabase={enabled=false,transport=\"streamable_http\",url=\"https://mcp.supabase.com/mcp\"}",
+          "mcp_servers.vercel={enabled=false,transport=\"streamable_http\",url=\"https://mcp.vercel.com\"}"
+        ],
+        "extra_args": [],
+        "cli": "codex",
+        "_disable_runtime_fallback": true,
+        "workflow_id": "flow_20260402020420_64a24bc1",
+        "agent_id": "butler_flow.codex_executor",
+        "codex_mode": "resume",
+        "codex_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "codex_home": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+        "_butler_session_binding": {
+          "provider": "codex",
+          "thread_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "resume_capable": true,
+          "resume_durable": true,
+          "mode": "exec",
+          "requested_session_id": "",
+          "durable_resume_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "session_persistence": "codex_home",
+          "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+          "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home|1775066666|4096",
+          "cli_binary_path": "/home/ocean/.local/bin/codex",
+          "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+          "vendor_session_state": "started",
+          "recovery_state": {}
+        },
+        "_butler_recovery": {
+          "resume_requested": true,
+          "degraded": false,
+          "reason": "explicit_resume"
+        },
+        "_profile_explicit": false,
+        "_provider_failover_managed": true,
+        "_provider_failover_active_profile": "aixj"
+      },
+      "cli_events": {
+        "usage": {},
+        "command_events": [
+          {
+            "kind": "command",
+            "text": "/bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\"",
+            "event_type": "item.started",
+            "status": "in_progress",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\" | output=--- workspace targets ---\n./MyWorkSpace/TargetProjects\n\n--- existing 0402 docs ---\ndocs/daily-upgrade/0402/00_当日总纲.md\ndo",
+            "event_type": "item.completed",
+            "status": "completed",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "/bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\"",
+            "event_type": "item.started",
+            "status": "in_progress",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\" | output=--- feature/truth hits ---\ndocs/project-map/03_truth_matrix.md:15:| campaign 宏账本 / agent 可重入内环 | [0331 后台主线 Campaign 宏账本",
+            "event_type": "item.completed",
+            "status": "completed",
+            "source": "codex"
+          }
+        ]
+      },
+      "usage": {},
+      "external_session": {
+        "provider": "codex",
+        "thread_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "resume_capable": true,
+        "resume_durable": true,
+        "mode": "resume",
+        "requested_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "durable_resume_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "session_persistence": "codex_home",
+        "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+        "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home|1775066666|4096",
+        "cli_binary_path": "/home/ocean/.local/bin/codex",
+        "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+        "vendor_session_state": "resumed",
+        "recovery_state": {
+          "resume_requested": true,
+          "degraded": false,
+          "reason": "explicit_resume"
+        }
+      },
+      "recovery_state": {
+        "resume_requested": true,
+        "degraded": false,
+        "reason": "explicit_resume"
+      },
+      "vendor_capabilities": {
+        "vendor": "codex",
+        "capabilities": {
+          "session": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "resume": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "compact": {
+            "layer": "intrinsic",
+            "ownership": "vendor_native"
+          },
+          "skills": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "collab": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "subagent": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "agent_team": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "recent_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          },
+          "local_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          }
+        }
+      },
+      "command_events": [
+        {
+          "kind": "command",
+          "text": "/bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\"",
+          "event_type": "item.started",
+          "status": "in_progress",
+          "source": "codex"
+        },
+        {
+          "kind": "command",
+          "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\" | output=--- workspace targets ---\n./MyWorkSpace/TargetProjects\n\n--- existing 0402 docs ---\ndocs/daily-upgrade/0402/00_当日总纲.md\ndo",
+          "event_type": "item.completed",
+          "status": "completed",
+          "source": "codex"
+        },
+        {
+          "kind": "command",
+          "text": "/bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\"",
+          "event_type": "item.started",
+          "status": "in_progress",
+          "source": "codex"
+        },
+        {
+          "kind": "command",
+          "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\" | output=--- feature/truth hits ---\ndocs/project-map/03_truth_matrix.md:15:| campaign 宏账本 / agent 可重入内环 | [0331 后台主线 Campaign 宏账本",
+          "event_type": "item.completed",
+          "status": "completed",
+          "source": "codex"
+        }
+      ],
+      "stderr": "",
+      "timed_out": true
+    },
+    "output_bundle": {
+      "status": "failed",
+      "summary": "文档基线拿到了；现在补 Hermes 仓库候选和 Butler 三个产品真源目录。",
+      "text_blocks": [
+        {
+          "text": "文档基线拿到了；现在补 Hermes 仓库候选和 Butler 三个产品真源目录。",
+          "style": "plain"
+        }
+      ]
+    }
+  },
+  "last_cursor_receipt": {
+    "execution_id": "execution_c33975d911ff",
+    "workflow_id": "flow_20260402020420_64a24bc1",
+    "agent_id": "butler_flow.cursor_judge",
+    "status": "completed",
+    "summary": "{\n  \"decision\": \"RETRY\",\n  \"reason\": \"本轮执行超时且失败，未产出可执行计划交付物。\",\n  \"next_phase\": \"plan\",\n  \"next_codex_prompt\": \"继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。\",\n  \"completion_summary\": \"仅完成部分检索与定位，未形成完整可执行计划、路径清单和最小验证项。\",\n  \"issue_kind\": \"agent_cli_fault\",\n  \"followup_kind\": \"fix\"\n}",
+    "output_text": "{\n  \"decision\": \"RETRY\",\n  \"reason\": \"本轮执行超时且失败，未产出可执行计划交付物。\",\n  \"next_phase\": \"plan\",\n  \"next_codex_prompt\": \"继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。\",\n  \"completion_summary\": \"仅完成部分检索与定位，未形成完整可执行计划、路径清单和最小验证项。\",\n  \"issue_kind\": \"agent_cli_fault\",\n  \"followup_kind\": \"fix\"\n}",
+    "metadata": {
+      "workspace": "/home/ocean/Desktop/SuperButler",
+      "provider": "cursor",
+      "provider_returncode": 0,
+      "returncode": 0,
+      "failure_class": "",
+      "runtime_request": {
+        "model": "auto",
+        "profile": "aixj",
+        "speed": "",
+        "config_overrides": [],
+        "extra_args": [],
+        "cli": "cursor",
+        "_disable_runtime_fallback": true,
+        "workflow_id": "flow_20260402020420_64a24bc1",
+        "agent_id": "butler_flow.cursor_judge",
+        "_profile_explicit": false
+      },
+      "cli_events": {
+        "usage": {},
+        "command_events": []
+      },
+      "usage": {},
+      "external_session": {},
+      "recovery_state": {},
+      "vendor_capabilities": {
+        "vendor": "cursor",
+        "capabilities": {
+          "session": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "resume": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "compact": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "skills": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "collab": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "subagent": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "agent_team": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "recent_memory": {
+            "layer": "unknown",
+            "ownership": "butler"
+          },
+          "local_memory": {
+            "layer": "unknown",
+            "ownership": "butler"
+          }
+        }
+      },
+      "command_events": [],
+      "stderr": "",
+      "timed_out": false
+    },
+    "output_bundle": {
+      "status": "ready",
+      "summary": "{\n  \"decision\": \"RETRY\",\n  \"reason\": \"本轮执行超时且失败，未产出可执行计划交付物。\",\n  \"next_phase\": \"plan\",\n  \"next_codex_prompt\": \"继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。\",\n  \"completion_summary\": \"仅完成部分检索与定位，未形成完整可执行计划、路径清单和最小验证项。\",\n  \"issue_kind\": \"agent_cli_fault\",\n  \"followup_kind\": \"fix\"\n}",
+      "text_blocks": [
+        {
+          "text": "{\n  \"decision\": \"RETRY\",\n  \"reason\": \"本轮执行超时且失败，未产出可执行计划交付物。\",\n  \"next_phase\": \"plan\",\n  \"next_codex_prompt\": \"继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。\",\n  \"completion_summary\": \"仅完成部分检索与定位，未形成完整可执行计划、路径清单和最小验证项。\",\n  \"issue_kind\": \"agent_cli_fault\",\n  \"followup_kind\": \"fix\"\n}",
+          "style": "plain"
+        }
+      ]
+    }
+  },
+  "current_phase_artifact": {
+    "workflow_id": "flow_20260402020420_64a24bc1",
+    "workflow_kind": "project_loop",
+    "phase": "plan",
+    "role_id": "fixer",
+    "attempt_no": 3,
+    "phase_attempt_no": 1,
+    "goal": "去调研一下 hermes agent，在github上搜索，然后下载源码（压缩包+解压）到 targetproject，然后对照butler，的三个产品：flow、chat、campain，各生成一版本详细的参考学习资料+启发式的资料到docs 0402",
+    "guard_condition": "确保任务整个完成，并且资料质量、位置、内容符合要求",
+    "codex_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+    "codex_status": "failed",
+    "codex_output": "文档基线拿到了；现在补 Hermes 仓库候选和 Butler 三个产品真源目录。",
+    "codex_metadata": {
+      "workspace": "/home/ocean/Desktop/SuperButler",
+      "provider": "codex",
+      "provider_returncode": -9,
+      "returncode": -9,
+      "failure_class": "timeout",
+      "runtime_request": {
+        "model": "auto",
+        "profile": "",
+        "speed": "",
+        "config_overrides": [
+          "mcp_servers.stripe={enabled=false,transport=\"streamable_http\",url=\"https://mcp.stripe.com\"}",
+          "mcp_servers.supabase={enabled=false,transport=\"streamable_http\",url=\"https://mcp.supabase.com/mcp\"}",
+          "mcp_servers.vercel={enabled=false,transport=\"streamable_http\",url=\"https://mcp.vercel.com\"}"
+        ],
+        "extra_args": [],
+        "cli": "codex",
+        "_disable_runtime_fallback": true,
+        "workflow_id": "flow_20260402020420_64a24bc1",
+        "agent_id": "butler_flow.codex_executor",
+        "codex_mode": "resume",
+        "codex_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "codex_home": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+        "_butler_session_binding": {
+          "provider": "codex",
+          "thread_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "resume_capable": true,
+          "resume_durable": true,
+          "mode": "exec",
+          "requested_session_id": "",
+          "durable_resume_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "session_persistence": "codex_home",
+          "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+          "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home|1775066666|4096",
+          "cli_binary_path": "/home/ocean/.local/bin/codex",
+          "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+          "vendor_session_state": "started",
+          "recovery_state": {}
+        },
+        "_butler_recovery": {
+          "resume_requested": true,
+          "degraded": false,
+          "reason": "explicit_resume"
+        },
+        "_profile_explicit": false,
+        "_provider_failover_managed": true,
+        "_provider_failover_active_profile": "aixj"
+      },
+      "cli_events": {
+        "usage": {},
+        "command_events": [
+          {
+            "kind": "command",
+            "text": "/bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\"",
+            "event_type": "item.started",
+            "status": "in_progress",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\" | output=--- workspace targets ---\n./MyWorkSpace/TargetProjects\n\n--- existing 0402 docs ---\ndocs/daily-upgrade/0402/00_当日总纲.md\ndo",
+            "event_type": "item.completed",
+            "status": "completed",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "/bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\"",
+            "event_type": "item.started",
+            "status": "in_progress",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\" | output=--- feature/truth hits ---\ndocs/project-map/03_truth_matrix.md:15:| campaign 宏账本 / agent 可重入内环 | [0331 后台主线 Campaign 宏账本",
+            "event_type": "item.completed",
+            "status": "completed",
+            "source": "codex"
+          }
+        ]
+      },
+      "usage": {},
+      "external_session": {
+        "provider": "codex",
+        "thread_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "resume_capable": true,
+        "resume_durable": true,
+        "mode": "resume",
+        "requested_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "durable_resume_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "session_persistence": "codex_home",
+        "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+        "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home|1775066666|4096",
+        "cli_binary_path": "/home/ocean/.local/bin/codex",
+        "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+        "vendor_session_state": "resumed",
+        "recovery_state": {
+          "resume_requested": true,
+          "degraded": false,
+          "reason": "explicit_resume"
+        }
+      },
+      "recovery_state": {
+        "resume_requested": true,
+        "degraded": false,
+        "reason": "explicit_resume"
+      },
+      "vendor_capabilities": {
+        "vendor": "codex",
+        "capabilities": {
+          "session": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "resume": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "compact": {
+            "layer": "intrinsic",
+            "ownership": "vendor_native"
+          },
+          "skills": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "collab": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "subagent": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "agent_team": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "recent_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          },
+          "local_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          }
+        }
+      },
+      "command_events": [
+        {
+          "kind": "command",
+          "text": "/bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\"",
+          "event_type": "item.started",
+          "status": "in_progress",
+          "source": "codex"
+        },
+        {
+          "kind": "command",
+          "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\" | output=--- workspace targets ---\n./MyWorkSpace/TargetProjects\n\n--- existing 0402 docs ---\ndocs/daily-upgrade/0402/00_当日总纲.md\ndo",
+          "event_type": "item.completed",
+          "status": "completed",
+          "source": "codex"
+        },
+        {
+          "kind": "command",
+          "text": "/bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\"",
+          "event_type": "item.started",
+          "status": "in_progress",
+          "source": "codex"
+        },
+        {
+          "kind": "command",
+          "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\" | output=--- feature/truth hits ---\ndocs/project-map/03_truth_matrix.md:15:| campaign 宏账本 / agent 可重入内环 | [0331 后台主线 Campaign 宏账本",
+          "event_type": "item.completed",
+          "status": "completed",
+          "source": "codex"
+        }
+      ],
+      "stderr": "",
+      "timed_out": true
+    },
+    "pending_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+    "last_cursor_decision": {
+      "decision": "RETRY",
+      "next_phase": "plan",
+      "reason": "执行器本轮超时失败，未交付可执行的完整计划产物。",
+      "next_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+      "completion_summary": "仅完成部分文档读取与定位，未形成可落地计划、路径清单与最小验证项。",
+      "issue_kind": "agent_cli_fault",
+      "followup_kind": "fix"
+    }
+  },
+  "phase_history": [
+    {
+      "at": "2026-04-02 02:05:15",
+      "attempt_no": 1,
+      "phase": "plan",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "plan",
+        "reason": "执行器本轮因超时中断，尚未产出可执行的完整计划与明确代码/文档落点",
+        "next_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+        "completion_summary": "本次未完成计划产物，仅完成部分资料定位，需重试补齐完整实施计划。",
+        "issue_kind": "agent_cli_fault",
+        "followup_kind": "fix"
+      }
+    },
+    {
+      "at": "2026-04-02 02:06:01",
+      "attempt_no": 2,
+      "phase": "plan",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "plan",
+        "reason": "执行器本轮超时失败，未交付可执行的完整计划产物。",
+        "next_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+        "completion_summary": "仅完成部分文档读取与定位，未形成可落地计划、路径清单与最小验证项。",
+        "issue_kind": "agent_cli_fault",
+        "followup_kind": "fix"
+      }
+    },
+    {
+      "at": "2026-04-02 02:06:49",
+      "attempt_no": 3,
+      "phase": "plan",
+      "codex_status": "failed",
+      "cursor_status": "completed",
+      "decision": {
+        "decision": "RETRY",
+        "next_phase": "plan",
+        "reason": "本轮执行超时且失败，未产出可执行计划交付物。",
+        "next_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+        "completion_summary": "仅完成部分检索与定位，未形成完整可执行计划、路径清单和最小验证项。",
+        "issue_kind": "agent_cli_fault",
+        "followup_kind": "fix"
+      }
+    }
+  ],
+  "auto_fix_round_count": 0,
+  "resume_source": "",
+  "trace_run_id": "flow_20260402020420_64a24bc1",
+  "phase_plan": [
+    {
+      "phase_id": "plan",
+      "title": "Plan",
+      "objective": "Produce or repair the concrete implementation plan, identify files/tests, and leave the repo ready for execution.",
+      "done_when": "A concrete implementation plan is ready and the next code/test targets are clear.",
+      "retry_phase_id": "plan",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "imp"
+    },
+    {
+      "phase_id": "imp",
+      "title": "Implement",
+      "objective": "Implement the plan, update code/tests/docs as needed, and make the repository materially closer to done.",
+      "done_when": "The implementation is materially advanced and ready for review or targeted follow-up.",
+      "retry_phase_id": "imp",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "review"
+    },
+    {
+      "phase_id": "review",
+      "title": "Review",
+      "objective": "Review the latest implementation, run verification, fix real issues you find, then summarize residual risks.",
+      "done_when": "Verification is acceptable and the work is ready to conclude.",
+      "retry_phase_id": "imp",
+      "fallback_phase_id": "imp",
+      "next_phase_id": ""
+    }
+  ],
+  "entry_mode": "new",
+  "manage_handoff": {},
+  "execution_mode": "medium",
+  "session_strategy": "role_bound",
+  "active_role_id": "fixer",
+  "active_role_turn_no": 2,
+  "role_pack_id": "coding_flow",
+  "role_sessions": {
+    "planner": {
+      "role_id": "planner",
+      "session_id": "019d4a37-c49b-7072-b2ef-e9f562e44c78",
+      "status": "ready",
+      "updated_at": "2026-04-02 02:04:51"
+    },
+    "fixer": {
+      "role_id": "fixer",
+      "session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+      "last_handoff_id": "handoff_cf964ff7dcff",
+      "updated_at": "2026-04-02 02:06:33",
+      "status": "ready"
+    }
+  },
+  "latest_role_handoffs": {
+    "fixer": "handoff_cf964ff7dcff"
+  },
+  "role_turn_counts": {
+    "planner": 1,
+    "fixer": 2
+  },
+  "latest_mutation": {},
+  "flow_version": "1.3.0",
+  "created_at": "2026-04-02 02:04:20",
+  "updated_at": "2026-04-02 02:10:45",
+  "trace_refs": [
+    "trace_20260402020421_9abb31d4",
+    "trace_20260402020516_cbd2cb5b",
+    "trace_20260402020602_8d67e10a",
+    "trace_20260402021045_703c4c5a"
+  ],
+  "receipt_refs": [
+    "receipt_20260402020421_b09b942d",
+    "receipt_20260402020516_a54dc0c4",
+    "receipt_20260402020602_fcfb1318",
+    "action_20260402021045_93f1c764"
+  ],
+  "latest_supervisor_decision": {
+    "decision": "ask_operator",
+    "turn_kind": "operator_wait",
+    "reason": "auto-fix limit reached (2); operator input required before continuing",
+    "confidence": 0.9,
+    "next_action": "ask_operator",
+    "attempt_no": 3,
+    "phase": "plan",
+    "instruction": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+    "issue_kind": "agent_cli_fault",
+    "followup_kind": "none",
+    "fix_round_no": 3
+  },
+  "latest_judge_decision": {
+    "decision": "RETRY",
+    "next_phase": "plan",
+    "reason": "本轮执行超时且失败，未产出可执行计划交付物。",
+    "next_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+    "completion_summary": "仅完成部分检索与定位，未形成完整可执行计划、路径清单和最小验证项。",
+    "issue_kind": "agent_cli_fault",
+    "followup_kind": "fix"
+  },
+  "current_turn_id": "turn_20260402020602_f2f58b44",
+  "supervisor_thread_id": "019d4a37-c49b-7072-b2ef-e9f562e44c78",
+  "primary_executor_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+  "approval_state": "not_required",
+  "risk_level": "normal",
+  "autonomy_profile": "default",
+  "artifact_index_ref": "artifacts.json",
+  "last_operator_action": {
+    "action_id": "action_20260402021045_93f1c764",
+    "flow_id": "flow_20260402020420_64a24bc1",
+    "action_type": "retry_current_phase",
+    "operator_id": "local_user",
+    "policy_source": "cli",
+    "before_state": {
+      "status": "paused",
+      "current_phase": "plan",
+      "pending_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。"
+    },
+    "after_state": {
+      "status": "running",
+      "current_phase": "plan",
+      "pending_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 Hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。"
+    },
+    "trace_id": "trace_20260402021045_703c4c5a",
+    "receipt_id": "action_20260402021045_93f1c764",
+    "result_summary": "current phase scheduled for retry",
+    "created_at": "2026-04-02 02:10:45"
+  },
+  "latest_applied_operator_action_id": "",
+  "_judge_runtime_context": {
+    "codex_status": "failed",
+    "codex_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+    "codex_output": "文档基线拿到了；现在补 Hermes 仓库候选和 Butler 三个产品真源目录。",
+    "codex_metadata": {
+      "workspace": "/home/ocean/Desktop/SuperButler",
+      "provider": "codex",
+      "provider_returncode": -9,
+      "returncode": -9,
+      "failure_class": "timeout",
+      "runtime_request": {
+        "model": "auto",
+        "profile": "",
+        "speed": "",
+        "config_overrides": [
+          "mcp_servers.stripe={enabled=false,transport=\"streamable_http\",url=\"https://mcp.stripe.com\"}",
+          "mcp_servers.supabase={enabled=false,transport=\"streamable_http\",url=\"https://mcp.supabase.com/mcp\"}",
+          "mcp_servers.vercel={enabled=false,transport=\"streamable_http\",url=\"https://mcp.vercel.com\"}"
+        ],
+        "extra_args": [],
+        "cli": "codex",
+        "_disable_runtime_fallback": true,
+        "workflow_id": "flow_20260402020420_64a24bc1",
+        "agent_id": "butler_flow.codex_executor",
+        "codex_mode": "resume",
+        "codex_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "codex_home": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+        "_butler_session_binding": {
+          "provider": "codex",
+          "thread_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "resume_capable": true,
+          "resume_durable": true,
+          "mode": "exec",
+          "requested_session_id": "",
+          "durable_resume_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "session_persistence": "codex_home",
+          "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+          "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home|1775066666|4096",
+          "cli_binary_path": "/home/ocean/.local/bin/codex",
+          "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+          "vendor_session_state": "started",
+          "recovery_state": {}
+        },
+        "_butler_recovery": {
+          "resume_requested": true,
+          "degraded": false,
+          "reason": "explicit_resume"
+        },
+        "_profile_explicit": false,
+        "_provider_failover_managed": true,
+        "_provider_failover_active_profile": "aixj"
+      },
+      "cli_events": {
+        "usage": {},
+        "command_events": [
+          {
+            "kind": "command",
+            "text": "/bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\"",
+            "event_type": "item.started",
+            "status": "in_progress",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\" | output=--- workspace targets ---\n./MyWorkSpace/TargetProjects\n\n--- existing 0402 docs ---\ndocs/daily-upgrade/0402/00_当日总纲.md\ndo",
+            "event_type": "item.completed",
+            "status": "completed",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "/bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\"",
+            "event_type": "item.started",
+            "status": "in_progress",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\" | output=--- feature/truth hits ---\ndocs/project-map/03_truth_matrix.md:15:| campaign 宏账本 / agent 可重入内环 | [0331 后台主线 Campaign 宏账本",
+            "event_type": "item.completed",
+            "status": "completed",
+            "source": "codex"
+          }
+        ]
+      },
+      "usage": {},
+      "external_session": {
+        "provider": "codex",
+        "thread_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "resume_capable": true,
+        "resume_durable": true,
+        "mode": "resume",
+        "requested_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "durable_resume_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+        "session_persistence": "codex_home",
+        "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+        "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home|1775066666|4096",
+        "cli_binary_path": "/home/ocean/.local/bin/codex",
+        "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+        "vendor_session_state": "resumed",
+        "recovery_state": {
+          "resume_requested": true,
+          "degraded": false,
+          "reason": "explicit_resume"
+        }
+      },
+      "recovery_state": {
+        "resume_requested": true,
+        "degraded": false,
+        "reason": "explicit_resume"
+      },
+      "vendor_capabilities": {
+        "vendor": "codex",
+        "capabilities": {
+          "session": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "resume": {
+            "layer": "direct_contract",
+            "ownership": "vendor_native"
+          },
+          "compact": {
+            "layer": "intrinsic",
+            "ownership": "vendor_native"
+          },
+          "skills": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "collab": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "subagent": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "agent_team": {
+            "layer": "intrinsic",
+            "ownership": "butler"
+          },
+          "recent_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          },
+          "local_memory": {
+            "layer": "butler_owned",
+            "ownership": "butler"
+          }
+        }
+      },
+      "command_events": [
+        {
+          "kind": "command",
+          "text": "/bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\"",
+          "event_type": "item.started",
+          "status": "in_progress",
+          "source": "codex"
+        },
+        {
+          "kind": "command",
+          "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\" | output=--- workspace targets ---\n./MyWorkSpace/TargetProjects\n\n--- existing 0402 docs ---\ndocs/daily-upgrade/0402/00_当日总纲.md\ndo",
+          "event_type": "item.completed",
+          "status": "completed",
+          "source": "codex"
+        },
+        {
+          "kind": "command",
+          "text": "/bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\"",
+          "event_type": "item.started",
+          "status": "in_progress",
+          "source": "codex"
+        },
+        {
+          "kind": "command",
+          "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\" | output=--- feature/truth hits ---\ndocs/project-map/03_truth_matrix.md:15:| campaign 宏账本 / agent 可重入内环 | [0331 后台主线 Campaign 宏账本",
+          "event_type": "item.completed",
+          "status": "completed",
+          "source": "codex"
+        }
+      ],
+      "stderr": "",
+      "timed_out": true
+    },
+    "phase_history": [
+      {
+        "at": "2026-04-02 02:05:15",
+        "attempt_no": 1,
+        "phase": "plan",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "plan",
+          "reason": "执行器本轮因超时中断，尚未产出可执行的完整计划与明确代码/文档落点",
+          "next_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+          "completion_summary": "本次未完成计划产物，仅完成部分资料定位，需重试补齐完整实施计划。",
+          "issue_kind": "agent_cli_fault",
+          "followup_kind": "fix"
+        }
+      },
+      {
+        "at": "2026-04-02 02:06:01",
+        "attempt_no": 2,
+        "phase": "plan",
+        "codex_status": "failed",
+        "cursor_status": "completed",
+        "decision": {
+          "decision": "RETRY",
+          "next_phase": "plan",
+          "reason": "执行器本轮超时失败，未交付可执行的完整计划产物。",
+          "next_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+          "completion_summary": "仅完成部分文档读取与定位，未形成可落地计划、路径清单与最小验证项。",
+          "issue_kind": "agent_cli_fault",
+          "followup_kind": "fix"
+        }
+      }
+    ],
+    "phase_artifact": {
+      "workflow_id": "flow_20260402020420_64a24bc1",
+      "workflow_kind": "project_loop",
+      "phase": "plan",
+      "role_id": "fixer",
+      "attempt_no": 3,
+      "phase_attempt_no": 1,
+      "goal": "去调研一下 hermes agent，在github上搜索，然后下载源码（压缩包+解压）到 targetproject，然后对照butler，的三个产品：flow、chat、campain，各生成一版本详细的参考学习资料+启发式的资料到docs 0402",
+      "guard_condition": "确保任务整个完成，并且资料质量、位置、内容符合要求",
+      "codex_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+      "codex_status": "failed",
+      "codex_output": "文档基线拿到了；现在补 Hermes 仓库候选和 Butler 三个产品真源目录。",
+      "codex_metadata": {
+        "workspace": "/home/ocean/Desktop/SuperButler",
+        "provider": "codex",
+        "provider_returncode": -9,
+        "returncode": -9,
+        "failure_class": "timeout",
+        "runtime_request": {
+          "model": "auto",
+          "profile": "",
+          "speed": "",
+          "config_overrides": [
+            "mcp_servers.stripe={enabled=false,transport=\"streamable_http\",url=\"https://mcp.stripe.com\"}",
+            "mcp_servers.supabase={enabled=false,transport=\"streamable_http\",url=\"https://mcp.supabase.com/mcp\"}",
+            "mcp_servers.vercel={enabled=false,transport=\"streamable_http\",url=\"https://mcp.vercel.com\"}"
+          ],
+          "extra_args": [],
+          "cli": "codex",
+          "_disable_runtime_fallback": true,
+          "workflow_id": "flow_20260402020420_64a24bc1",
+          "agent_id": "butler_flow.codex_executor",
+          "codex_mode": "resume",
+          "codex_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "codex_home": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+          "_butler_session_binding": {
+            "provider": "codex",
+            "thread_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+            "resume_capable": true,
+            "resume_durable": true,
+            "mode": "exec",
+            "requested_session_id": "",
+            "durable_resume_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+            "session_persistence": "codex_home",
+            "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+            "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home|1775066666|4096",
+            "cli_binary_path": "/home/ocean/.local/bin/codex",
+            "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+            "vendor_session_state": "started",
+            "recovery_state": {}
+          },
+          "_butler_recovery": {
+            "resume_requested": true,
+            "degraded": false,
+            "reason": "explicit_resume"
+          },
+          "_profile_explicit": false,
+          "_provider_failover_managed": true,
+          "_provider_failover_active_profile": "aixj"
+        },
+        "cli_events": {
+          "usage": {},
+          "command_events": [
+            {
+              "kind": "command",
+              "text": "/bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\"",
+              "event_type": "item.started",
+              "status": "in_progress",
+              "source": "codex"
+            },
+            {
+              "kind": "command",
+              "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\" | output=--- workspace targets ---\n./MyWorkSpace/TargetProjects\n\n--- existing 0402 docs ---\ndocs/daily-upgrade/0402/00_当日总纲.md\ndo",
+              "event_type": "item.completed",
+              "status": "completed",
+              "source": "codex"
+            },
+            {
+              "kind": "command",
+              "text": "/bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\"",
+              "event_type": "item.started",
+              "status": "in_progress",
+              "source": "codex"
+            },
+            {
+              "kind": "command",
+              "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\" | output=--- feature/truth hits ---\ndocs/project-map/03_truth_matrix.md:15:| campaign 宏账本 / agent 可重入内环 | [0331 后台主线 Campaign 宏账本",
+              "event_type": "item.completed",
+              "status": "completed",
+              "source": "codex"
+            }
+          ]
+        },
+        "usage": {},
+        "external_session": {
+          "provider": "codex",
+          "thread_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "resume_capable": true,
+          "resume_durable": true,
+          "mode": "resume",
+          "requested_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "durable_resume_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+          "session_persistence": "codex_home",
+          "session_store_path": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home",
+          "session_store_fingerprint": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402020420_64a24bc1/codex_home|1775066666|4096",
+          "cli_binary_path": "/home/ocean/.local/bin/codex",
+          "cli_binary_fingerprint": "/home/ocean/.local/bin/codex|1775050269|6659",
+          "vendor_session_state": "resumed",
+          "recovery_state": {
+            "resume_requested": true,
+            "degraded": false,
+            "reason": "explicit_resume"
+          }
+        },
+        "recovery_state": {
+          "resume_requested": true,
+          "degraded": false,
+          "reason": "explicit_resume"
+        },
+        "vendor_capabilities": {
+          "vendor": "codex",
+          "capabilities": {
+            "session": {
+              "layer": "direct_contract",
+              "ownership": "vendor_native"
+            },
+            "resume": {
+              "layer": "direct_contract",
+              "ownership": "vendor_native"
+            },
+            "compact": {
+              "layer": "intrinsic",
+              "ownership": "vendor_native"
+            },
+            "skills": {
+              "layer": "intrinsic",
+              "ownership": "butler"
+            },
+            "collab": {
+              "layer": "intrinsic",
+              "ownership": "butler"
+            },
+            "subagent": {
+              "layer": "intrinsic",
+              "ownership": "butler"
+            },
+            "agent_team": {
+              "layer": "intrinsic",
+              "ownership": "butler"
+            },
+            "recent_memory": {
+              "layer": "butler_owned",
+              "ownership": "butler"
+            },
+            "local_memory": {
+              "layer": "butler_owned",
+              "ownership": "butler"
+            }
+          }
+        },
+        "command_events": [
+          {
+            "kind": "command",
+            "text": "/bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\"",
+            "event_type": "item.started",
+            "status": "in_progress",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- workspace targets ---\\\\n' && find . -maxdepth 3 \\\\( -iname '*TargetProjects*' -o -iname 'targetproject' -o -iname 'targetprojects' \\\\) | sort && printf '\\\\n--- existing 0402 docs ---\\\\n' && find docs/daily-upgrade/0402 -maxdepth 1 -type f | sort\" | output=--- workspace targets ---\n./MyWorkSpace/TargetProjects\n\n--- existing 0402 docs ---\ndocs/daily-upgrade/0402/00_当日总纲.md\ndo",
+            "event_type": "item.completed",
+            "status": "completed",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "/bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\"",
+            "event_type": "item.started",
+            "status": "in_progress",
+            "source": "codex"
+          },
+          {
+            "kind": "command",
+            "text": "exit=0 | /bin/bash -lc \"printf '\\\\n--- feature/truth hits ---\\\\n' && rg -n \\\"butler-flow|chat/frontdoor|campaign|TargetProjects|targetproject|flow/chat/campaign\\\" docs/project-map/02_feature_map.md docs/project-map/03_truth_matrix.md docs/daily-upgrade/0401 docs/daily-upgrade/0331 -S && printf '\\\\n--- code roots ---\\\\n' && find butler_main -maxdepth 2 -type d \\\\( -name 'butler_flow' -o -name 'chat' -o -name 'orchestrator' -o -name 'domains' \\\\) | sort && printf '\\\\n--- tests hits ---\\\\n' && rg --files butler_main/butler_bot_code/tests | rg 'flow|chat|campaign|orchestrator'\" | output=--- feature/truth hits ---\ndocs/project-map/03_truth_matrix.md:15:| campaign 宏账本 / agent 可重入内环 | [0331 后台主线 Campaign 宏账本",
+            "event_type": "item.completed",
+            "status": "completed",
+            "source": "codex"
+          }
+        ],
+        "stderr": "",
+        "timed_out": true
+      },
+      "pending_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+      "last_cursor_decision": {
+        "decision": "RETRY",
+        "next_phase": "plan",
+        "reason": "执行器本轮超时失败，未交付可执行的完整计划产物。",
+        "next_codex_prompt": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+        "completion_summary": "仅完成部分文档读取与定位，未形成可落地计划、路径清单与最小验证项。",
+        "issue_kind": "agent_cli_fault",
+        "followup_kind": "fix"
+      }
+    },
+    "active_role_id": "fixer",
+    "role_session_id": "019d4a38-9af9-71b0-929c-114ef00d2f7b",
+    "inbound_handoff": {
+      "handoff_id": "handoff_cf964ff7dcff",
+      "flow_id": "flow_20260402020420_64a24bc1",
+      "from_role_id": "planner",
+      "to_role_id": "fixer",
+      "source_role_id": "planner",
+      "target_role_id": "fixer",
+      "source_phase": "plan",
+      "target_phase": "plan",
+      "summary": "执行器本轮因超时中断，尚未产出可执行的完整计划与明确代码/文档落点",
+      "goal": "去调研一下 hermes agent，在github上搜索，然后下载源码（压缩包+解压）到 targetproject，然后对照butler，的三个产品：flow、chat、campain，各生成一版本详细的参考学习资料+启发式的资料到docs 0402",
+      "guard_condition": "确保任务整个完成，并且资料质量、位置、内容符合要求",
+      "completion_summary": "本次未完成计划产物，仅完成部分资料定位，需重试补齐完整实施计划。",
+      "open_questions": [],
+      "next_action": "继续在 plan 阶段收敛：基于已拿到的 project-map 导航结果，明确 hermes 调研与下载解压到 targetproject 的具体步骤；精确定位 Butler 三个产品（flow/chat/campaign）对应真源目录；给出 docs 0402 的目标文件清单与章节结构；输出可直接执行的分步计划、涉及路径与最小验证清单。",
+      "artifact_refs": [
+        "artifact:1:plan"
+      ],
+      "verification_refs": [],
+      "risk_flags": [
+        "agent_cli_fault",
+        "fix"
+      ],
+      "status": "consumed",
+      "created_at": "2026-04-02 02:05:15",
+      "consumed_at": "2026-04-02 02:05:15",
+      "consumed_by_role_id": "fixer"
+    }
+  }
+}

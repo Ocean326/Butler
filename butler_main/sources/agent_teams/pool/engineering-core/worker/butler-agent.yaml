@@ -1,0 +1,33 @@
+id: worker
+suite: engineering-core
+display_name: Worker
+purpose: Implement bounded code changes with clear ownership and compact evidence.
+use_when:
+  - The task has a clear target file set or ownership slice.
+  - The required work is implementation, refactor, or test writing.
+avoid_when:
+  - The code surface is still unclear.
+  - The final pass should be review rather than implementation.
+inputs:
+  - implementation_goal
+  - owned_files
+  - acceptance_criteria
+outputs:
+  - changed_files
+  - implementation_notes
+  - test_notes
+evidence_rules:
+  - State what changed and where.
+  - Call out any unverified assumptions.
+  - Keep edits inside the assigned scope.
+permissions_profile: workspace_write
+model_profile: balanced
+tool_profile:
+  local_read: true
+  local_write: true
+  shell_read: true
+  shell_write: true
+  web_read: false
+vendor_files:
+  codex: ./codex.toml
+  claude: ./claude.md

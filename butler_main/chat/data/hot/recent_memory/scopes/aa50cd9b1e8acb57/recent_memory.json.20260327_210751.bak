@@ -1,0 +1,675 @@
+[
+  {
+    "memory_id": "a5d12c3d-04b0-44b3-8d01-148094f0cfa0",
+    "timestamp": "2026-03-25 21:17:37",
+    "topic": "最近在想什么",
+    "summary": "文件路径与命名方式对用户有实际意义，应保留。",
+    "scene_mode": "mixed",
+    "memory_scope": "talk",
+    "memory_stream": "mental",
+    "event_type": "post_turn_reflection",
+    "raw_user_prompt": "",
+    "status": "completed",
+    "next_actions": [],
+    "detail_points": [],
+    "unresolved_points": [],
+    "self_mind_cues": [],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": [],
+      "promoted_to_local_at": "",
+      "promoted_source": "",
+      "promoted_action": ""
+    },
+    "salience": 0.8500000000000001,
+    "confidence": 0.7,
+    "derived_from": [
+      "6fba2f85-b1df-4450-ad97-c003e8632817"
+    ],
+    "context_tags": [
+      "会议纪要",
+      "研究生资料整理",
+      "桌面归档",
+      "缺少原始内容",
+      "待用户补充材料",
+      "文件命名偏好"
+    ],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {
+      "importance": 0.5
+    },
+    "active_window": "current",
+    "subconscious": {},
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "41ee6067-726e-4426-87ba-f568e1f72d9b",
+    "timestamp": "2026-03-25 21:17:37",
+    "topic": "关系与情绪信号",
+    "summary": "用户给的是直接型任务指令，偏好助手少绕弯、直接产出可用结果。",
+    "scene_mode": "mixed",
+    "memory_scope": "talk",
+    "memory_stream": "relationship_signal",
+    "event_type": "relationship_observation",
+    "raw_user_prompt": "",
+    "status": "completed",
+    "next_actions": [],
+    "detail_points": [],
+    "unresolved_points": [],
+    "self_mind_cues": [],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": [],
+      "promoted_to_local_at": "",
+      "promoted_source": "",
+      "promoted_action": ""
+    },
+    "salience": 0.8500000000000001,
+    "confidence": 0.7,
+    "derived_from": [
+      "6fba2f85-b1df-4450-ad97-c003e8632817"
+    ],
+    "context_tags": [
+      "会议纪要",
+      "研究生资料整理",
+      "桌面归档",
+      "缺少原始内容",
+      "待用户补充材料",
+      "文件命名偏好"
+    ],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {
+      "tone": "direct_practical",
+      "preference_shift": "更偏好直接整理成可落盘成果，同时接受先出正文后落盘的流程",
+      "importance": 0.76
+    },
+    "active_window": "recent",
+    "subconscious": {},
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "2bb50c15-7537-491f-a5e2-814d512459ed",
+    "timestamp": "2026-03-25 21:17:37",
+    "topic": "关系与情绪信号",
+    "summary": "对路径和落盘位置有明确要求，说明用户在意整理后的可归档性。",
+    "scene_mode": "mixed",
+    "memory_scope": "talk",
+    "memory_stream": "relationship_signal",
+    "event_type": "relationship_observation",
+    "raw_user_prompt": "",
+    "status": "completed",
+    "next_actions": [],
+    "detail_points": [],
+    "unresolved_points": [],
+    "self_mind_cues": [],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": [],
+      "promoted_to_local_at": "",
+      "promoted_source": "",
+      "promoted_action": ""
+    },
+    "salience": 0.8500000000000001,
+    "confidence": 0.7,
+    "derived_from": [
+      "6fba2f85-b1df-4450-ad97-c003e8632817"
+    ],
+    "context_tags": [
+      "会议纪要",
+      "研究生资料整理",
+      "桌面归档",
+      "缺少原始内容",
+      "待用户补充材料",
+      "文件命名偏好"
+    ],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {
+      "tone": "direct_practical",
+      "preference_shift": "更偏好直接整理成可落盘成果，同时接受先出正文后落盘的流程",
+      "importance": 0.76
+    },
+    "active_window": "recent",
+    "subconscious": {},
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "d7d41829-a2ab-4d44-bf21-9ee85ef06736",
+    "timestamp": "2026-03-25 21:17:37",
+    "topic": "关系与情绪信号",
+    "summary": "助手已采取坦诚边界说明，避免制造‘已完成写盘’的错觉。",
+    "scene_mode": "mixed",
+    "memory_scope": "talk",
+    "memory_stream": "relationship_signal",
+    "event_type": "relationship_observation",
+    "raw_user_prompt": "",
+    "status": "completed",
+    "next_actions": [],
+    "detail_points": [],
+    "unresolved_points": [],
+    "self_mind_cues": [],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": [],
+      "promoted_to_local_at": "",
+      "promoted_source": "",
+      "promoted_action": ""
+    },
+    "salience": 0.8500000000000001,
+    "confidence": 0.7,
+    "derived_from": [
+      "6fba2f85-b1df-4450-ad97-c003e8632817"
+    ],
+    "context_tags": [
+      "会议纪要",
+      "研究生资料整理",
+      "桌面归档",
+      "缺少原始内容",
+      "待用户补充材料",
+      "文件命名偏好"
+    ],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {
+      "tone": "direct_practical",
+      "preference_shift": "更偏好直接整理成可落盘成果，同时接受先出正文后落盘的流程",
+      "importance": 0.76
+    },
+    "active_window": "recent",
+    "subconscious": {},
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "e4d10d2c-dbab-4b61-83c5-037e344a5f28",
+    "timestamp": "2026-03-25 21:17:37",
+    "topic": "任务信号",
+    "summary": "跟进用户是否补发会议原始记录。；准备在收到素材后快速输出结构化会议纪要。；观察并记录用户对学术/研究生资料归档目录和纪要模板的长期偏好。；等待用户发送会议原始内容。",
+    "scene_mode": "mixed",
+    "memory_scope": "talk",
+    "memory_stream": "task_signal",
+    "event_type": "task_signal",
+    "raw_user_prompt": "",
+    "status": "completed",
+    "next_actions": [],
+    "detail_points": [],
+    "unresolved_points": [],
+    "self_mind_cues": [],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": [],
+      "promoted_to_local_at": "",
+      "promoted_source": "",
+      "promoted_action": ""
+    },
+    "salience": 0.9,
+    "confidence": 0.7,
+    "derived_from": [
+      "6fba2f85-b1df-4450-ad97-c003e8632817"
+    ],
+    "context_tags": [
+      "会议纪要",
+      "研究生资料整理",
+      "桌面归档",
+      "缺少原始内容",
+      "待用户补充材料",
+      "文件命名偏好"
+    ],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {
+      "importance": 0.5
+    },
+    "active_window": "current",
+    "subconscious": {},
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "1e51f645-c7ab-45c4-803a-967d8e5d47bf",
+    "timestamp": "2026-03-25 21:30:31",
+    "topic": "看一下我们最近的聊天记录",
+    "summary": "用户：看一下我们最近的聊天记录；助手：有，我这边能接住的**最近聊天主线**大概是这样： ## 最近在聊什么 - 你一直在推进一件很具体的事：**把这次开会内容整理到 `桌面/研究生`** - 我这边也已经对齐了一个关",
+    "scene_mode": "mixed",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "看一下我们最近的聊天记录",
+    "status": "completed",
+    "next_actions": [],
+    "detail_points": [],
+    "unresolved_points": [],
+    "self_mind_cues": [],
+    "heartbeat_tasks": [],
+    "heartbeat_long_term_tasks": [],
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": [],
+      "promoted_to_local_at": "",
+      "promoted_source": "",
+      "promoted_action": ""
+    },
+    "salience": 0.2,
+    "confidence": 0.5,
+    "derived_from": [
+      "pending-turn"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {
+      "importance": 0.5
+    },
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "6b646955-5f28-40b7-b346-fac7b3c43545",
+    "timestamp": "2026-03-26 03:17:38",
+    "topic": "请执行命令 `ssh -o Batc",
+    "summary": "用户：请执行命令 `ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o C；助手：operation: create mission_id: mission_9502f7af440b title: 请执行命令 `ssh -o BatchMode=yes -o S",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "请执行命令 `ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 jianghy@10.254.73.179 \"pwd\"`，然后只回复输出结果。",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "44f43ba2-87a2-4f7a-8ae9-d1023a28c89c",
+    "timestamp": "2026-03-26 03:21:14",
+    "topic": "给你一次大任务：登录 179 服务器",
+    "summary": "用户：给你一次大任务：登录 179 服务器进入 Transfer_Recovery 目录，基于项目现有材料确认研究主题；随后系；助手：operation: create mission_id: mission_7929ee3e7881 title: 给你一次大任务：登录 179 服务器进入 Transfer_Re",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "给你一次大任务：登录 179 服务器进入 Transfer_Recovery 目录，基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，形成分类矩阵、阅读摘要与参考文献库，并写出一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "f952156d-9548-45c2-964d-107c4adaa91f",
+    "timestamp": "2026-03-26 03:21:14",
+    "topic": "给你一次大任务：登录 179 服务器",
+    "summary": "用户：给你一次大任务：登录 179 服务器进入 Transfer_Recovery 目录，基于项目现有材料确认研究主题；随后系；助手：operation: create mission_id: mission_7929ee3e7881 title: 给你一次大任务：登录 179 服务器进入 Transfer_Re",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "给你一次大任务：登录 179 服务器进入 Transfer_Recovery 目录，基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，形成分类矩阵、阅读摘要与参考文献库，并写出一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "faf2391c-6592-4984-aaff-8675a426b49d",
+    "timestamp": "2026-03-26 03:24:33",
+    "topic": "给你一次大任务：登录 179 服务器",
+    "summary": "用户：给你一次大任务：登录 179 服务器进入 Transfer_Recovery 目录，基于项目现有材料确认研究主题；随后系；助手：先讨论后启动。 goal: 给你一次大任务：登录 179 服务器进入 Transfer_Recovery 目录，基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "给你一次大任务：登录 179 服务器进入 Transfer_Recovery 目录，基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，形成分类矩阵、阅读摘要与参考文献库，并写出一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "a835ca8f-0aaa-4736-8c05-0a666210c7f0",
+    "timestamp": "2026-03-26 04:21:15",
+    "topic": "给你个后台任务，进行多agent写作",
+    "summary": "用户：给你个后台任务，进行多agent写作的大任务：登录 179 （jianghy@10.254.73.179）服务器进入 T；助手：进入后台任务入口态。 goal: 给你个后台任务，进行多agent写作的大任务：登录 179 （jianghy@10.254.73.179）服务器进入 Transfer_Recov",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "给你个后台任务，进行多agent写作的大任务：登录 179 （jianghy@10.254.73.179）服务器进入 Transfer_Recovery 目录，基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，形成分类矩阵、阅读摘要与参考文献库，并写出一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。 之前的ssh相关应该已经修好",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "88d899b3-1a57-477c-adae-313b1e981452",
+    "timestamp": "2026-03-26 04:21:15",
+    "topic": "给你个后台任务，进行多agent写作",
+    "summary": "用户：给你个后台任务，进行多agent写作的大任务：登录 179 （jianghy@10.254.73.179）服务器进入 T；助手：进入后台任务入口态。 goal: 给你个后台任务，进行多agent写作的大任务：登录 179 （jianghy@10.254.73.179）服务器进入 Transfer_Recov",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "给你个后台任务，进行多agent写作的大任务：登录 179 （jianghy@10.254.73.179）服务器进入 Transfer_Recovery 目录，基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，形成分类矩阵、阅读摘要与参考文献库，并写出一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。 之前的ssh相关应该已经修好",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "b8e11e1f-1e33-4df9-8e27-fb731833638b",
+    "timestamp": "2026-03-26 04:21:46",
+    "topic": "进行最小正确性讨论，然后进入后台任务",
+    "summary": "用户：进行最小正确性讨论，然后进入后台任务；助手：进入后台任务入口态。 goal: 给你个后台任务，进行多agent写作的大任务：登录 179 （jianghy@10.254.73.179）服务器进入 Transfer_Recov",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "进行最小正确性讨论，然后进入后台任务",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "54e4ae75-4681-4844-906e-bb57ad6e6718",
+    "timestamp": "2026-03-26 04:21:46",
+    "topic": "进行最小正确性讨论，然后进入后台任务",
+    "summary": "用户：进行最小正确性讨论，然后进入后台任务；助手：进入后台任务入口态。 goal: 给你个后台任务，进行多agent写作的大任务：登录 179 （jianghy@10.254.73.179）服务器进入 Transfer_Recov",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "进行最小正确性讨论，然后进入后台任务",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "f108a809-a4eb-4f98-bf14-1fc134a8b95b",
+    "timestamp": "2026-03-27 12:16:26",
+    "topic": "【前门协作协议】 chat 前门默认",
+    "summary": "用户：【前门协作协议】 chat 前门默认视为第四层里的协作消费者，不把自己当成控制面，也不把后台对象当成黑盒特判。 要求： ；助手：exceeded retry limit, last status: 429 Too Many Requests, request id: 406f9dd2-d198-4c8a-9",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "【前门协作协议】 chat 前门默认视为第四层里的协作消费者，不把自己当成控制面，也不把后台对象当成黑盒特判。 要求： - 先判断当前是普通对话、后台入口协商，还是状态查询。 - 对用户只输出自然中文，不复读内部字段名、状态机名或 JSON。 - 读取后台状态时，只使用正式 observation / facade 结果，不解释私有落盘。 - 普通 follow-up 默认续接当前主线，不因为后台任务存在就强行切成回执模式。 - 已识别为后台长任务后，若后续消息明显是在推进启动或补充启动约束，默认续接后台入口主线，不回落成 chat 前台执行主任务。 【后台入口协作协议】 后台入口协作协议： - 这一态只负责讨论是否进入后台、还缺什么、何时可以启动。 - 没有真实执行就明确说未执行，不假装已经 SSH、联网、进入目录或完成主任务。 - 如果最小正确性还没补齐，就说明当前缺口；如果用户接受探索式启动，也可以明确说明这一点。 - 如果当前已经在后台入口态，用户这轮又在推进启动并补充语言、范围、截止时间、优先级等约束，应把它理解成“启动意图 + 约束补充”，而不是回到前台自己执行主任务。 -",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "ac0ab29d-9c34-4803-9f9f-bacb1b2e44b5",
+    "timestamp": "2026-03-27 20:42:37",
+    "topic": "【前门协作协议】 chat 前门默认",
+    "summary": "用户：【前门协作协议】 chat 前门默认视为第四层里的协作消费者，不把自己当成控制面，也不把后台对象当成黑盒特判。 要求： ；助手：已终止当前执行。",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "【前门协作协议】 chat 前门默认视为第四层里的协作消费者，不把自己当成控制面，也不把后台对象当成黑盒特判。 要求： - 先判断当前是普通对话、后台入口协商，还是状态查询。 - 对用户只输出自然中文，不复读内部字段名、状态机名或 JSON。 - 读取后台状态时，只使用正式 observation / facade 结果，不解释私有落盘。 - 普通 follow-up 默认续接当前主线，不因为后台任务存在就强行切成回执模式。 - 已识别为后台长任务后，若后续消息明显是在推进启动或补充启动约束，默认续接后台入口主线，不回落成 chat 前台执行主任务。 【后台入口协作协议】 后台入口协作协议： - 这一态只负责讨论是否进入后台、还缺什么、何时可以启动。 - 没有真实执行就明确说未执行，不假装已经 SSH、联网、进入目录或完成主任务。 - 如果最小正确性还没补齐，就说明当前缺口；如果用户接受探索式启动，也可以明确说明这一点。 - 如果当前已经在后台入口态，用户这轮又在推进启动并补充语言、范围、截止时间、优先级等约束，应把它理解成“启动意图 + 约束补充”，而不是回到前台自己执行主任务。 -",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "c675b50f-8dd0-42ed-ad2b-2a8246dd993a",
+    "timestamp": "2026-03-27 20:44:42",
+    "topic": "【前门协作协议】 chat 前门默认",
+    "summary": "用户：【前门协作协议】 chat 前门默认视为第四层里的协作消费者，不把自己当成控制面，也不把后台对象当成黑盒特判。 要求： ；助手：**收到。**这轮补充我已经并进后台主线了，后面会按你刚确认的口径继续推进，不会回退成前台这边自己展开主任务。 当前我理解的主线还是这条： - 先在 `179` 服务器上的 `Tr",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "【前门协作协议】 chat 前门默认视为第四层里的协作消费者，不把自己当成控制面，也不把后台对象当成黑盒特判。 要求： - 先判断当前是普通对话、后台入口协商，还是状态查询。 - 对用户只输出自然中文，不复读内部字段名、状态机名或 JSON。 - 读取后台状态时，只使用正式 observation / facade 结果，不解释私有落盘。 - 普通 follow-up 默认续接当前主线，不因为后台任务存在就强行切成回执模式。 - 已识别为后台长任务后，若后续消息明显是在推进启动或补充启动约束，默认续接后台入口主线，不回落成 chat 前台执行主任务。 【后台入口协作协议】 后台入口协作协议： - 这一态只负责讨论是否进入后台、还缺什么、何时可以启动。 - 没有真实执行就明确说未执行，不假装已经 SSH、联网、进入目录或完成主任务。 - 如果最小正确性还没补齐，就说明当前缺口；如果用户接受探索式启动，也可以明确说明这一点。 - 如果当前已经在后台入口态，用户这轮又在推进启动并补充语言、范围、截止时间、优先级等约束，应把它理解成“启动意图 + 约束补充”，而不是回到前台自己执行主任务。 -",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  },
+  {
+    "memory_id": "8bd29acf-9aa7-4a9f-b29a-750ffc19224a",
+    "timestamp": "2026-03-27 20:45:29",
+    "topic": "【前门协作协议】 chat 前门默认",
+    "summary": "用户：【前门协作协议】 chat 前门默认视为第四层里的协作消费者，不把自己当成控制面，也不把后台对象当成黑盒特判。 要求： ；助手：收到，这条补充我已经并进那条**正在推进的后台主线**里了，后面会按你刚强调的口径继续吸收，不会又回到前台这边另起一套说法。 目前主线理解不变：先围绕 `Transfer_Reco",
+    "memory_scope": "talk",
+    "memory_stream": "talk",
+    "event_type": "conversation_turn",
+    "raw_user_prompt": "【前门协作协议】 chat 前门默认视为第四层里的协作消费者，不把自己当成控制面，也不把后台对象当成黑盒特判。 要求： - 先判断当前是普通对话、后台入口协商，还是状态查询。 - 对用户只输出自然中文，不复读内部字段名、状态机名或 JSON。 - 读取后台状态时，只使用正式 observation / facade 结果，不解释私有落盘。 - 普通 follow-up 默认续接当前主线，不因为后台任务存在就强行切成回执模式。 - 已识别为后台长任务后，若后续消息明显是在推进启动或补充启动约束，默认续接后台入口主线，不回落成 chat 前台执行主任务。 【后台入口协作协议】 后台入口协作协议： - 这一态只负责讨论是否进入后台、还缺什么、何时可以启动。 - 没有真实执行就明确说未执行，不假装已经 SSH、联网、进入目录或完成主任务。 - 如果最小正确性还没补齐，就说明当前缺口；如果用户接受探索式启动，也可以明确说明这一点。 - 如果当前已经在后台入口态，用户这轮又在推进启动并补充语言、范围、截止时间、优先级等约束，应把它理解成“启动意图 + 约束补充”，而不是回到前台自己执行主任务。 -",
+    "status": "completed",
+    "next_actions": [],
+    "salience": 0.4,
+    "confidence": 0.5,
+    "derived_from": [
+      "chat-light-memory"
+    ],
+    "context_tags": [],
+    "mental_notes": [],
+    "relationship_signals": [],
+    "relation_signal": {},
+    "active_window": "current",
+    "subconscious": {
+      "trigger_level": 0
+    },
+    "long_term_candidate": {
+      "should_write": false,
+      "title": "",
+      "summary": "",
+      "keywords": []
+    },
+    "session_scope_id": "feishu:oc_c3a77f31e352accd9966176646648b8f"
+  }
+]

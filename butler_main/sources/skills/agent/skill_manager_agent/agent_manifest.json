@@ -1,0 +1,37 @@
+{
+  "agent_id": "skill_manager_agent",
+  "profile_id": "skill.manager",
+  "display_name": "Skill Manager Agent",
+  "description": "Cold-data agent bundle for Butler global skill asset management.",
+  "runtime_key": "default",
+  "supported_entrypoints": [
+    "talk",
+    "orchestrator"
+  ],
+  "default_entrypoint": "talk",
+  "default_collection_id": "skill_ops",
+  "capability_ids": [
+    "skill.management",
+    "skill.collection.governance",
+    "skill.import",
+    "skill.verification"
+  ],
+  "supported_workflow_kinds": [
+    "chat",
+    "mission"
+  ],
+  "render_mode": "dialogue",
+  "block_order": [
+    "role",
+    "bootstrap",
+    "entrypoint_prompt",
+    "ops_skills"
+  ],
+  "assets": {
+    "role": "roles/skill-manager-role.md",
+    "bootstrap": "bootstrap/SKILLS.md",
+    "talk_prompt": "prompts/talk.md",
+    "orchestrator_prompt": "prompts/orchestrator.md",
+    "ops_skills": "skills/ops-skills.md"
+  }
+}

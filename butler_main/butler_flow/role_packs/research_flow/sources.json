@@ -1,0 +1,16 @@
+{
+  "pack_id": "research_flow",
+  "captured_at": "2026-03-31",
+  "sources": [
+    {
+      "source_repo": "bytedance/deer-flow",
+      "source_type": "workflow_seed",
+      "adaptation": "Absorbed the public multi-role/state-workflow framing into lighter Butler foreground role contracts."
+    },
+    {
+      "source_repo": "fanqingsong/deer-flow",
+      "source_type": "workflow_seed",
+      "adaptation": "Used as a public reference for planner/researcher/reporter separation and message-passing style handoff boundaries."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "main_mode": "share",
+  "project_phase": "",
+  "project_next_phase": "",
+  "mode_artifacts": {
+    "share": {
+      "summary": "share",
+      "latest_user_prompt": "整理这个链接",
+      "next_action": "",
+      "updated_at": "2026-03-29 20:49:41"
+    }
+  },
+  "updated_at": "2026-03-29 20:49:41"
+}

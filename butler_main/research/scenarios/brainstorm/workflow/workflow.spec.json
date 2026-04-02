@@ -1,0 +1,41 @@
+{
+  "workflow_id": "brainstorm_session",
+  "scenario_id": "brainstorm",
+  "run_type": "interactive_session",
+  "title": "Brainstorm Session",
+  "steps": [
+    {
+      "step_id": "capture",
+      "step_kind": "prepare",
+      "process_role": "manager"
+    },
+    {
+      "step_id": "cluster",
+      "step_kind": "plan",
+      "process_role": "planner"
+    },
+    {
+      "step_id": "expand",
+      "step_kind": "dispatch",
+      "process_role": "executor"
+    },
+    {
+      "step_id": "converge",
+      "step_kind": "verify",
+      "process_role": "acceptance",
+      "requires_verification": true
+    },
+    {
+      "step_id": "archive",
+      "step_kind": "promote",
+      "process_role": "manager"
+    }
+  ],
+  "metadata": {
+    "entrypoints": [
+      "talk",
+      "codex"
+    ],
+    "output_format": "brainstorm_note"
+  }
+}

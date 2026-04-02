@@ -1,0 +1,40 @@
+{
+  "flow_id": "project_loop",
+  "label": "Project Loop",
+  "description": "The built-in plan -> implement -> review flow for coding work.",
+  "workflow_kind": "project_loop",
+  "phase_plan": [
+    {
+      "phase_id": "plan",
+      "title": "Plan",
+      "objective": "Produce or repair the concrete implementation plan, identify files/tests, and leave the repo ready for execution.",
+      "done_when": "A concrete implementation plan is ready and the next code/test targets are clear.",
+      "retry_phase_id": "plan",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "imp"
+    },
+    {
+      "phase_id": "imp",
+      "title": "Implement",
+      "objective": "Implement the plan, update code/tests/docs as needed, and make the repository materially closer to done.",
+      "done_when": "The implementation is materially advanced and ready for review or targeted follow-up.",
+      "retry_phase_id": "imp",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "review"
+    },
+    {
+      "phase_id": "review",
+      "title": "Review",
+      "objective": "Review the latest implementation, run verification, fix real issues you find, then summarize residual risks.",
+      "done_when": "Verification is acceptable and the work is ready to conclude.",
+      "retry_phase_id": "imp",
+      "fallback_phase_id": "imp",
+      "next_phase_id": ""
+    }
+  ],
+  "default_role_pack": "coding_flow",
+  "allowed_execution_modes": [
+    "simple",
+    "medium"
+  ]
+}

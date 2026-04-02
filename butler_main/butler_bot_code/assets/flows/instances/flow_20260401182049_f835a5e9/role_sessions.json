@@ -1,0 +1,20 @@
+{
+  "flow_id": "flow_20260401182049_f835a5e9",
+  "items": [
+    {
+      "role_id": "implementer",
+      "session_id": "019d488f-6318-76e2-9dfd-639c97636b23",
+      "status": "ready",
+      "updated_at": "2026-04-01 18:26:19"
+    }
+  ],
+  "by_role_id": {
+    "implementer": {
+      "role_id": "implementer",
+      "session_id": "019d488f-6318-76e2-9dfd-639c97636b23",
+      "status": "ready",
+      "updated_at": "2026-04-01 18:26:19"
+    }
+  },
+  "updated_at": "2026-04-01 18:26:35"
+}

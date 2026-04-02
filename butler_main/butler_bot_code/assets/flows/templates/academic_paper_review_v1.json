@@ -1,0 +1,189 @@
+{
+  "flow_id": "academic_paper_review_v1",
+  "definition_id": "academic_paper_review_v1",
+  "asset_kind": "template",
+  "label": "论文四维评估",
+  "description": "面向长篇论文评审的模板流，覆盖接入切分、分项评估、加权复核与最终报告交付。",
+  "workflow_kind": "managed_flow",
+  "goal": "对输入论文进行结构化学术评估，产出语言、成果、逻辑、学术内容四类分项结果，以及最终综合评估报告。",
+  "guard_condition": "四类分项结果、A1-A4 学术内容子结论、加权综合结论和最终评估报告均已产出，且可以回溯到章节证据。",
+  "phase_plan": [
+    {
+      "phase_id": "plan",
+      "title": "文档接入与评估编排",
+      "objective": "完成PDF接入、章节切分与索引建立，统一证据引用口径和后续分项评估输入面。",
+      "done_when": "章节结构可引用，章节清单与基础上下文已建立，后续评估输入统一。",
+      "retry_phase_id": "plan",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "baseline_eval"
+    },
+    {
+      "phase_id": "baseline_eval",
+      "title": "语言/成果/章节摘要",
+      "objective": "并行产出语言评价、成果评价与章节摘要，并绑定章节或页码证据。",
+      "done_when": "语言评价、成果评价、章节摘要三项齐备，且记录关键证据与待核查点。",
+      "retry_phase_id": "baseline_eval",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "deep_eval"
+    },
+    {
+      "phase_id": "deep_eval",
+      "title": "学术内容与逻辑评估",
+      "objective": "基于章节摘要与全文证据，形成逻辑评价与A1-A4学术内容分项结论。",
+      "done_when": "逻辑评价与学术内容评价完成，A1-A4均包含结论、依据与风险点。",
+      "retry_phase_id": "deep_eval",
+      "fallback_phase_id": "baseline_eval",
+      "next_phase_id": "review"
+    },
+    {
+      "phase_id": "review",
+      "title": "加权综合与一致性复核",
+      "objective": "按0.55/0.30/0.10/0.05进行加权综合，复核分项一致性与证据冲突并决定是否回退补评。",
+      "done_when": "综合结论与权重说明稳定，主要风险与必要补评建议明确。",
+      "retry_phase_id": "review",
+      "fallback_phase_id": "deep_eval",
+      "next_phase_id": "report"
+    },
+    {
+      "phase_id": "report",
+      "title": "结论汇总与最终报告",
+      "objective": "输出可交付最终报告，覆盖总体结论、四类分项、A1-A4、加权说明、关键证据与改进建议。",
+      "done_when": "最终评估报告完成且可回溯到全部分项结果与关键证据。",
+      "retry_phase_id": "report",
+      "fallback_phase_id": "review",
+      "next_phase_id": ""
+    }
+  ],
+  "default_role_pack": "research_flow",
+  "allowed_execution_modes": [
+    "simple",
+    "medium"
+  ],
+  "launch_mode": "flow",
+  "catalog_flow_id": "template:academic_paper_review_v1",
+  "execution_mode": "simple",
+  "session_strategy": "shared",
+  "role_pack_id": "research_flow",
+  "risk_level": "normal",
+  "autonomy_profile": "guarded",
+  "manager_handoff": {
+    "summary": "模板流已完成提交阶段交接：当前为可复用的论文四维评估 managed flow，采用5个顺序阶段并带回退与重试控制。",
+    "label": "论文四维评估",
+    "description": "面向长篇论文评审的模板流，覆盖接入切分、分项评估、加权复核与最终报告交付。",
+    "goal": "对输入论文进行结构化学术评估，产出语言、成果、逻辑、学术内容四类分项结果，以及最终综合评估报告。",
+    "guard_condition": "四类分项结果、A1-A4 学术内容子结论、加权综合结论和最终评估报告均已产出，且可以回溯到章节证据。",
+    "workflow_kind": "managed_flow",
+    "asset_kind": "template",
+    "mutation": "update",
+    "risk_level": "normal",
+    "autonomy_profile": "guarded",
+    "phase_plan": [
+      {
+        "phase_id": "plan",
+        "title": "文档接入与评估编排",
+        "objective": "完成PDF接入、章节切分与索引建立，统一证据引用口径和后续分项评估输入面。",
+        "done_when": "章节结构可引用，章节清单与基础上下文已建立，后续评估输入统一。",
+        "retry_phase_id": "plan",
+        "fallback_phase_id": "plan",
+        "next_phase_id": "baseline_eval"
+      },
+      {
+        "phase_id": "baseline_eval",
+        "title": "语言/成果/章节摘要",
+        "objective": "并行产出语言评价、成果评价与章节摘要，并绑定章节或页码证据。",
+        "done_when": "语言评价、成果评价、章节摘要三项齐备，且记录关键证据与待核查点。",
+        "retry_phase_id": "baseline_eval",
+        "fallback_phase_id": "plan",
+        "next_phase_id": "deep_eval"
+      },
+      {
+        "phase_id": "deep_eval",
+        "title": "学术内容与逻辑评估",
+        "objective": "基于章节摘要与全文证据，形成逻辑评价与A1-A4学术内容分项结论。",
+        "done_when": "逻辑评价与学术内容评价完成，A1-A4均包含结论、依据与风险点。",
+        "retry_phase_id": "deep_eval",
+        "fallback_phase_id": "baseline_eval",
+        "next_phase_id": "review"
+      },
+      {
+        "phase_id": "review",
+        "title": "加权综合与一致性复核",
+        "objective": "按0.55/0.30/0.10/0.05进行加权综合，复核分项一致性与证据冲突并决定是否回退补评。",
+        "done_when": "综合结论与权重说明稳定，主要风险与必要补评建议明确。",
+        "retry_phase_id": "review",
+        "fallback_phase_id": "deep_eval",
+        "next_phase_id": "report"
+      },
+      {
+        "phase_id": "report",
+        "title": "结论汇总与最终报告",
+        "objective": "输出可交付最终报告，覆盖总体结论、四类分项、A1-A4、加权说明、关键证据与改进建议。",
+        "done_when": "最终评估报告完成且可回溯到全部分项结果与关键证据。",
+        "retry_phase_id": "report",
+        "fallback_phase_id": "review",
+        "next_phase_id": ""
+      }
+    ],
+    "review_checklist": [],
+    "instance_defaults": {},
+    "lineage": {},
+    "asset_state": {},
+    "bundle_manifest": {
+      "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1",
+      "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/manager.md",
+      "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/supervisor.md",
+      "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/sources.json",
+      "manager_prompt": "manager.md",
+      "supervisor_prompt": "supervisor.md",
+      "sources_path": "sources.json",
+      "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/references",
+      "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/assets",
+      "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/derived",
+      "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+      "derived_supervisor_knowledge": "bundles/templates/academic_paper_review_v1/derived/supervisor_knowledge.json",
+      "derived": {
+        "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/derived/supervisor_knowledge.json"
+      }
+    },
+    "operator_guidance": "当前模板状态正常，可直接实例化运行；先在plan阶段确认论文接入与章节索引质量，若baseline_eval或deep_eval证据不足则按fallback回退补证，review阶段锁定加权口径后再进入report收口。",
+    "confirmation_prompt": "请确认按当前定义继续将该模板作为论文评审前台标准流使用。",
+    "managed_at": "2026-04-02 02:48:35",
+    "manage_stage": "commit",
+    "manager_session_id": ""
+  },
+  "asset_state": {
+    "status": "active",
+    "stage": "commit"
+  },
+  "lineage": {},
+  "instance_defaults": {
+    "execution_mode": "simple",
+    "session_strategy": "shared",
+    "role_pack_id": "research_flow",
+    "launch_mode": "flow"
+  },
+  "review_checklist": [],
+  "bundle_manifest": {
+    "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1",
+    "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/manager.md",
+    "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/supervisor.md",
+    "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/sources.json",
+    "manager_prompt": "manager.md",
+    "supervisor_prompt": "supervisor.md",
+    "sources_path": "sources.json",
+    "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/references",
+    "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/assets",
+    "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/derived",
+    "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+    "derived_supervisor_knowledge": "bundles/templates/academic_paper_review_v1/derived/supervisor_knowledge.json",
+    "derived": {
+      "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/academic_paper_review_v1/derived/supervisor_knowledge.json"
+    }
+  },
+  "source_asset_key": "",
+  "source_asset_kind": "",
+  "source_asset_version": "",
+  "version": "1.3.0",
+  "created_at": "2026-04-01 00:00:00",
+  "updated_at": "2026-04-02 02:48:35"
+}

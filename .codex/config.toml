@@ -1,0 +1,44 @@
+profile = "aixj"
+
+model_provider = "codex_proxy_codex"
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+disable_response_storage = true
+approvals_reviewer = "user"
+sandbox_mode = "danger-full-access"
+approval_policy = "never"
+network_access = true
+
+[profiles.codex_proxy_codex]
+model_provider = "codex_proxy_codex"
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+disable_response_storage = true
+
+[model_providers.codex_proxy_codex]
+name = "codex_proxy_codex"
+base_url = "https://codex.miaomiaocode.com/v1"
+wire_api = "responses"
+requires_openai_auth = true
+
+[profiles.aixj]
+model_provider = "aixj_vip"
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+disable_response_storage = true
+
+[model_providers.aixj_vip]
+name = "aixj_vip"
+base_url = "https://aixj.vip"
+wire_api = "responses"
+requires_openai_auth = true
+
+[profiles.delay]
+model_provider = "openai"
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+
+[agents]
+max_threads = 4
+max_depth = 3
+job_max_runtime_seconds = 1200

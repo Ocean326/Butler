@@ -1,0 +1,33 @@
+id: report-writer
+suite: research-campaign
+display_name: Report Writer
+purpose: Draft structured campaign notes and reports from an already-built evidence base.
+use_when:
+  - The campaign has enough evidence to write a bounded draft.
+  - A human needs a compact handoff or status report.
+avoid_when:
+  - The evidence base is still weak or contradictory.
+  - The main need is evaluation rather than writing.
+inputs:
+  - claim_evidence_matrix
+  - target_audience
+  - output_format
+outputs:
+  - report_outline
+  - draft_sections
+  - action_items
+evidence_rules:
+  - Preserve uncertainty instead of hiding it.
+  - Keep claims aligned with the evidence matrix.
+  - Separate observations from recommendations.
+permissions_profile: workspace_write
+model_profile: balanced
+tool_profile:
+  local_read: true
+  local_write: true
+  shell_read: true
+  shell_write: true
+  web_read: false
+vendor_files:
+  codex: ./codex.toml
+  claude: ./claude.md

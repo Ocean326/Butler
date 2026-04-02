@@ -1,0 +1,43 @@
+{
+  "workflow_id": "paper_discovery_round",
+  "scenario_id": "paper_discovery",
+  "run_type": "background_round",
+  "title": "Paper Discovery Round",
+  "steps": [
+    {
+      "step_id": "topic_lock",
+      "step_kind": "prepare",
+      "process_role": "manager"
+    },
+    {
+      "step_id": "query_plan",
+      "step_kind": "plan",
+      "process_role": "planner"
+    },
+    {
+      "step_id": "search",
+      "step_kind": "dispatch",
+      "process_role": "executor",
+      "allow_parallel": true
+    },
+    {
+      "step_id": "screen",
+      "step_kind": "verify",
+      "process_role": "acceptance",
+      "requires_verification": true
+    },
+    {
+      "step_id": "digest",
+      "step_kind": "promote",
+      "process_role": "manager"
+    }
+  ],
+  "metadata": {
+    "entrypoints": [
+      "orchestrator",
+      "talk",
+      "codex"
+    ],
+    "output_format": "paper_digest"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "flow_id": "flow_20260402020420_64a24bc1",
+  "items": [
+    {
+      "role_id": "planner",
+      "session_id": "019d4a68-4eca-7471-982d-25f9d74e26c3",
+      "status": "ready",
+      "updated_at": "2026-04-02 03:10:23",
+      "last_handoff_id": "handoff_f5821064d5ac"
+    },
+    {
+      "role_id": "implementer",
+      "session_id": "019d4a6c-50c8-7873-a4cc-20f115dcf69f",
+      "last_handoff_id": "handoff_78e5f12f3d1d",
+      "updated_at": "2026-04-02 03:13:00",
+      "status": "ready"
+    },
+    {
+      "role_id": "reviewer",
+      "session_id": "019d4a74-a70a-76e0-bdd5-e034aa448780",
+      "last_handoff_id": "handoff_fb7161508342",
+      "updated_at": "2026-04-02 03:11:22",
+      "status": "ready"
+    }
+  ],
+  "by_role_id": {
+    "planner": {
+      "role_id": "planner",
+      "session_id": "019d4a68-4eca-7471-982d-25f9d74e26c3",
+      "status": "ready",
+      "updated_at": "2026-04-02 03:10:23",
+      "last_handoff_id": "handoff_f5821064d5ac"
+    },
+    "implementer": {
+      "role_id": "implementer",
+      "session_id": "019d4a6c-50c8-7873-a4cc-20f115dcf69f",
+      "last_handoff_id": "handoff_78e5f12f3d1d",
+      "updated_at": "2026-04-02 03:13:00",
+      "status": "ready"
+    },
+    "reviewer": {
+      "role_id": "reviewer",
+      "session_id": "019d4a74-a70a-76e0-bdd5-e034aa448780",
+      "last_handoff_id": "handoff_fb7161508342",
+      "updated_at": "2026-04-02 03:11:22",
+      "status": "ready"
+    }
+  },
+  "updated_at": "2026-04-02 03:13:00"
+}

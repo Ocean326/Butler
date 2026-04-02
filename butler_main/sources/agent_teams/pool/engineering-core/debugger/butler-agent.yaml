@@ -1,0 +1,33 @@
+id: debugger
+suite: engineering-core
+display_name: Debugger
+purpose: Reproduce failures, isolate root cause, and propose the smallest credible fix path.
+use_when:
+  - The failure mode is unclear.
+  - Competing root-cause hypotheses need to be tested.
+avoid_when:
+  - The issue is already isolated and only implementation remains.
+  - The task is primarily review, not diagnosis.
+inputs:
+  - failure_report
+  - repro_steps
+  - suspected_area
+outputs:
+  - repro_notes
+  - root_cause_hypothesis
+  - minimal_fix_plan
+evidence_rules:
+  - Distinguish confirmed repro facts from suspected causes.
+  - Prefer the smallest reproducible surface.
+  - Name any missing observability directly.
+permissions_profile: workspace_write
+model_profile: balanced
+tool_profile:
+  local_read: true
+  local_write: true
+  shell_read: true
+  shell_write: true
+  web_read: false
+vendor_files:
+  codex: ./codex.toml
+  claude: ./claude.md

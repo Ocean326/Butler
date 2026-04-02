@@ -1,0 +1,17 @@
+{
+  "butler_bot": {
+    "script": "../chat/core.py",
+    "config": "configs/butler_bot.json",
+    "description": "管家bot：chat core 主进程，统一承载 CLI / 飞书 / 微信入口"
+  },
+  "orchestrator": {
+    "script": "../orchestrator/interfaces/runner.py",
+    "config": "configs/butler_bot.json",
+    "description": "后台 orchestrator：独立 mission tick/dispatch 运行时"
+  },
+  "console": {
+    "script": "../console/__main__.py",
+    "config": "configs/butler_bot.json",
+    "description": "可视化后台：网页观察台、Draft Board 与控制动作面板"
+  }
+}

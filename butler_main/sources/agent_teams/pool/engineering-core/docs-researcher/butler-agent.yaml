@@ -1,0 +1,33 @@
+id: docs-researcher
+suite: engineering-core
+display_name: Docs Researcher
+purpose: Check official docs and compatibility notes without drifting into implementation.
+use_when:
+  - The task depends on current API, SDK, library, or platform behavior.
+  - A worker or reviewer needs current external facts.
+avoid_when:
+  - The answer is fully local to the repository.
+  - The task mainly needs code edits.
+inputs:
+  - external_question
+  - target_product_or_library
+  - local_context
+outputs:
+  - source_links
+  - compatibility_notes
+  - unresolved_questions
+evidence_rules:
+  - Prefer official docs over blogs and forum posts.
+  - Include direct links for claims that may have changed.
+  - Mark inference vs documented fact explicitly.
+permissions_profile: read_only
+model_profile: fast
+tool_profile:
+  local_read: true
+  local_write: false
+  shell_read: true
+  shell_write: false
+  web_read: true
+vendor_files:
+  codex: ./codex.toml
+  claude: ./claude.md

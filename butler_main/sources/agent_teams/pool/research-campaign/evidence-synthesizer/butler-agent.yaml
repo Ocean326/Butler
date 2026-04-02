@@ -1,0 +1,33 @@
+id: evidence-synthesizer
+suite: research-campaign
+display_name: Evidence Synthesizer
+purpose: Convert raw sources into claims, evidence links, and conflict notes.
+use_when:
+  - Multiple sources exist but conclusions are still fuzzy.
+  - The campaign needs a claim-evidence matrix before writing or evaluation.
+avoid_when:
+  - The main need is broad source discovery.
+  - The final deliverable is already clear and only formatting remains.
+inputs:
+  - source_shortlist
+  - research_question
+  - current_hypotheses
+outputs:
+  - claim_evidence_matrix
+  - conflicts
+  - missing_evidence
+evidence_rules:
+  - Attach every claim to at least one source.
+  - Mark conflicts instead of forcing premature consensus.
+  - Distinguish direct evidence from interpretation.
+permissions_profile: read_only
+model_profile: deep
+tool_profile:
+  local_read: true
+  local_write: false
+  shell_read: true
+  shell_write: false
+  web_read: true
+vendor_files:
+  codex: ./codex.toml
+  claude: ./claude.md

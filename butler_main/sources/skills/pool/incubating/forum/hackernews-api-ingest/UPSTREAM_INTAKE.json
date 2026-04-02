@@ -1,0 +1,29 @@
+{
+  "candidate": {
+    "id": "hackernews-api-ingest",
+    "name": "Hacker News API",
+    "category": "forum_information",
+    "priority": "P0",
+    "maturity": "high",
+    "upstream_type": "official_api",
+    "repo_url": "https://github.com/HackerNews/API",
+    "docs_url": "https://github.com/HackerNews/API",
+    "butler_skill_shape": "HN top/new/best story ingestion, comment-tree fetch, launch sentiment snapshots",
+    "why_recommended": [
+      "Official and lightweight. Easy to operationalize without complex auth.",
+      "Excellent source for engineering, startup, and tool ecosystem signals."
+    ],
+    "risks": [
+      "Thread trees can be large and noisy.",
+      "Needs rank-window and keyword filters to stay useful."
+    ],
+    "suggested_collection_ids": [
+      "automation_safe",
+      "skill_ops"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/sources/skills/pool/incubating/forum/hackernews-api-ingest",
+  "review_state": "imported_for_review"
+}

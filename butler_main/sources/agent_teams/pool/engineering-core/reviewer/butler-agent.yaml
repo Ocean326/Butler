@@ -1,0 +1,33 @@
+id: reviewer
+suite: engineering-core
+display_name: Reviewer
+purpose: Perform the final risk-focused review and acceptance gate.
+use_when:
+  - A change set exists and needs a serious regression pass.
+  - The workflow needs a final accept or reject verdict.
+avoid_when:
+  - The task still needs exploration or implementation.
+  - The main need is external docs lookup.
+inputs:
+  - change_summary
+  - diff_or_changed_files
+  - claimed_acceptance_criteria
+outputs:
+  - prioritized_findings
+  - regression_risks
+  - verdict
+evidence_rules:
+  - Put findings before summary.
+  - Rank issues by severity.
+  - Reference files and lines wherever possible.
+permissions_profile: read_only
+model_profile: deep
+tool_profile:
+  local_read: true
+  local_write: false
+  shell_read: true
+  shell_write: false
+  web_read: false
+vendor_files:
+  codex: ./codex.toml
+  claude: ./claude.md

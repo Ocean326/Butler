@@ -1,0 +1,8 @@
+{
+  "candidate_id": "feedparser-rss-ingest",
+  "active_skill_name": "rss-feed-watch",
+  "active_skill_path": "./butler_main/sources/skills/pool/general/rss-feed-watch",
+  "promoted_at": "2026-03-24",
+  "promotion_mode": "auto_template",
+  "upstream_name": "feedparser"
+}

@@ -1,0 +1,8 @@
+{
+  "candidate_id": "praw-reddit-ingest",
+  "active_skill_name": "reddit-thread-read",
+  "active_skill_path": "./butler_main/sources/skills/pool/forum/reddit-thread-read",
+  "promoted_at": "2026-03-24",
+  "promotion_mode": "auto_template",
+  "upstream_name": "PRAW"
+}

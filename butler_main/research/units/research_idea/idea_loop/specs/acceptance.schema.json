@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "idea_loop acceptance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "iteration",
+    "accepted",
+    "status",
+    "reason",
+    "decision"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "iteration": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "accepted": {
+      "type": "boolean"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "strong_positive",
+        "weak_positive",
+        "neutral",
+        "weak_negative",
+        "hard_failure"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "PROCEED",
+        "REFINE",
+        "PIVOT",
+        "STOP"
+      ]
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ran_successfully": { "type": "boolean" },
+        "passed_smoke_test": { "type": "boolean" },
+        "respected_frozen_scope": { "type": "boolean" },
+        "metric_signal_positive": { "type": "boolean" },
+        "evidence_consistent": { "type": "boolean" }
+      }
+    },
+    "metric_summary": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "next_action": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "evidence_generated_on": "2026-03-26",
+  "linux_machine": {
+    "python_version": "3.12.3",
+    "venv_available": true,
+    "pip_available": true,
+    "pytest_available": true
+  },
+  "runtime_entry_checks": {
+    "manager_status_command": "./tools/butler status orchestrator",
+    "orchestrator_running": true,
+    "runner_module_command": ".venv/bin/python -m butler_main.orchestrator.interfaces.runner --help",
+    "runner_module_exit_code": 0,
+    "runner_module_stderr_empty": true
+  },
+  "targeted_regression": {
+    "runner": ".venv/bin/pytest -q",
+    "suite_groups": [
+      {
+        "name": "frontdoor_runner_feedback_campaign",
+        "passed": 54,
+        "suites": [
+          "butler_main.butler_bot_code.tests.test_chat_campaign_negotiation",
+          "butler_main.butler_bot_code.tests.test_talk_mainline_service",
+          "butler_main.butler_bot_code.tests.test_chat_long_task_frontdoor_regression",
+          "butler_main.butler_bot_code.tests.test_orchestrator_runner",
+          "butler_main.butler_bot_code.tests.test_orchestrator_feedback_notifier",
+          "butler_main.butler_bot_code.tests.test_orchestrator_campaign_observe",
+          "butler_main.butler_bot_code.tests.test_orchestrator_smoke",
+          "butler_main.butler_bot_code.tests.test_campaign_domain_runtime"
+        ]
+      },
+      {
+        "name": "control_plane_process_runtime",
+        "passed": 41,
+        "suites": [
+          "butler_main.butler_bot_code.tests.test_orchestrator_core",
+          "butler_main.butler_bot_code.tests.test_orchestrator_ingress_and_template",
+          "butler_main.butler_bot_code.tests.test_orchestrator_workflow_vm",
+          "butler_main.butler_bot_code.tests.test_request_intake_service",
+          "butler_main.butler_bot_code.tests.test_orchestrator_campaign_service",
+          "butler_main.butler_bot_code.tests.test_runtime_module_layout"
+        ]
+      },
+      {
+        "name": "service_manager",
+        "passed": 5,
+        "suites": [
+          "butler_main.butler_bot_code.tests.test_butler_manager"
+        ]
+      }
+    ],
+    "total_passed": 100
+  },
+  "live_runtime_snapshot": {
+    "process_state": "running",
+    "run_state": "running",
+    "watchdog_state": "running",
+    "phase": "idle",
+    "note": "missions=3 | activated=0 | dispatched=0 | ready_nodes=0 | running_nodes=0 | executed=0 | completed=0 | failed=0 | non_terminal=0 | feedback_docs=0 | feedback_pushes=0",
+    "stable_evidence": {
+      "mission_id": "mission_7929ee3e7881",
+      "branch_id": "branch_116c5b0ab918",
+      "workflow_id": "branch_116c5b0ab918",
+      "workflow_session_id": "workflow_session_35b6183343d5",
+      "status": "completed",
+      "active_step": "talk_ingress",
+      "workflow_ir_compiled": true,
+      "workflow_vm_executed": true,
+      "workflow_session_count": 3
+    }
+  },
+  "stability_closures": [
+    "feedback_contract 显式 doc_enabled=false 不再在规范化时丢失，可稳定表达 push-only Feishu 反馈面",
+    "feedback_notifier 在 push-only 模式下会继续发送启动/进度推送，并把 push_count 正确计入运行摘要",
+    "orchestrator.interfaces 包改成 lazy export，python -m butler_main.orchestrator.interfaces.runner 不再产生日志级 runpy 警告",
+    "示例配置已和当前稳定运行口径对齐：auto_dispatch=true 且 auto_execute=true"
+  ]
+}

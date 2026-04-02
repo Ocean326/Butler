@@ -1,0 +1,70 @@
+{
+  "evidence_generated_on": "2026-03-26",
+  "linux_machine": {
+    "python_version": "3.12.3",
+    "venv_available": true,
+    "pip_available": true,
+    "pytest_available": true
+  },
+  "tests": {
+    "runner": ".venv/bin/pytest -q",
+    "suites": [
+      "butler_main.butler_bot_code.tests.test_orchestrator_core",
+      "butler_main.butler_bot_code.tests.test_orchestrator_ingress_and_template",
+      "butler_main.butler_bot_code.tests.test_orchestrator_smoke",
+      "butler_main.butler_bot_code.tests.test_campaign_domain_runtime"
+    ],
+    "passed": 27
+  },
+  "campaign_smoke": {
+    "ok": true,
+    "campaign_id": "campaign_266b350ef870",
+    "mission_id": "mission_2313be9866bf",
+    "workflow_session_id": "workflow_session_2147161f1b5f",
+    "workflow_session_status": "stopped",
+    "created_phase": "discover",
+    "resumed_phase": "iterate",
+    "stopped_status": "stopped",
+    "artifact_count": 5,
+    "verdict_count": 1,
+    "contract_revision_count": 2,
+    "goal_immutable_ok": true,
+    "hard_constraints_immutable_ok": true,
+    "session_event_count": 22,
+    "blackboard_entry_count": 13,
+    "acceptance_checks": [
+      {
+        "name": "campaign_refs_present",
+        "ok": true
+      },
+      {
+        "name": "initial_phase_shape",
+        "ok": true
+      },
+      {
+        "name": "session_count_visible",
+        "ok": true
+      },
+      {
+        "name": "initial_artifact_count",
+        "ok": true
+      },
+      {
+        "name": "verdict_count_after_resume",
+        "ok": true
+      },
+      {
+        "name": "goal_immutable_through_resume",
+        "ok": true
+      },
+      {
+        "name": "constraints_immutable_through_resume",
+        "ok": true
+      },
+      {
+        "name": "session_stopped",
+        "ok": true
+      }
+    ]
+  }
+}

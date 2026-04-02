@@ -1,0 +1,32 @@
+{
+  "platform": "xiaohongshu",
+  "status": "ok",
+  "source_url": "https://www.xiaohongshu.com/explore/69c13dab000000001a02579b?xsec_token=ABTqKclLfjHVr3D9oH9O4fm96aNjTT_nYb3-zopgTN8H4=&xsec_source=pc_feed",
+  "resolved_url": "https://www.xiaohongshu.com/explore/69c13dab000000001a02579b?xsec_token=ABTqKclLfjHVr3D9oH9O4fm96aNjTT_nYb3-zopgTN8H4=&xsec_source=pc_feed",
+  "id": "69c13dab000000001a02579b",
+  "xsec_token": "ABTqKclLfjHVr3D9oH9O4fm96aNjTT_nYb3-zopgTN8H4=",
+  "title": "多 Agent 项目最先失控的，可能不是模型，",
+  "author": "123",
+  "author_id": "68be6b2e000000000803b983",
+  "published_at": "2026-03-23T21:18:35+08:00",
+  "updated_at": "2026-03-23T21:18:35+08:00",
+  "ip_location": "云南",
+  "content_text": "很多团队做多 Agent，最先失控的往往不是模型，而是 skill 管理。\n同一个 skill，既想给 Codex、Cursor、Claude Code 这类 Agent 应用使用，也想给 LangChain、LangGraph、AutoGen、CrewAI 这类框架里的多个 agent 复用。结果常常不是“复用”，而是“复制”——同一份 skill 被拷到多个项目里，一旦更新就要到处同步，最后越改越乱、越用越分叉。\nMagicSkills 解决的正是这个问题。它不是再造一个 Agent 框架，而是给多 Agent 项目补上一层本地优先的 skill 基础设施。它的核心思路很简单：\n一次构建 skill，供每个 Agent 复用。\n具体来说，MagicSkills 会先把已安装的 skill 汇总到统一的共享 skill 池中；再为不同 Agent 创建各自的 Skills 集合，每个 Agent 只暴露真正需要的能力；最后再根据不同运行时的接入方式，同步到 AGENTS.md、CLAUDE.md，或者接成代码里的 tool / function。\n这意味着什么？\n意味着同一份底层 skill，不需要复制，就可以同时服务多个 Agent 应用和多个智能体框架；skill 的维护成本集中在一处，每次更新只需要维护共享池里的那一份；每个 Agent 也只看到自己真正需要的那组能力，边界更清晰，项目结构也更干净。\n最有价值的一点是，新增一个运行时，不需要重写整套 skill，只需要从共享池里组合出新的 Skills 集合，再接上对应适配层即可。\n如果你正在做多 Agent 系统，已经遇到 skill 复制、重复维护、能力分叉、运行时适配混乱这些问题，那 MagicSkills 很值得看。它解决的不是“模型更强”，而是一个更底层、也更容易被忽视的问题：\n怎么让 skill 真正成为可复用资产，而不是一次次复制的目录。\n项目地址： https://github.com/Narwhal-Lab/MagicSkills #个人开发者[话题]# #多模态人工智能[话题]# #黑客松巅峰赛[话题]# #openclaw[话题]# @AI大模型开发 @会敲代码的泡 @LLM- insights @大模型-瓦力 #claudeskill[话题]# #后端开发[话题]# #开发[话题]##大模型[话题]# #智能体[话题]# #智能体框架[话题]#",
+  "tags": [],
+  "images": [
+    "http://sns-webpic-qc.xhscdn.com/202603232358/752286df4f3dd7b5995ba79489c8186e/spectrum/1040g34o31u2cqv46ha8g5pejc331e9jiptf159g!nd_dft_wlteh_jpg_3",
+    "http://sns-webpic-qc.xhscdn.com/202603232358/792b627b565248559f754907bd86abd4/spectrum/1040g34o31u2cqv46ha905pejc331e9ji7ug5e1o!nd_dft_wlteh_jpg_3",
+    "http://sns-webpic-qc.xhscdn.com/202603232358/fa78eb82015b21f45baafc9b3bd4b099/spectrum/1040g34o31u2cqv46ha9g5pejc331e9jil7pfepg!nd_dft_wlteh_jpg_3",
+    "http://sns-webpic-qc.xhscdn.com/202603232358/ffeb91277a9db68230914b062caa2f24/spectrum/1040g34o31u2cqv46haa05pejc331e9ji07qdtt0!nd_dft_wlteh_jpg_3"
+  ],
+  "engagement": {
+    "likes": null,
+    "comments": null,
+    "collects": null,
+    "shares": null
+  },
+  "notes": [
+    "当前结果来自分享页 HTML 首屏数据。",
+    "默认不含完整评论；若后续要抓评论，可在依赖就绪后再接小红书 API 层。"
+  ]
+}
