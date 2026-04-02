@@ -188,10 +188,12 @@
 - 用户价值：让 agent 改动前先命中正确文档，不靠全文扫库
 - 主层级：文档治理
 - 次层级：跨层
-- 关键代码目录：无
+- 关键代码目录：`AGENTS.md`、`tools/vibe-close`、`tools/README.md`
 - 当前真源文档：
   - [Project Map 入口](./README.md)
   - [真源矩阵](./03_truth_matrix.md)
+  - [0402 Vibecoding Agent 默认收尾动作与 `vibe-close` 收口](../daily-upgrade/0402/09_vibecoding_agent默认收尾动作与vibe_close收口.md)
+  - [0402 GitHub / ChatGPT 网页端阅读入口增强](../daily-upgrade/0402/10_github_chatgpt网页端阅读入口增强.md)
   - [0331 根目录归档整理收口](../daily-upgrade/0331/05_根目录归档整理收口.md)
   - [仓库根 README](../../README.md)
   - [系统分层与事件契约](../runtime/System_Layering_and_Event_Contracts.md)

@@ -4,6 +4,36 @@ Butler 当前主工程收口在 `butler_main/`，正式文档统一收口在 `do
 从 `2026-03-26` 起，agent 改动前的当前导航入口统一收口在 `docs/project-map/`。  
 本轮先建立一版目录整理方案与治理规则，作为后续实际搬迁、归档和清理的执行基线。
 
+## GitHub / ChatGPT 网页端阅读入口
+
+如果你是在 **GitHub 网页**、**ChatGPT 网页端** 或其他只读环境里查看本仓库，**不要直接按目录名猜系统结构**。  
+当前仓库目录更偏向 agent 开发与迁移期治理，正式系统说明统一以 `docs/` 为准。
+
+建议阅读顺序：
+
+1. [`docs/README.md`](./docs/README.md)
+2. [`docs/project-map/README.md`](./docs/project-map/README.md)
+3. [`docs/project-map/00_current_baseline.md`](./docs/project-map/00_current_baseline.md)
+4. [`docs/project-map/01_layer_map.md`](./docs/project-map/01_layer_map.md)
+5. 当天 [`docs/daily-upgrade/<MMDD>/00_当日总纲.md`](./docs/daily-upgrade/0402/00_当日总纲.md)
+
+当前系统理解入口固定按 `3 -> 2 -> 1`：
+
+- `3`：`orchestrator` control plane
+- `2`：`runtime_os / process runtime`
+- `1`：`runtime_os / agent runtime`
+
+当前目录职责速览：
+
+- `butler_main/`：主代码区
+- `docs/`：唯一正式文档入口
+- `runtime_os/`：repo-root 兼容命名空间
+- `tools/`：现役工具与 CLI 入口
+- `工作区/`：活跃中的工作材料
+- `过时/`：历史归档
+
+若你的目标是“快速理解系统做什么、入口在哪、哪些目录是现役真源”，请优先从 `docs/project-map/` 导航，而不是直接遍历整个仓库树。
+
 `2026-03-31` 已完成第一轮根目录收口实施：
 
 - `runtime_os/` 保持为根目录现役兼容命名空间，不下沉、不归档

@@ -12,6 +12,8 @@
   - 前台 workflow shell / butler-flow CLI 入口
 - `install-butler-flow`
   - 把 `butler-flow` 安装到 `~/.local/bin/butler-flow`
+- `vibe-close`
+  - 给 vibecoding agent 用的默认收尾入口：分析改动重量、给出文档回写目标，并执行 commit / push / worktree 收口
 
 ### 运维 / 联通脚本
 

@@ -34,6 +34,8 @@
 12. [0402 Hermes Agent 专题：Chat 启发式资料](./daily-upgrade/0402/06_HermesAgent专题_Chat启发式资料.md)
 13. [0402 Hermes Agent 专题：Campaign 详细参考学习资料](./daily-upgrade/0402/07_HermesAgent专题_Campaign详细参考学习资料.md)
 14. [0402 Hermes Agent 专题：Campaign 启发式资料](./daily-upgrade/0402/08_HermesAgent专题_Campaign启发式资料.md)
+- 补充：[0402 Vibecoding Agent 默认收尾动作与 vibe-close 收口](./daily-upgrade/0402/09_vibecoding_agent默认收尾动作与vibe_close收口.md)
+- 补充：[0402 GitHub / ChatGPT 网页端阅读入口增强](./daily-upgrade/0402/10_github_chatgpt网页端阅读入口增强.md)
 15. [0401 当日总纲](./daily-upgrade/0401/00_当日总纲.md)
 16. [0401 前台 Butler Flow 入口收口与 New 向导 V1](./daily-upgrade/0401/01_前台ButlerFlow入口收口与New向导V1.md)
 17. [0401 Claude Code 对 Butler Flow 工作台化升级与 TUI 信息架构计划](./daily-upgrade/0401/02_ClaudeCode对ButlerFlow工作台化升级与TUI信息架构计划.md)
@@ -84,6 +86,8 @@
 11. 涉及系统抽象、事件契约、multi-agent 语义或 observe/projection 边界时，补读 [系统分层与事件契约](./runtime/System_Layering_and_Event_Contracts.md)
 12. 然后按 [改前读包](./project-map/04_change_packets.md) 命中目标专题
 13. 若是跨链路排查或系统级升级，补读 [系统级审计与并行升级协议](./project-map/06_system_audit_and_upgrade_loop.md)
+- 补充：若目标是 agent 默认工作流、文档回写协议、或 vibecoding 的 git / worktree 收口，补读 [0402 Vibecoding Agent 默认收尾动作与 vibe-close 收口](./daily-upgrade/0402/09_vibecoding_agent默认收尾动作与vibe_close收口.md)
+- 补充：若目标是 GitHub / ChatGPT 网页端如何理解仓库入口与系统说明，补读 [0402 GitHub / ChatGPT 网页端阅读入口增强](./daily-upgrade/0402/10_github_chatgpt网页端阅读入口增强.md)
 14. 只有需要长期背景时，再进入 [`concepts/`](./concepts/README.md)
 15. 需要追溯旧语义时，最后才进入 `concepts/history/` 或 `daily-upgrade/history/`
 
