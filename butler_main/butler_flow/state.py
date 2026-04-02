@@ -14,6 +14,7 @@ from butler_main.chat.pathing import resolve_butler_root
 from .constants import (
     DEFAULT_CATALOG_FLOW_ID,
     DEFAULT_LAUNCH_MODE,
+    DEFAULT_PROJECT_MAX_RUNTIME_SECONDS,
     EXECUTION_MODE_COMPLEX,
     EXECUTION_MODE_MEDIUM,
     EXECUTION_MODE_SIMPLE,
@@ -336,6 +337,26 @@ def ensure_flow_state_v1(payload: dict[str, Any]) -> dict[str, Any]:
         state["last_operator_action"] = {}
     if "latest_applied_operator_action_id" not in state:
         state["latest_applied_operator_action_id"] = ""
+    if not isinstance(state.get("queued_operator_updates"), list):
+        state["queued_operator_updates"] = []
+    if not isinstance(state.get("phase_snapshots"), list):
+        state["phase_snapshots"] = []
+    if not isinstance(state.get("context_governor"), dict):
+        state["context_governor"] = {}
+    if "session_epoch" not in state:
+        state["session_epoch"] = 0
+    if "service_fault_streak" not in state:
+        state["service_fault_streak"] = 0
+    if not isinstance(state.get("latest_token_usage"), dict):
+        state["latest_token_usage"] = {}
+    if "max_runtime_seconds" not in state:
+        state["max_runtime_seconds"] = (
+            DEFAULT_PROJECT_MAX_RUNTIME_SECONDS if workflow_kind in {"project_loop", "managed_flow"} else 0
+        )
+    if "runtime_started_at" not in state:
+        state["runtime_started_at"] = ""
+    if "runtime_elapsed_seconds" not in state:
+        state["runtime_elapsed_seconds"] = 0
     if "entry_mode" not in state:
         state["entry_mode"] = workflow_kind or "single_goal"
     if "launch_mode" not in state:
@@ -348,6 +369,8 @@ def ensure_flow_state_v1(payload: dict[str, Any]) -> dict[str, Any]:
         state["current_phase"] = first_phase_id(list(state.get("phase_plan") or []), workflow_kind=workflow_kind)
     if "manage_handoff" not in state:
         state["manage_handoff"] = {}
+    if not isinstance(state.get("role_guidance"), dict):
+        state["role_guidance"] = {}
     execution_mode = str(state.get("execution_mode") or "").strip().lower()
     if execution_mode not in {EXECUTION_MODE_SIMPLE, EXECUTION_MODE_MEDIUM, EXECUTION_MODE_COMPLEX}:
         execution_mode = EXECUTION_MODE_SIMPLE
@@ -390,6 +413,18 @@ def ensure_flow_state_v1(payload: dict[str, Any]) -> dict[str, Any]:
         state["latest_mutation"] = {}
     if "flow_version" not in state:
         state["flow_version"] = BUTLER_FLOW_VERSION
+    pending_prompt = str(state.get("pending_codex_prompt") or "").strip()
+    if pending_prompt and not list(state.get("queued_operator_updates") or []):
+        state["queued_operator_updates"] = [
+            {
+                "update_id": f"legacy_update_{uuid4().hex[:10]}",
+                "source": "legacy_pending_codex_prompt",
+                "instruction": pending_prompt,
+                "status": "planned",
+                "created_at": str(state.get("updated_at") or state.get("created_at") or now_text()).strip(),
+                "planned_attempt_no": int(safe_int(state.get("attempt_count"), 0)) + 1,
+            }
+        ]
     return state
 
 
@@ -421,6 +456,7 @@ def new_flow_state(
     guard_condition: str,
     max_attempts: int,
     max_phase_attempts: int,
+    max_runtime_seconds: int | None = None,
     launch_mode: str = DEFAULT_LAUNCH_MODE,
     catalog_flow_id: str = "",
     codex_session_id: str = "",
@@ -445,20 +481,33 @@ def new_flow_state(
         "phase_attempt_count": 0,
         "max_attempts": safe_int(max_attempts, 0),
         "max_phase_attempts": safe_int(max_phase_attempts, 0),
+        "max_runtime_seconds": safe_int(
+            max_runtime_seconds,
+            DEFAULT_PROJECT_MAX_RUNTIME_SECONDS if normalized_kind in {"project_loop", "managed_flow"} else 0,
+        ),
         "codex_session_id": str(codex_session_id or "").strip(),
         "pending_codex_prompt": str(pending_codex_prompt or "").strip(),
+        "queued_operator_updates": [],
         "last_cursor_decision": {},
         "last_completion_summary": "",
         "last_codex_receipt": {},
         "last_cursor_receipt": {},
         "current_phase_artifact": {},
         "phase_history": [],
+        "phase_snapshots": [],
         "auto_fix_round_count": 0,
+        "runtime_started_at": "",
+        "runtime_elapsed_seconds": 0,
+        "context_governor": {},
+        "session_epoch": 0,
+        "service_fault_streak": 0,
+        "latest_token_usage": {},
         "resume_source": str(resume_source or "").strip(),
         "trace_run_id": str(workflow_id or "").strip(),
         "phase_plan": phase_plan,
         "entry_mode": normalized_kind,
         "manage_handoff": {},
+        "role_guidance": {},
         "execution_mode": EXECUTION_MODE_SIMPLE,
         "session_strategy": SESSION_STRATEGY_SHARED,
         "active_role_id": "",

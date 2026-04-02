@@ -1,7 +1,7 @@
 # 0402 Butler Flow Manage Center 资产中心升级与会话式交互落地
 
 日期：2026-04-02  
-状态：已实施
+状态：已实施（同日补充 lightweight `role_guidance` 与临时角色参考）
 
 ## 1. 本轮裁决
 
@@ -42,6 +42,17 @@ shared asset definition 新增以下静态字段：
   - 管理/发布前的静态检查项
 - `bundle_manifest`
   - 关联 bundle 的路径与派生产物入口
+- `role_guidance`
+  - 轻量角色参考字段，只服务两件事：
+    1. 给 manager 在创建 template/flow 时提供参考
+    2. 给 supervisor 在 runtime 中选择临时节点角色时提供参考
+  - 当前口径是**建议型静态资产**，不是固定 team contract
+  - 推荐结构：
+    - `suggested_roles`
+    - `suggested_specialists`
+    - `activation_hints`
+    - `promotion_candidates`
+    - `manager_notes`
 
 instance materialization 新增以下来源字段：
 
@@ -63,13 +74,19 @@ instance materialization 新增以下来源字段：
   - shared asset 自动补 bundle 目录与基础文件
 - `butler_main/butler_flow/compiler.py`
   - compiled packet 挂接 `asset_context / supervisor_knowledge`
+  - `flow_board / asset_context` 透传 `role_guidance`，并显式标注其为 advisory only
 - `butler_main/butler_flow/runtime.py`
   - runtime 从 instance definition/bundle 读取 mixed supervisor knowledge 并注入 supervisor packet
+  - runtime 透传 `role_guidance` 给 supervisor 作为轻量角色参考
+- `butler_main/butler_flow/role_runtime.py`
+  - 补 `creator / product-manager / user-simulator` 的 fallback role prompt
+  - ephemeral role 优先继承 role pack 中的 base role prompt，不再只靠单一 fallback
 - `butler_main/butler_flow/tui/app.py`
   - `/manage` 改为 transcript-first shell
   - 各页纯文本路由：`manage -> manager chat`、`flow -> supervisor queue`、`history -> reject`
   - manager chat queue + manager session reuse
   - `$asset` inline picker + 资产选择
+  - manage detail 显示 `role_guidance`
 - `butler_main/butler_flow/tui/manage_interaction.py`
   - 抽离 manage prompt 解析、mention picker 状态、bare target/`$target` 解析
 - `butler_main/butler_flow/manage_agent.py`
@@ -130,6 +147,17 @@ instance materialization 新增以下来源字段：
   - 文本通过 `append_instruction` 入队
   - 由现有 flow `codex_session_id` / role session 续接语义消费
 
+### 4.6 lightweight role guidance
+
+- manager 在创建 template / pending flow 时，应主动思考但不强绑：
+  - 当前默认适合哪些常驻角色参考（如 `planner / implementer / reviewer`）
+  - 哪些只在堵点或创新点出现时再临时调用（如 `creator / product-manager / user-simulator`）
+  - 哪些临时节点值得在 runtime 中升级成更持久的 role session
+- supervisor 在执行时：
+  - 仍保持唯一外部主脑
+  - `role_guidance` 只作为启发，不替代 supervisor 自主判断
+  - 若任务中出现环境缺口、产品体验验证、用户试用、格式/图表/知识盲区等问题，可按需 `spawn_ephemeral_role`
+
 ## 5. 与 single flow/runtime 的边界
 
 - `/manage`
@@ -147,15 +175,23 @@ instance materialization 新增以下来源字段：
   - 覆盖 template bundle 自动创建
   - 覆盖 builtin 必须显式 `clone/edit`
   - 覆盖 supervisor knowledge 注入 packet
+  - 覆盖 `role_guidance` 从 asset -> flow_state -> compiled prompt 的透传
+  - 覆盖 `creator / product-manager / user-simulator` fallback prompt
 - `test_butler_flow_tui_app.py`
   - 覆盖 `/manage` transcript-first
   - 覆盖 `$asset` mention suggester
   - 覆盖 `manage/flow/history` 纯文本默认路由
   - 覆盖 plain text -> manager chat、manager chat -> `manage_flow()` 自动执行
   - 覆盖 picker 7 项窗口、explicit target 覆盖当前 builtin focus
+  - 覆盖 manage detail 的 `role_guidance` 展示
 - `test_butler_flow_tui_controller.py`
   - 复验 controller 参数面未回退
   - 覆盖 `manage_chat()` API
 - 实测回归：
   - `./.venv/bin/python -m pytest butler_main/butler_bot_code/tests/test_butler_flow.py butler_main/butler_bot_code/tests/test_butler_flow_tui_app.py butler_main/butler_bot_code/tests/test_butler_flow_tui_controller.py -q`
   - 本次变更后重新执行并回写最新结果
+
+## 7. 补充：长流治理与 supervisor 可观测性
+
+- supervisor stream 的 Input / Output / Decision 外显，以及 heuristic supervisor 的合成输入/输出记录，已另行收口到：
+  - [11_butler-flow_长流治理与supervisor可观测性升级.md](./11_butler-flow_长流治理与supervisor可观测性升级.md)

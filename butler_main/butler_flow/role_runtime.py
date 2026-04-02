@@ -383,18 +383,25 @@ def current_role_prompt(
     base_role_id = str(role_payload.get("base_role_id") or "").strip()
     role_charter_addendum = str(role_payload.get("role_charter_addendum") or "").strip()
     if str(role_payload.get("role_kind") or "").strip() == "ephemeral":
-        base_prompt = _fallback_role_prompt(base_role_id or role_id)
+        base_prompt = _role_pack_prompt_text(role_pack_id, base_role_id or role_id) or _fallback_role_prompt(base_role_id or role_id)
         if role_charter_addendum:
             return f"{base_prompt}\n\nEphemeral role addendum:\n{role_charter_addendum}".strip()
         return base_prompt
+    prompt_text = _role_pack_prompt_text(role_pack_id, role_id)
+    if prompt_text:
+        return prompt_text
+    return _fallback_role_prompt(role_id)
+
+
+def _role_pack_prompt_text(role_pack_id: str, role_id: str) -> str:
     role_pack_root = Path(__file__).with_name("role_packs")
     prompt_path = role_pack_root / str(role_pack_id or "").strip() / f"{str(role_id or '').strip()}.md"
     if prompt_path.exists():
         try:
             return prompt_path.read_text(encoding="utf-8").strip()
         except Exception:
-            pass
-    return _fallback_role_prompt(role_id)
+            return ""
+    return ""
 
 
 def _fallback_role_prompt(role_id: str) -> str:
@@ -443,6 +450,33 @@ def _fallback_role_prompt(role_id: str) -> str:
             "Required outputs: evidence summary, cited findings, open questions, next research or implementation suggestion.\n"
             "Handoff expectations: hand findings to planner or reporter in compact form.\n"
             "Artifact expectations: produce evidence artifacts with clear provenance."
+        )
+    if normalized == "creator":
+        return (
+            "Role: creator\n"
+            "Objective: discover and remove capability bottlenecks that would block delivery, including missing environment, missing know-how, or missing enabling assets.\n"
+            "Allowed inputs: current phase goal, bottleneck description, missing capability notes, recent artifacts.\n"
+            "Required outputs: bottleneck diagnosis, enabling plan, concrete artifact or setup proposal, next action.\n"
+            "Handoff expectations: hand the resolved bottleneck or next enabling step back to supervisor or planner in compact form.\n"
+            "Artifact expectations: produce reusable enablement notes, references, or setup artifacts."
+        )
+    if normalized in {"product-manager", "product_manager"}:
+        return (
+            "Role: product-manager\n"
+            "Objective: represent user value, workflow fit, scope control, and product-quality tradeoffs for the current task.\n"
+            "Allowed inputs: goal, target users, acceptance criteria, prototypes, current output.\n"
+            "Required outputs: product critique, missing requirements, prioritization advice, next product-facing action.\n"
+            "Handoff expectations: hand concrete user-value deltas or acceptance gaps back to supervisor or implementer.\n"
+            "Artifact expectations: produce concise requirement or evaluation artifacts."
+        )
+    if normalized in {"user-simulator", "user_simulator"}:
+        return (
+            "Role: user-simulator\n"
+            "Objective: exercise the current output like a realistic end user and surface friction, confusion, quality gaps, and missing affordances.\n"
+            "Allowed inputs: current build/output, target scenario, expected user journey, acceptance criteria.\n"
+            "Required outputs: user-journey observations, concrete pain points, severity, and suggested next checks.\n"
+            "Handoff expectations: hand product and usability gaps back to supervisor, product-manager, or implementer.\n"
+            "Artifact expectations: produce compact trial notes with scenario and impact."
         )
     return (
         "Role: implementer\n"

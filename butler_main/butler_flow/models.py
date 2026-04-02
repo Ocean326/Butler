@@ -29,8 +29,12 @@ class FlowState(TypedDict, total=False):
     phase_attempt_count: int
     max_attempts: int
     max_phase_attempts: int
+    max_runtime_seconds: int
+    runtime_started_at: str
+    runtime_elapsed_seconds: int
     codex_session_id: str
     pending_codex_prompt: str
+    queued_operator_updates: list[dict[str, Any]]
     last_cursor_decision: dict[str, Any]
     last_completion_summary: str
     last_codex_receipt: dict[str, Any]
@@ -43,6 +47,11 @@ class FlowState(TypedDict, total=False):
     phase_plan: list[dict[str, Any]]
     entry_mode: str
     manage_handoff: dict[str, Any]
+    phase_snapshots: list[dict[str, Any]]
+    context_governor: dict[str, Any]
+    session_epoch: int
+    service_fault_streak: int
+    latest_token_usage: dict[str, Any]
     execution_mode: str
     session_strategy: str
     active_role_id: str
@@ -145,10 +154,16 @@ class FlowBoardV1(TypedDict, total=False):
     risk_level: str
     autonomy_profile: str
     pending_codex_prompt: str
+    queued_operator_updates: list[dict[str, Any]]
+    max_runtime_seconds: int
+    runtime_elapsed_seconds: int
+    context_governor: dict[str, Any]
+    latest_token_usage: dict[str, Any]
     source_asset_key: str
     source_asset_kind: str
     source_asset_version: str
     review_checklist: list[str]
+    role_guidance: dict[str, Any]
     bundle_manifest: dict[str, Any]
 
 
@@ -347,6 +362,7 @@ class FlowDefinitionV1(TypedDict, total=False):
     risk_level: str
     autonomy_profile: str
     manager_handoff: dict[str, Any]
+    role_guidance: dict[str, Any]
     version: str
     created_at: str
     updated_at: str
@@ -397,6 +413,7 @@ class FlowCatalogEntryV1(TypedDict, total=False):
     phase_plan: list[dict[str, Any]]
     default_role_pack: str
     allowed_execution_modes: list[str]
+    role_guidance: dict[str, Any]
 
 
 class FlowDesignSessionV1(TypedDict, total=False):

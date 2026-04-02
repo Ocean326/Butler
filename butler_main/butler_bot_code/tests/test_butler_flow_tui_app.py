@@ -967,6 +967,42 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(action_bar.region.y + action_bar.region.height, command_input.region.y)
                 self.assertEqual(command_input.region.y + command_input.region.height, picker.region.y)
 
+    async def test_manage_detail_renders_role_guidance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            detail = app._render_manage_detail(
+                {
+                    "asset_key": "template:paper_flow",
+                    "asset_kind": "template",
+                    "workflow_kind": "managed_flow",
+                    "label": "Paper Flow",
+                    "goal": "deliver a paper",
+                    "guard_condition": "paper is complete",
+                    "asset_path": str(root / "template.json"),
+                    "role_pack_id": "research_flow",
+                    "updated_at": "2026-04-02 12:00:00",
+                    "definition": {
+                        "role_guidance": {
+                            "suggested_roles": ["planner", "researcher", "reviewer"],
+                            "suggested_specialists": ["creator", "user-simulator"],
+                            "activation_hints": ["when formatting or figure production blocks delivery"],
+                            "promotion_candidates": ["creator"],
+                            "manager_notes": "Keep this reference-only and let supervisor decide when to spawn.",
+                        }
+                    },
+                }
+            )
+            self.assertIn("Role Guidance", detail)
+            self.assertIn("suggested_roles=planner, researcher, reviewer", detail)
+            self.assertIn("suggested_specialists=creator, user-simulator", detail)
+            self.assertIn("promotion_candidates=creator", detail)
+
     async def test_flow_plain_text_queues_supervisor_instruction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1098,7 +1134,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
 
                 transcript = _transcript_text(app)
                 self.assertIn("{\"decision\":\"execute\"}", transcript)
-                self.assertIn("[supervisor/raw_execution]", transcript)
+                self.assertIn("[supervisor/output]", transcript)
 
     async def test_history_plain_text_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

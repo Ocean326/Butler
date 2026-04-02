@@ -38,7 +38,13 @@ from .display import FlowDisplay, JsonlFlowDisplay, RichFlowDisplay
 from .events import FlowLifecycleHook, FlowUiEvent, FlowUiEventCallback
 from .flow_catalog import builtin_flow_catalog, catalog_entry
 from .flow_definition import coerce_workflow_kind, first_phase_id, normalize_phase_plan, phase_ids, resolve_phase_plan
-from .manage_agent import normalize_manage_stage, run_design_stage, run_manage_agent, run_manage_chat_agent
+from .manage_agent import (
+    normalize_manage_stage,
+    normalize_role_guidance_payload,
+    run_design_stage,
+    run_manage_agent,
+    run_manage_chat_agent,
+)
 from .models import FlowExecReceiptV1, PreparedFlowRun
 from .role_runtime import (
     default_execution_mode,
@@ -304,6 +310,7 @@ class FlowApp:
         raw = dict(payload or {})
         flow_id = str(raw.get("flow_id") or raw.get("definition_id") or asset_id).strip() or asset_id
         workflow_kind = coerce_workflow_kind(str(raw.get("workflow_kind") or MANAGED_FLOW_KIND))
+        manager_handoff = dict(raw.get("manager_handoff") or raw.get("manage_handoff") or {})
         asset_state = dict(raw.get("asset_state") or {})
         if not str(asset_state.get("status") or "").strip():
             asset_state["status"] = "active"
@@ -324,6 +331,9 @@ class FlowApp:
             if str(item or "").strip()
         ]
         bundle_manifest = dict(raw.get("bundle_manifest") or {})
+        role_guidance = normalize_role_guidance_payload(
+            raw.get("role_guidance") or manager_handoff.get("role_guidance") or {},
+        )
         return {
             "flow_id": flow_id,
             "definition_id": str(raw.get("definition_id") or flow_id).strip() or flow_id,
@@ -350,11 +360,12 @@ class FlowApp:
             "role_pack_id": str(raw.get("role_pack_id") or raw.get("default_role_pack") or "coding_flow").strip() or "coding_flow",
             "risk_level": str(raw.get("risk_level") or "normal").strip() or "normal",
             "autonomy_profile": str(raw.get("autonomy_profile") or "default").strip() or "default",
-            "manager_handoff": dict(raw.get("manager_handoff") or raw.get("manage_handoff") or {}),
+            "manager_handoff": manager_handoff,
             "asset_state": asset_state,
             "lineage": lineage,
             "instance_defaults": instance_defaults,
             "review_checklist": review_checklist,
+            "role_guidance": role_guidance,
             "bundle_manifest": bundle_manifest,
             "source_asset_key": str(raw.get("source_asset_key") or "").strip(),
             "source_asset_kind": str(raw.get("source_asset_kind") or "").strip(),
@@ -412,6 +423,7 @@ class FlowApp:
             "asset_state": dict(definition.get("asset_state") or {}),
             "lineage": dict(definition.get("lineage") or {}),
             "review_checklist": list(definition.get("review_checklist") or []),
+            "role_guidance": dict(definition.get("role_guidance") or {}),
             "bundle_manifest": dict(bundle_manifest),
             "definition": definition,
             "_sort_value": sort_value,
@@ -651,6 +663,7 @@ class FlowApp:
         flow_state["goal"] = str(draft.get("goal") or flow_state.get("goal") or "").strip()
         flow_state["guard_condition"] = str(draft.get("guard_condition") or flow_state.get("guard_condition") or "").strip()
         raw_role_pack = str(draft.get("role_pack_id") or "").strip()
+        flow_state["role_guidance"] = {}
         if launch_mode == LAUNCH_MODE_SINGLE:
             flow_state["workflow_kind"] = SINGLE_GOAL_KIND
             flow_state["phase_plan"] = resolve_phase_plan({"workflow_kind": SINGLE_GOAL_KIND})
@@ -671,6 +684,7 @@ class FlowApp:
             flow_state["source_asset_kind"] = ""
             flow_state["source_asset_version"] = ""
             flow_state["review_checklist"] = []
+            flow_state["role_guidance"] = {}
             flow_state["bundle_manifest"] = {}
         elif catalog_flow_id.startswith("template:"):
             template_id = str(catalog_flow_id.split(":", 1)[1] or "").strip()
@@ -706,6 +720,7 @@ class FlowApp:
             flow_state["source_asset_kind"] = "template"
             flow_state["source_asset_version"] = str(template_definition.get("version") or "").strip()
             flow_state["review_checklist"] = list(template_definition.get("review_checklist") or [])
+            flow_state["role_guidance"] = dict(template_definition.get("role_guidance") or {})
             flow_state["bundle_manifest"] = self._runtime_bundle_manifest(
                 workspace_root=str(flow_state.get("workspace_root") or "").strip(),
                 asset_kind="template",
@@ -727,6 +742,7 @@ class FlowApp:
             flow_state["source_asset_kind"] = "builtin"
             flow_state["source_asset_version"] = str(entry.get("version") or "").strip()
             flow_state["review_checklist"] = list(entry.get("review_checklist") or [])
+            flow_state["role_guidance"] = normalize_role_guidance_payload(entry.get("role_guidance") or {})
             flow_state["bundle_manifest"] = self._runtime_bundle_manifest(
                 workspace_root=str(flow_state.get("workspace_root") or "").strip(),
                 asset_kind="builtin",
@@ -1078,6 +1094,7 @@ class FlowApp:
             flow_state.get("role_pack_id"),
             workflow_kind=workflow_kind,
         )
+        flow_state["role_guidance"] = normalize_role_guidance_payload(flow_state.get("role_guidance") or {})
         flow_state["flow_version"] = str(flow_state.get("flow_version") or BUTLER_FLOW_VERSION).strip() or BUTLER_FLOW_VERSION
         return flow_state
 
@@ -1099,6 +1116,7 @@ class FlowApp:
             "autonomy_profile": str(flow_state.get("autonomy_profile") or "default").strip() or "default",
             "manager_handoff": dict(flow_state.get("manage_handoff") or {}),
             "review_checklist": list(flow_state.get("review_checklist") or []),
+            "role_guidance": dict(flow_state.get("role_guidance") or {}),
             "bundle_manifest": dict(flow_state.get("bundle_manifest") or {}),
             "source_asset_key": str(flow_state.get("source_asset_key") or "").strip(),
             "source_asset_kind": str(flow_state.get("source_asset_kind") or "").strip(),
@@ -1167,6 +1185,7 @@ class FlowApp:
         flow_state["autonomy_profile"] = str(normalized.get("autonomy_profile") or "default").strip() or "default"
         flow_state["manage_handoff"] = dict(normalized.get("manager_handoff") or {})
         flow_state["review_checklist"] = list(normalized.get("review_checklist") or [])
+        flow_state["role_guidance"] = dict(normalized.get("role_guidance") or {})
         flow_state["bundle_manifest"] = dict(normalized.get("bundle_manifest") or {})
         flow_state["source_asset_key"] = str(normalized.get("source_asset_key") or "").strip()
         flow_state["source_asset_kind"] = str(normalized.get("source_asset_kind") or "").strip()
@@ -1204,6 +1223,10 @@ class FlowApp:
             for item in list(result.get("review_checklist") or existing.get("review_checklist") or [])
             if str(item or "").strip()
         ]
+        role_guidance = normalize_role_guidance_payload(
+            result.get("role_guidance") or {},
+            current=dict(existing.get("role_guidance") or dict(existing.get("manager_handoff") or {}).get("role_guidance") or {}),
+        )
         bundle_manifest = dict(existing.get("bundle_manifest") or {})
         if asset_kind in {"builtin", "template"}:
             bundle_manifest = self._runtime_bundle_manifest(
@@ -1251,6 +1274,7 @@ class FlowApp:
                     "lineage": merged_lineage,
                     "instance_defaults": instance_defaults,
                     "review_checklist": review_checklist,
+                    "role_guidance": role_guidance,
                     "bundle_manifest": bundle_manifest,
                     "source_asset_key": str((flow_state or {}).get("source_asset_key") or existing.get("source_asset_key") or "").strip(),
                     "source_asset_kind": str((flow_state or {}).get("source_asset_kind") or existing.get("source_asset_kind") or "").strip(),
@@ -1324,6 +1348,10 @@ class FlowApp:
             "timeouts": {
                 "flow": flow_timeout_seconds(cfg),
                 "judge": judge_timeout_seconds(cfg),
+            },
+            "runtime_governance": {
+                "project_default_max_attempts": DEFAULT_PROJECT_LOOP_MAX_ATTEMPTS,
+                "project_default_max_phase_attempts": DEFAULT_PROJECT_PHASE_MAX_ATTEMPTS,
             },
             "catalog": self.build_catalog_payload(),
         }
@@ -1718,6 +1746,10 @@ class FlowApp:
             f"role_pack={flow_state.get('role_pack_id') or '-'}"
         )
         self._display.write(f"attempt_count={flow_state.get('attempt_count')}/{flow_state.get('max_attempts')}")
+        self._display.write(
+            f"phase_attempt_count={flow_state.get('phase_attempt_count')}/{flow_state.get('max_phase_attempts')}  "
+            f"runtime_elapsed={flow_state.get('runtime_elapsed_seconds') or 0}s/{flow_state.get('max_runtime_seconds') or 0}s"
+        )
         self._display.write(f"codex_session_id={flow_state.get('codex_session_id') or '-'}")
         self._display.write(f"process_state={runtime.get('process_state')} pid={runtime.get('pid') or 0}")
         self._display.write(f"last_decision={dict(flow_state.get('last_cursor_decision') or {}).get('decision') or '-'}")
@@ -1891,6 +1923,7 @@ class FlowApp:
         flow_state["phase_plan"] = list(result.get("phase_plan") or flow_state.get("phase_plan") or [])
         flow_state["manage_handoff"] = dict(result or {})
         flow_state["review_checklist"] = list(result.get("review_checklist") or flow_state.get("review_checklist") or [])
+        flow_state["role_guidance"] = dict(result.get("role_guidance") or flow_state.get("role_guidance") or {})
         flow_state["bundle_manifest"] = dict(result.get("bundle_manifest") or flow_state.get("bundle_manifest") or {})
         flow_state["entry_mode"] = "manage"
         flow_state["launch_mode"] = LAUNCH_MODE_FLOW

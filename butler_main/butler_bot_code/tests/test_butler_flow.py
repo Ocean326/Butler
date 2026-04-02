@@ -27,8 +27,11 @@ except ModuleNotFoundError:  # pragma: no cover - fallback module layout
         from butler_main.butler_flow import app as flow_shell  # noqa: E402
 from butler_main.butler_flow import cli as flow_cli  # noqa: E402
 
+from butler_main.butler_flow.compiler import build_flow_board, build_role_board, build_turn_task_packet, compile_packet  # noqa: E402
 from butler_main.runtime_os.process_runtime import ExecutionReceipt  # noqa: E402
 from butler_main.butler_flow.state import FileRuntimeStateStore, ensure_flow_sidecars  # noqa: E402
+from butler_main.butler_flow.role_runtime import current_role_prompt  # noqa: E402
+from butler_main.butler_flow import runtime as flow_runtime  # noqa: E402
 
 
 FlowApp = getattr(flow_shell, "ButlerFlowApp", getattr(flow_shell, "WorkflowShellApp"))
@@ -616,6 +619,13 @@ class ButlerFlowTests(unittest.TestCase):
                     "source_asset_kind": "template",
                     "source_asset_version": "2026.04.02",
                     "review_checklist": ["check static fields", "check supervisor bundle"],
+                    "role_guidance": {
+                        "suggested_roles": ["planner", "implementer", "reviewer"],
+                        "suggested_specialists": ["creator", "product-manager", "user-simulator"],
+                        "activation_hints": ["when environment or domain gaps block progress"],
+                        "promotion_candidates": ["creator"],
+                        "manager_notes": "Use extra specialists only when a real bottleneck appears.",
+                    },
                     "bundle_manifest": {
                         "bundle_root": "bundle",
                         "supervisor_ref": "bundle/supervisor.md",
@@ -639,10 +649,13 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(compiled["flow_board"]["source_asset_kind"], "template")
             self.assertEqual(compiled["flow_board"]["source_asset_version"], "2026.04.02")
             self.assertIn("check static fields", compiled["flow_board"]["review_checklist"])
+            self.assertEqual(compiled["flow_board"]["role_guidance"]["promotion_candidates"], ["creator"])
             self.assertIn("Know the flow author's intent", compiled["supervisor_knowledge"]["knowledge_text"])
             self.assertIn("Compiled checklist", compiled["supervisor_knowledge"]["knowledge_text"])
             self.assertIn("template:manage_center_v2", compiled["rendered_prompt"])
             self.assertIn("Compiled checklist", compiled["rendered_prompt"])
+            self.assertIn("advisory only", compiled["rendered_prompt"])
+            self.assertIn("creator", compiled["rendered_prompt"])
 
     def test_llm_supervisor_invalid_json_falls_back_to_heuristic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1468,6 +1481,10 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(flow_state["status"], "paused")
             self.assertEqual(flow_state["approval_state"], "not_required")
             self.assertIn("start a real resume turn", receipt["result_summary"])
+            updates = list(flow_state.get("queued_operator_updates") or [])
+            self.assertEqual(len(updates), 1)
+            self.assertEqual(updates[0]["status"], "queued")
+            self.assertTrue(str(updates[0].get("instruction") or "").strip())
 
     def test_operator_resume_request_keeps_paused_until_runtime_consumes_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1827,9 +1844,119 @@ class ButlerFlowTests(unittest.TestCase):
             rc = app.action(args)
             self.assertEqual(rc, 0)
             state = self._flow_state(flow_dir)
-            self.assertEqual(state["pending_codex_prompt"], "please retry carefully")
+            self.assertEqual(state["queued_operator_updates"][0]["instruction"], "please retry carefully")
+            self.assertEqual(state["queued_operator_updates"][0]["status"], "queued")
             actions = self._read_jsonl(flow_dir / "actions.jsonl")
             self.assertEqual(actions[-1]["action_type"], "append_instruction")
+
+    def test_compile_packet_delta_profile_compacts_flow_payload(self) -> None:
+        flow_state = _NEW_FLOW_STATE(
+            workflow_id="flow_compact_demo",
+            workflow_kind=MANAGED_FLOW_KIND,
+            workspace_root="/tmp",
+            goal="ship compact packet",
+            guard_condition="verified",
+            max_attempts=0,
+            max_phase_attempts=10,
+        )
+        flow_state["phase_history"] = [
+            {
+                "at": f"2026-04-02 10:0{index}:00",
+                "attempt_no": index + 1,
+                "phase": "imp",
+                "decision": {"decision": "RETRY", "reason": f"reason {index}"},
+            }
+            for index in range(4)
+        ]
+        flow_state["queued_operator_updates"] = [{"status": "queued", "instruction": "narrow the next work package"}]
+        flow_state["bundle_manifest"] = {"bundle_root": "bundle/demo"}
+        flow_state["context_governor"] = {"mode": "compact"}
+        full_packet = compile_packet(
+            target_role="implementer",
+            session_mode="warm",
+            load_profile="full",
+            flow_board=build_flow_board(flow_state),
+            role_board=build_role_board(
+                flow_state=flow_state,
+                role_id="implementer",
+                role_kind="stable",
+                role_pack_id="coding_flow",
+                role_turn_no=1,
+                role_session_id="thread-1",
+                role_charter="Role: implementer",
+            ),
+            turn_task_packet=build_turn_task_packet(
+                role_id="implementer",
+                workflow_kind=MANAGED_FLOW_KIND,
+                phase="imp",
+                turn_kind="execute",
+                attempt_no=5,
+                phase_attempt_no=2,
+                next_instruction="finish the remaining bounded delta",
+            ),
+        )
+        delta_packet = compile_packet(
+            target_role="implementer",
+            session_mode="warm",
+            load_profile="delta",
+            flow_board=build_flow_board(flow_state),
+            role_board=build_role_board(
+                flow_state=flow_state,
+                role_id="implementer",
+                role_kind="stable",
+                role_pack_id="coding_flow",
+                role_turn_no=1,
+                role_session_id="thread-1",
+                role_charter="Role: implementer",
+            ),
+            turn_task_packet=build_turn_task_packet(
+                role_id="implementer",
+                workflow_kind=MANAGED_FLOW_KIND,
+                phase="imp",
+                turn_kind="execute",
+                attempt_no=5,
+                phase_attempt_no=2,
+                next_instruction="finish the remaining bounded delta",
+            ),
+        )
+        self.assertGreater(len(full_packet["flow_board"]["recent_phase_history"]), len(delta_packet["flow_board"]["recent_phase_history"]))
+        self.assertTrue(full_packet["flow_board"]["bundle_manifest"])
+        self.assertEqual(delta_packet["flow_board"]["bundle_manifest"], {})
+        self.assertLessEqual(len(delta_packet["turn_task_packet"]["next_instruction"]), len(full_packet["turn_task_packet"]["next_instruction"]))
+
+    def test_runtime_budget_with_queued_operator_update_pauses_instead_of_failing(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None:
+            raise AssertionError("butler_flow must expose _new_flow_state/_write_json_atomic for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_id = "flow_runtime_budget_demo"
+            flow_dir = _BUILD_FLOW_ROOT(root) / flow_id
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id=flow_id,
+                workflow_kind=MANAGED_FLOW_KIND,
+                workspace_root=str(root),
+                goal="respect runtime budget",
+                guard_condition="done",
+                max_attempts=0,
+                max_phase_attempts=10,
+            )
+            flow_state["runtime_started_at"] = "2026-04-01 00:00:00"
+            flow_state["max_runtime_seconds"] = 1
+            flow_state["queued_operator_updates"] = [
+                {
+                    "update_id": "op_update_1",
+                    "instruction": "apply my late supplement",
+                    "status": "queued",
+                    "created_at": "2026-04-02 00:00:00",
+                }
+            ]
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+            app = self._app(_ReceiptRunner([]))
+            rc = app._runtime.run_flow_loop({}, flow_dir, flow_state, stream_enabled=False)
+            self.assertEqual(rc, 0)
+            state = self._flow_state(flow_dir)
+            self.assertEqual(state["status"], "paused")
+            self.assertIn("runtime budget reached", state["last_completion_summary"])
 
     def test_running_flow_honors_external_pause_after_current_turn(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2117,6 +2244,11 @@ class ButlerFlowTests(unittest.TestCase):
                     "label": "Template Demo",
                     "workflow_kind": MANAGED_FLOW_KIND,
                     "default_role_pack": "research_flow",
+                    "role_guidance": {
+                        "suggested_roles": ["planner", "researcher", "reviewer"],
+                        "suggested_specialists": ["creator"],
+                        "activation_hints": ["when missing paper formatting or LaTeX capability blocks delivery"],
+                    },
                     "phase_plan": [
                         {
                             "phase_id": "scan",
@@ -2163,6 +2295,15 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(state.get("phase_plan")[1]["phase_id"], "synthesize")
             self.assertEqual(state.get("execution_mode"), "medium")
             self.assertEqual(state.get("role_pack_id"), "research_flow")
+            self.assertEqual(state.get("role_guidance", {}).get("suggested_roles"), ["planner", "researcher", "reviewer"])
+
+    def test_current_role_prompt_covers_lightweight_specialists(self) -> None:
+        creator_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="creator", flow_state={"role_sessions": {}})
+        product_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="product-manager", flow_state={"role_sessions": {}})
+        user_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="user-simulator", flow_state={"role_sessions": {}})
+        self.assertIn("Role: creator", creator_prompt)
+        self.assertIn("Role: product-manager", product_prompt)
+        self.assertIn("Role: user-simulator", user_prompt)
 
     def test_parser_defaults_new_kind_to_single_goal_and_allows_resume_priority_args(self) -> None:
         parser = flow_shell.build_arg_parser()

@@ -354,6 +354,49 @@ class ButlerFlowTuiControllerTests(unittest.TestCase):
             self.assertIn("run_completed", [row["kind"] for row in timeline])
             self.assertEqual(len(persisted), len(timeline))
 
+    def test_timeline_payload_includes_supervisor_input_output_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            controller = _controller()
+            path = _write_flow_state(root, flow_id="flow_supervisor_io", status="running")
+            _append_jsonl(
+                flow_turns_path(path),
+                [
+                    {
+                        "turn_id": "turn-1",
+                        "flow_id": "flow_supervisor_io",
+                        "phase": "plan",
+                        "attempt_no": 1,
+                        "supervisor_decision": {
+                            "decision": "execute",
+                            "next_action": "run_executor",
+                            "turn_kind": "execute",
+                            "active_role_id": "planner",
+                            "session_mode": "warm",
+                            "load_profile": "compact",
+                            "instruction": "focus on the remaining blockers",
+                        },
+                        "decision": "ADVANCE",
+                        "reason": "go",
+                        "started_at": "2026-03-31 10:00:00",
+                        "completed_at": "2026-03-31 10:01:00",
+                    }
+                ],
+            )
+
+            timeline = controller.timeline_payload(config=config, flow_id="flow_supervisor_io")
+
+            kinds = {str(row.get("kind") or "") for row in timeline}
+            self.assertIn("supervisor_input", kinds)
+            self.assertIn("supervisor_output", kinds)
+            input_event = next(row for row in timeline if str(row.get("kind") or "") == "supervisor_input")
+            output_event = next(row for row in timeline if str(row.get("kind") or "") == "supervisor_output")
+            self.assertEqual(input_event.get("lane"), "supervisor")
+            self.assertEqual(input_event.get("family"), "input")
+            self.assertEqual(output_event.get("lane"), "supervisor")
+            self.assertEqual(output_event.get("family"), "output")
+
     def test_single_flow_payload_includes_summary_and_phase_steps(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

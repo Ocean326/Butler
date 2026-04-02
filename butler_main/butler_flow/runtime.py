@@ -113,7 +113,10 @@ from .state import (
 
 _UI_EVENT_LANE_BY_KIND = {
     "run_started": "system",
+    "supervisor_input": "supervisor",
+    "supervisor_output": "supervisor",
     "supervisor_decided": "supervisor",
+    "supervisor_decision_applied": "supervisor",
     "approval_state_changed": "supervisor",
     "operator_action_applied": "supervisor",
     "judge_result": "supervisor",
@@ -133,7 +136,10 @@ _UI_EVENT_LANE_BY_KIND = {
 
 _UI_EVENT_FAMILY_BY_KIND = {
     "run_started": "run",
+    "supervisor_input": "input",
+    "supervisor_output": "output",
     "supervisor_decided": "decision",
+    "supervisor_decision_applied": "decision",
     "approval_state_changed": "approval",
     "operator_action_applied": "action",
     "judge_result": "decision",
@@ -461,6 +467,225 @@ def _append_unique_ref(flow_state: dict[str, Any], field: str, value: str) -> No
     flow_state[field] = existing
 
 
+def _parse_timestamp(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.strptime(text, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return None
+
+
+def _runtime_elapsed_seconds(flow_state: dict[str, Any]) -> int:
+    started_at = _parse_timestamp(flow_state.get("runtime_started_at"))
+    if started_at is None:
+        return int(safe_int(flow_state.get("runtime_elapsed_seconds"), 0))
+    return max(0, int((datetime.now() - started_at).total_seconds()))
+
+
+def _refresh_runtime_clock(flow_state: dict[str, Any]) -> int:
+    elapsed = _runtime_elapsed_seconds(flow_state)
+    flow_state["runtime_elapsed_seconds"] = elapsed
+    return elapsed
+
+
+def _normalize_usage_payload(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    usage = dict((metadata or {}).get("usage") or {})
+    normalized: dict[str, Any] = {}
+    for key in ("input_tokens", "cached_input_tokens", "output_tokens"):
+        if usage.get(key) is None:
+            continue
+        normalized[key] = int(safe_int(usage.get(key), 0))
+    return normalized
+
+
+def _queued_operator_updates(flow_state: dict[str, Any], *, include_executed: bool = False) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in list(flow_state.get("queued_operator_updates") or []):
+        row = dict(item or {})
+        if not row:
+            continue
+        status = str(row.get("status") or "queued").strip().lower() or "queued"
+        row["status"] = status
+        if include_executed or status != "executed":
+            rows.append(row)
+    return rows
+
+
+def _next_operator_update(flow_state: dict[str, Any]) -> dict[str, Any]:
+    for row in _queued_operator_updates(flow_state):
+        if str(row.get("status") or "").strip() in {"queued", "planned"}:
+            return row
+    return {}
+
+
+def _replace_operator_update(flow_state: dict[str, Any], update_id: str, replacement: dict[str, Any]) -> None:
+    target = str(update_id or "").strip()
+    rows: list[dict[str, Any]] = []
+    for item in list(flow_state.get("queued_operator_updates") or []):
+        row = dict(item or {})
+        current_id = str(row.get("update_id") or "").strip()
+        if current_id and current_id == target:
+            rows.append(dict(replacement or {}))
+        else:
+            rows.append(row)
+    flow_state["queued_operator_updates"] = rows
+
+
+def _queue_operator_update(
+    flow_state: dict[str, Any],
+    *,
+    instruction: str,
+    action_id: str,
+    source: str,
+    replace_existing: bool = False,
+) -> dict[str, Any]:
+    update = {
+        "update_id": str(action_id or _new_flow_id("op_update")).strip(),
+        "source": str(source or "operator").strip(),
+        "instruction": str(instruction or "").strip(),
+        "status": "queued",
+        "created_at": now_text(),
+        "planned_attempt_no": 0,
+        "executed_attempt_no": 0,
+    }
+    existing = [dict(item or {}) for item in list(flow_state.get("queued_operator_updates") or [])]
+    if replace_existing:
+        existing = [row for row in existing if str(row.get("status") or "").strip().lower() == "executed"]
+    existing.append(update)
+    flow_state["queued_operator_updates"] = existing
+    return update
+
+
+def _merge_operator_updates(flow_state: dict[str, Any], external_state: dict[str, Any]) -> None:
+    external_updates = [dict(item or {}) for item in list(external_state.get("queued_operator_updates") or [])]
+    if not external_updates:
+        return
+    existing = [dict(item or {}) for item in list(flow_state.get("queued_operator_updates") or [])]
+    existing_index = {
+        str(item.get("update_id") or "").strip(): idx
+        for idx, item in enumerate(existing)
+        if str(item.get("update_id") or "").strip()
+    }
+    for update in external_updates:
+        update_id = str(update.get("update_id") or "").strip()
+        if not update_id:
+            continue
+        if update_id in existing_index:
+            idx = existing_index[update_id]
+            merged = dict(existing[idx])
+            merged.update(update)
+            if str(existing[idx].get("status") or "").strip() == "executed":
+                merged["status"] = "executed"
+                if existing[idx].get("executed_at") and not merged.get("executed_at"):
+                    merged["executed_at"] = existing[idx].get("executed_at")
+            existing[idx] = merged
+        else:
+            existing.append(dict(update))
+    flow_state["queued_operator_updates"] = existing
+
+
+def _plan_operator_update_for_attempt(flow_state: dict[str, Any], *, attempt_no: int) -> dict[str, Any]:
+    update = _next_operator_update(flow_state)
+    update_id = str(update.get("update_id") or "").strip()
+    if not update_id:
+        return {}
+    if str(update.get("status") or "").strip() == "queued":
+        update["status"] = "planned"
+        update["planned_attempt_no"] = int(attempt_no or 0)
+        _replace_operator_update(flow_state, update_id, update)
+    return update
+
+
+def _mark_operator_update_executed(flow_state: dict[str, Any], *, attempt_no: int, codex_status: str) -> dict[str, Any]:
+    for item in list(flow_state.get("queued_operator_updates") or []):
+        row = dict(item or {})
+        if str(row.get("status") or "").strip() != "planned":
+            continue
+        row["status"] = "executed"
+        row["executed_attempt_no"] = int(attempt_no or 0)
+        row["executed_at"] = now_text()
+        row["executor_status"] = str(codex_status or "").strip()
+        _replace_operator_update(flow_state, str(row.get("update_id") or "").strip(), row)
+        return row
+    return {}
+
+
+def _active_operator_instruction(flow_state: dict[str, Any]) -> str:
+    return str(_next_operator_update(flow_state).get("instruction") or "").strip()
+
+
+def _compose_next_instruction(flow_state: dict[str, Any]) -> str:
+    operator_instruction = _active_operator_instruction(flow_state)
+    pending = str(flow_state.get("pending_codex_prompt") or "").strip()
+    if operator_instruction and pending and operator_instruction != pending:
+        return (
+            "[operator update]\n"
+            f"{operator_instruction}\n\n"
+            "[runtime follow-up]\n"
+            f"{pending}"
+        ).strip()
+    return operator_instruction or pending
+
+
+def _append_phase_snapshot(flow_state: dict[str, Any], *, phase: str, attempt_no: int, reason: str) -> None:
+    snapshots = [dict(item or {}) for item in list(flow_state.get("phase_snapshots") or [])]
+    snapshots.append(
+        {
+            "snapshot_id": _new_flow_id("phase_snapshot"),
+            "phase": str(phase or "").strip(),
+            "attempt_no": int(attempt_no or 0),
+            "reason": str(reason or "").strip(),
+            "created_at": now_text(),
+            "latest_supervisor_decision": dict(flow_state.get("latest_supervisor_decision") or {}),
+            "latest_judge_decision": dict(flow_state.get("latest_judge_decision") or flow_state.get("last_cursor_decision") or {}),
+            "latest_token_usage": dict(flow_state.get("latest_token_usage") or {}),
+        }
+    )
+    flow_state["phase_snapshots"] = snapshots[-24:]
+
+
+def _governor_state(flow_state: dict[str, Any], *, attempt_no: int) -> dict[str, Any]:
+    latest_usage = dict(flow_state.get("latest_token_usage") or {})
+    input_tokens = int(safe_int(latest_usage.get("input_tokens"), 0))
+    service_fault_streak = int(safe_int(flow_state.get("service_fault_streak"), 0))
+    session_epoch = int(safe_int(flow_state.get("session_epoch"), 0))
+    mode = "normal"
+    reasons: list[str] = []
+    if attempt_no >= 6:
+        reasons.append("late_attempt_window")
+    if input_tokens >= 120000:
+        reasons.append("large_input_context")
+    if service_fault_streak >= 2:
+        reasons.append("repeated_service_fault")
+    if reasons:
+        mode = "compact"
+    if input_tokens >= 180000 or service_fault_streak >= 4 or attempt_no >= 10:
+        mode = "reset"
+    governor = {
+        "mode": mode,
+        "reasons": reasons,
+        "input_tokens": input_tokens,
+        "service_fault_streak": service_fault_streak,
+        "session_epoch": session_epoch,
+        "updated_at": now_text(),
+    }
+    previous_mode = str(dict(flow_state.get("context_governor") or {}).get("mode") or "").strip()
+    if mode == "reset" and previous_mode != "reset":
+        flow_state["session_epoch"] = session_epoch + 1
+        governor["session_epoch"] = int(flow_state.get("session_epoch") or 0)
+    flow_state["context_governor"] = governor
+    return governor
+
+
+def _runtime_budget_reached(flow_state: dict[str, Any]) -> bool:
+    budget = int(safe_int(flow_state.get("max_runtime_seconds"), 0))
+    if budget <= 0:
+        return False
+    return _refresh_runtime_clock(flow_state) >= budget
+
+
 def _turn_kind_for_phase(phase: str) -> str:
     normalized = str(phase or "").strip().lower()
     if normalized in {"plan", "execute", "review", "recover", "operator_wait", "handoff"}:
@@ -679,7 +904,7 @@ def _build_phase_artifact(
         "codex_status": str(getattr(codex_receipt, "status", "") or "").strip(),
         "codex_output": _receipt_text(codex_receipt),
         "codex_metadata": dict(getattr(codex_receipt, "metadata", {}) or {}),
-        "pending_codex_prompt": str(flow_state.get("pending_codex_prompt") or "").strip(),
+        "pending_codex_prompt": _compose_next_instruction(flow_state),
         "last_cursor_decision": dict(flow_state.get("last_cursor_decision") or {}),
     }
 
@@ -754,6 +979,7 @@ class FlowRuntime:
                 for item in list(definition.get("review_checklist") or flow_state.get("review_checklist") or [])
                 if str(item or "").strip()
             ],
+            "role_guidance": dict(definition.get("role_guidance") or flow_state.get("role_guidance") or {}),
             "bundle_manifest": bundle_manifest,
         }
         base_dir = flow_dir_path
@@ -828,6 +1054,7 @@ class FlowRuntime:
             "flow_board": dict(flow_board or {}),
             "active_turn_task": dict(active_turn_task or {}),
             "latest_mutation": dict(flow_state.get("latest_mutation") or {}),
+            "context_governor": dict(flow_state.get("context_governor") or {}),
             "updated_at": now_text(),
         }
 
@@ -1268,6 +1495,7 @@ class FlowRuntime:
         active_role_id = str(payload.get("active_role_id") or "").strip()
         valid_roles = set(stable_role_ids(str(flow_state.get("role_pack_id") or "").strip()))
         ephemeral_role = dict(payload.get("ephemeral_role") or {})
+        governor = dict(flow_state.get("context_governor") or {})
         if active_role_id and active_role_id not in valid_roles and not ephemeral_role:
             active_role_id = ""
         if not active_role_id:
@@ -1287,6 +1515,8 @@ class FlowRuntime:
                 role_kind="ephemeral" if active_role_id not in valid_roles else "stable",
                 has_session=bool(role_session_id_for_turn(flow_state, role_id=active_role_id)),
             )
+        if str(governor.get("mode") or "").strip() == "reset":
+            session_mode = "cold"
         load_profile = str(payload.get("load_profile") or "").strip().lower()
         if load_profile not in {"delta", "compact", "full"}:
             load_profile = default_load_profile(
@@ -1294,6 +1524,11 @@ class FlowRuntime:
                 role_id=active_role_id,
                 force_compact=bool(str(flow_state.get("latest_mutation", {}).get("mutation_id") or "").strip()),
             )
+        governor_mode = str(governor.get("mode") or "").strip()
+        if governor_mode == "compact" and load_profile == "delta":
+            load_profile = "compact"
+        elif governor_mode == "reset":
+            load_profile = "compact"
         normalized: SupervisorDecisionV1 = {
             "decision": decision,
             "turn_kind": turn_kind,
@@ -1302,7 +1537,7 @@ class FlowRuntime:
             "next_action": next_action,
             "attempt_no": int(attempt_no),
             "phase": str(phase or "").strip(),
-            "instruction": str(payload.get("instruction") or flow_state.get("pending_codex_prompt") or "").strip(),
+            "instruction": str(payload.get("instruction") or _compose_next_instruction(flow_state)).strip(),
             "issue_kind": str(payload.get("issue_kind") or "none").strip().lower() or "none",
             "followup_kind": str(payload.get("followup_kind") or "none").strip().lower() or "none",
             "fix_round_no": int(safe_int(flow_state.get("auto_fix_round_count"), 0)),
@@ -1398,13 +1633,24 @@ class FlowRuntime:
         external_state = read_flow_state(flow_dir_path)
         if not external_state:
             return {}
+        _merge_operator_updates(flow_state, external_state)
         external_action = dict(external_state.get("last_operator_action") or {})
         external_action_id = str(external_action.get("action_id") or "").strip()
         applied_action_id = str(flow_state.get("latest_applied_operator_action_id") or "").strip()
         if not external_action_id or external_action_id == applied_action_id:
             return {}
         flow_state["last_operator_action"] = external_action
-        for field in ("status", "approval_state", "pending_codex_prompt", "current_phase", "phase_attempt_count"):
+        for field in (
+            "status",
+            "approval_state",
+            "pending_codex_prompt",
+            "current_phase",
+            "phase_attempt_count",
+            "runtime_started_at",
+            "runtime_elapsed_seconds",
+            "latest_token_usage",
+            "context_governor",
+        ):
             if field in external_state:
                 flow_state[field] = external_state.get(field)
         for ref in list(external_state.get("trace_refs") or []):
@@ -1440,7 +1686,11 @@ class FlowRuntime:
             phase=phase,
             attempt_no=safe_int(flow_state.get("attempt_count"), 0),
             message=action_type,
-            payload={"action_type": action_type, "action_id": action_id},
+            payload={
+                "action_type": action_type,
+                "action_id": action_id,
+                "queued_operator_updates": list(flow_state.get("queued_operator_updates") or []),
+            },
             hook_name="on_operator_action",
         )
         flow_state["latest_applied_operator_action_id"] = action_id
@@ -1479,7 +1729,7 @@ class FlowRuntime:
         attempt_no: int,
         allow_fix_turns: bool,
     ) -> dict[str, Any]:
-        pending = str(flow_state.get("pending_codex_prompt") or "").strip()
+        pending = _compose_next_instruction(flow_state)
         latest_judge = dict(flow_state.get("latest_judge_decision") or flow_state.get("last_cursor_decision") or {})
         followup_kind = str(latest_judge.get("followup_kind") or "").strip().lower()
         issue_kind = str(latest_judge.get("issue_kind") or "").strip().lower()
@@ -1539,16 +1789,24 @@ class FlowRuntime:
         role_id = str(heuristic.get("active_role_id") or flow_state.get("active_role_id") or select_active_role(flow_state, phase=phase)).strip()
         role_turn_no = safe_int(dict(flow_state.get("role_turn_counts") or {}).get(role_id), 0)
         role_payload = dict(dict(flow_state.get("role_sessions") or {}).get(role_id) or {})
+        governor = _governor_state(flow_state, attempt_no=attempt_no)
         session_mode = session_mode_for_role(
             role_kind="ephemeral" if is_ephemeral_role(flow_state, role_id=role_id) else "stable",
             has_session=bool(role_session_id_for_turn(flow_state, role_id=role_id)),
         )
+        if str(governor.get("mode") or "").strip() == "reset":
+            session_mode = "cold"
         load_profile = default_load_profile(
             session_mode=session_mode,
             role_id=role_id,
             phase_changed=attempt_no > 1 and bool(flow_state.get("latest_mutation")),
             force_compact=attempt_no > 1 and str(flow_state.get("current_phase") or "").strip() != str(phase or "").strip(),
         )
+        governor_mode = str(governor.get("mode") or "").strip()
+        if governor_mode == "compact" and load_profile == "delta":
+            load_profile = "compact"
+        elif governor_mode == "reset":
+            load_profile = "compact"
         compiled = self._compile_packet(
             flow_dir_path=flow_dir_path,
             flow_state=flow_state,
@@ -1561,7 +1819,24 @@ class FlowRuntime:
             load_profile=load_profile,
             task_brief="Reassess the flow and choose the next bounded move.",
             turn_kind=str(heuristic.get("turn_kind") or _turn_kind_for_phase(phase)).strip(),
-            next_instruction=str(flow_state.get("pending_codex_prompt") or "").strip(),
+            next_instruction=_compose_next_instruction(flow_state),
+        )
+        self._emit_ui_event(
+            kind="supervisor_input",
+            lane="supervisor",
+            family="input",
+            title="supervisor input",
+            flow_dir_path=flow_dir_path,
+            flow_id=str(flow_state.get("workflow_id") or "").strip(),
+            phase=phase,
+            attempt_no=attempt_no,
+            message=str(compiled.get("rendered_prompt") or ""),
+            payload={
+                "session_mode": session_mode,
+                "load_profile": load_profile,
+                "context_governor": governor,
+            },
+            raw_text=str(compiled.get("rendered_prompt") or ""),
         )
         runtime_request = self._build_supervisor_runtime_request(
             cfg,
@@ -1583,9 +1858,9 @@ class FlowRuntime:
         supervisor_raw_output = _receipt_text(receipt)
         if supervisor_raw_output:
             self._emit_ui_event(
-                kind="codex_segment",
+                kind="supervisor_output",
                 lane="supervisor",
-                family="raw_execution",
+                family="output",
                 title="supervisor raw output",
                 flow_dir_path=flow_dir_path,
                 flow_id=str(flow_state.get("workflow_id") or "").strip(),
@@ -1599,6 +1874,23 @@ class FlowRuntime:
                     "session_mode": session_mode,
                     "load_profile": load_profile,
                     "receipt_status": str(getattr(receipt, "status", "") or "").strip(),
+                },
+                raw_text=supervisor_raw_output,
+            )
+            self._emit_ui_event(
+                kind="codex_segment",
+                lane="supervisor",
+                family="raw_execution",
+                title="supervisor raw output",
+                flow_dir_path=flow_dir_path,
+                flow_id=str(flow_state.get("workflow_id") or "").strip(),
+                phase=phase,
+                attempt_no=attempt_no,
+                message=supervisor_raw_output,
+                payload={
+                    "segment": supervisor_raw_output,
+                    "source": "supervisor_runtime",
+                    "compat": True,
                 },
                 raw_text=supervisor_raw_output,
             )
@@ -1622,6 +1914,19 @@ class FlowRuntime:
                 phase=phase,
             )
             flow_state["latest_supervisor_decision"] = dict(decision)
+            self._emit_ui_event(
+                kind="supervisor_output",
+                lane="supervisor",
+                family="output",
+                title="supervisor fallback output",
+                flow_dir_path=flow_dir_path,
+                flow_id=str(flow_state.get("workflow_id") or "").strip(),
+                phase=phase,
+                attempt_no=attempt_no,
+                message=reason,
+                payload={"fallback": "heuristic", "receipt_status": str(getattr(receipt, "status", "") or "").strip()},
+                raw_text=reason,
+            )
             return decision
         raw_payload = _parse_json_object(_receipt_text(receipt))
         if not raw_payload:
@@ -1643,6 +1948,19 @@ class FlowRuntime:
                 phase=phase,
             )
             flow_state["latest_supervisor_decision"] = dict(decision)
+            self._emit_ui_event(
+                kind="supervisor_output",
+                lane="supervisor",
+                family="output",
+                title="supervisor invalid output",
+                flow_dir_path=flow_dir_path,
+                flow_id=str(flow_state.get("workflow_id") or "").strip(),
+                phase=phase,
+                attempt_no=attempt_no,
+                message=reason,
+                payload={"fallback": "heuristic", "invalid_json": True},
+                raw_text=reason,
+            )
             return decision
         decision = self._normalize_supervisor_decision(
             raw_payload,
@@ -1723,7 +2041,7 @@ class FlowRuntime:
         attempt_no: int,
         decision: dict[str, Any],
     ) -> int:
-        prompt = str(flow_state.get("pending_codex_prompt") or "").strip()
+        prompt = _compose_next_instruction(flow_state)
         summary = (
             f"auto-fix limit reached ({AUTO_FIX_MAX_ROUNDS}); operator input required before continuing"
         )
@@ -1809,10 +2127,11 @@ class FlowRuntime:
         _ = cfg
         action = str(action_type or "").strip().lower()
         data = dict(payload or {})
+        action_id = _new_flow_id("action")
         before = {
             "status": str(flow_state.get("status") or "").strip(),
             "current_phase": str(flow_state.get("current_phase") or "").strip(),
-            "pending_codex_prompt": str(flow_state.get("pending_codex_prompt") or "").strip(),
+            "pending_codex_prompt": _compose_next_instruction(flow_state),
         }
         result_summary = ""
         if action == "pause":
@@ -1828,15 +2147,25 @@ class FlowRuntime:
             instruction = str(data.get("instruction") or "").strip()
             if not instruction:
                 raise ValueError("append_instruction requires non-empty instruction")
-            flow_state["pending_codex_prompt"] = instruction
+            queued = _queue_operator_update(
+                flow_state,
+                instruction=instruction,
+                action_id=action_id,
+                source=f"operator:{action}",
+            )
             flow_state["auto_fix_round_count"] = 0
-            result_summary = "instruction appended for next supervisor turn"
+            result_summary = f"instruction queued for the next executor turn ({queued.get('update_id')})"
         elif action == "retry_current_phase":
             flow_state["auto_fix_round_count"] = 0
             if str(flow_state.get("workflow_kind") or "").strip() in {PROJECT_LOOP_KIND, MANAGED_FLOW_KIND}:
                 flow_state["phase_attempt_count"] = 0
-            if not str(flow_state.get("pending_codex_prompt") or "").strip():
-                flow_state["pending_codex_prompt"] = _build_default_retry_instruction(flow_state, codex_ok=False)
+            instruction = str(data.get("instruction") or "").strip() or _build_default_retry_instruction(flow_state, codex_ok=False)
+            _queue_operator_update(
+                flow_state,
+                instruction=instruction,
+                action_id=action_id,
+                source=f"operator:{action}",
+            )
             result_summary = "current phase prepared for retry; start a real resume turn to continue execution"
         elif action == "abort":
             flow_state["status"] = "failed"
@@ -1861,7 +2190,6 @@ class FlowRuntime:
             reason=result_summary,
             source=f"operator:{action}",
         )
-        action_id = _new_flow_id("action")
         trace_id = _new_flow_id("trace")
         receipt: FlowActionReceiptV1 = {
             "action_id": action_id,
@@ -1873,7 +2201,8 @@ class FlowRuntime:
             "after_state": {
                 "status": str(flow_state.get("status") or "").strip(),
                 "current_phase": str(flow_state.get("current_phase") or "").strip(),
-                "pending_codex_prompt": str(flow_state.get("pending_codex_prompt") or "").strip(),
+                "pending_codex_prompt": _compose_next_instruction(flow_state),
+                "queued_operator_updates": list(flow_state.get("queued_operator_updates") or []),
             },
             "trace_id": trace_id,
             "receipt_id": action_id,
@@ -1891,7 +2220,7 @@ class FlowRuntime:
             phase=str(flow_state.get("current_phase") or "").strip(),
             attempt_no=safe_int(flow_state.get("attempt_count"), 0),
             message=result_summary,
-            payload=dict(receipt),
+            payload={**dict(receipt), "queued_operator_updates": list(flow_state.get("queued_operator_updates") or [])},
             hook_name="on_operator_action",
         )
         return receipt
@@ -1950,9 +2279,16 @@ class FlowRuntime:
                 role_kind=role_kind,
                 has_session=bool(role_session_id_for_turn(flow_state, role_id=active_role_id)),
             )
+        governor_mode = str(dict(flow_state.get("context_governor") or {}).get("mode") or "").strip()
+        if governor_mode == "reset":
+            session_mode = "cold"
         load_profile = str(dict(flow_state.get("latest_supervisor_decision") or {}).get("load_profile") or "").strip().lower()
         if load_profile not in {"delta", "compact", "full"}:
             load_profile = default_load_profile(session_mode=session_mode, role_id=active_role_id)
+        if governor_mode == "compact" and load_profile == "delta":
+            load_profile = "compact"
+        elif governor_mode == "reset":
+            load_profile = "compact"
         compiled = self._compile_packet(
             flow_dir_path=flow_dir_path,
             flow_state=flow_state,
@@ -1965,7 +2301,7 @@ class FlowRuntime:
             load_profile=load_profile,
             task_brief="Do the next bounded role task and preserve forward momentum.",
             turn_kind=str(dict(flow_state.get("latest_supervisor_decision") or {}).get("turn_kind") or _turn_kind_for_phase(str(flow_state.get("current_phase") or ""))).strip(),
-            next_instruction=str(flow_state.get("pending_codex_prompt") or "").strip(),
+            next_instruction=_compose_next_instruction(flow_state),
         )
         return str(compiled.get("rendered_prompt") or "")
 
@@ -2123,6 +2459,9 @@ class FlowRuntime:
             )
         if not str(flow_state.get("supervisor_thread_id") or "").strip():
             flow_state["supervisor_thread_id"] = str(flow_state.get("codex_session_id") or "").strip()
+        if not str(flow_state.get("runtime_started_at") or "").strip():
+            flow_state["runtime_started_at"] = now_text()
+        _refresh_runtime_clock(flow_state)
         self._write_flow_state(flow_dir_path, flow_state)
         trace_store.append_event(flow_id, phase=str(flow_state.get("current_phase") or "").strip(), event_type="flow.shell.start", payload={"cleanup": cleanup})
         state_store.write_pid(os.getpid())
@@ -2139,9 +2478,55 @@ class FlowRuntime:
                 )
                 if operator_result is not None:
                     return operator_result
+                if _runtime_budget_reached(flow_state):
+                    budget = int(safe_int(flow_state.get("max_runtime_seconds"), 0))
+                    elapsed = int(safe_int(flow_state.get("runtime_elapsed_seconds"), 0))
+                    has_queued_updates = bool(_next_operator_update(flow_state))
+                    if has_queued_updates:
+                        flow_state["status"] = "paused"
+                        flow_state["last_completion_summary"] = (
+                            f"runtime budget reached ({elapsed}/{budget}s); queued operator updates preserved for the next explicit resume"
+                        )
+                        self._set_approval_state(
+                            flow_dir_path=flow_dir_path,
+                            flow_state=flow_state,
+                            flow_id=flow_id,
+                            phase=current_phase,
+                            attempt_no=safe_int(flow_state.get("attempt_count"), 0),
+                            approval_state="operator_required",
+                            reason=str(flow_state.get("last_completion_summary") or "").strip(),
+                            source="runtime_budget",
+                        )
+                        self._write_flow_state(flow_dir_path, flow_state)
+                        self._emit_ui_event(
+                            kind="warning",
+                            lane="supervisor",
+                            family="risk",
+                            flow_dir_path=flow_dir_path,
+                            flow_id=flow_id,
+                            phase=current_phase,
+                            attempt_no=safe_int(flow_state.get("attempt_count"), 0),
+                            message=str(flow_state.get("last_completion_summary") or "").strip(),
+                            payload={"max_runtime_seconds": budget, "runtime_elapsed_seconds": elapsed},
+                        )
+                        return 0
+                    flow_state["status"] = "failed"
+                    flow_state["last_completion_summary"] = f"runtime budget reached: {elapsed}/{budget}s"
+                    self._write_flow_state(flow_dir_path, flow_state)
+                    trace_store.append_event(flow_id, phase=current_phase, event_type="flow.failed", payload={"reason": flow_state["last_completion_summary"]})
+                    self._emit_ui_event(
+                        kind="run_failed",
+                        flow_dir_path=flow_dir_path,
+                        flow_id=flow_id,
+                        phase=current_phase,
+                        attempt_no=safe_int(flow_state.get("attempt_count"), 0),
+                        message=str(flow_state["last_completion_summary"]),
+                        payload={"reason": flow_state["last_completion_summary"]},
+                    )
+                    return 1
                 attempt_count = safe_int(flow_state.get("attempt_count"), 0)
-                max_attempts = max(1, safe_int(flow_state.get("max_attempts"), DEFAULT_SINGLE_GOAL_MAX_ATTEMPTS))
-                if attempt_count >= max_attempts:
+                max_attempts = safe_int(flow_state.get("max_attempts"), DEFAULT_SINGLE_GOAL_MAX_ATTEMPTS)
+                if max_attempts > 0 and attempt_count >= max_attempts:
                     flow_state["status"] = "failed"
                     flow_state["last_completion_summary"] = f"attempt limit reached: {attempt_count}/{max_attempts}"
                     self._write_flow_state(flow_dir_path, flow_state)
@@ -2158,8 +2543,8 @@ class FlowRuntime:
                     return 1
                 if flow_state.get("workflow_kind") in {PROJECT_LOOP_KIND, MANAGED_FLOW_KIND}:
                     phase_attempts = sync_project_phase_attempt_count(flow_state)
-                    max_phase_attempts = max(1, safe_int(flow_state.get("max_phase_attempts"), DEFAULT_PROJECT_PHASE_MAX_ATTEMPTS))
-                    if phase_attempts >= max_phase_attempts:
+                    max_phase_attempts = safe_int(flow_state.get("max_phase_attempts"), DEFAULT_PROJECT_PHASE_MAX_ATTEMPTS)
+                    if max_phase_attempts > 0 and phase_attempts >= max_phase_attempts:
                         flow_state["status"] = "failed"
                         flow_state["last_completion_summary"] = (
                             f"phase attempt limit reached for {flow_state.get('current_phase')}: "
@@ -2183,6 +2568,7 @@ class FlowRuntime:
                 phase_attempt_no = safe_int(flow_state.get("phase_attempt_count"), 0) + 1
                 turn_id = _new_flow_id("turn")
                 flow_state["current_turn_id"] = turn_id
+                _plan_operator_update_for_attempt(flow_state, attempt_no=attempt_no)
                 if attempt_no == 1:
                     self._emit_ui_event(
                         kind="run_started",
@@ -2209,11 +2595,37 @@ class FlowRuntime:
                         decision=supervisor_decision,
                     )
                 else:
+                    self._emit_ui_event(
+                        kind="supervisor_input",
+                        lane="supervisor",
+                        family="input",
+                        title="supervisor heuristic input",
+                        flow_dir_path=flow_dir_path,
+                        flow_id=flow_id,
+                        phase=phase,
+                        attempt_no=attempt_no,
+                        message=_compose_next_instruction(flow_state),
+                        payload={"heuristic": True, "context_governor": _governor_state(flow_state, attempt_no=attempt_no)},
+                        raw_text=_compose_next_instruction(flow_state),
+                    )
                     supervisor_decision = self._supervisor_decide(
                         flow_state,
                         phase=phase,
                         attempt_no=attempt_no,
                         allow_fix_turns=flow_fix_turns_enabled(cfg),
+                    )
+                    self._emit_ui_event(
+                        kind="supervisor_output",
+                        lane="supervisor",
+                        family="output",
+                        title="supervisor heuristic output",
+                        flow_dir_path=flow_dir_path,
+                        flow_id=flow_id,
+                        phase=phase,
+                        attempt_no=attempt_no,
+                        message=str(supervisor_decision.get("reason") or "").strip(),
+                        payload={**dict(supervisor_decision), "heuristic": True},
+                        raw_text=json.dumps(supervisor_decision, ensure_ascii=False),
                     )
                 phase = str(flow_state.get("current_phase") or phase).strip()
                 active_role_id = str(supervisor_decision.get("active_role_id") or flow_state.get("active_role_id") or "").strip()
@@ -2235,6 +2647,17 @@ class FlowRuntime:
                     phase=phase,
                     attempt_no=attempt_no,
                     message=str(supervisor_decision.get("reason") or "").strip(),
+                    payload=dict(supervisor_decision),
+                )
+                self._emit_ui_event(
+                    kind="supervisor_decision_applied",
+                    lane="supervisor",
+                    family="decision",
+                    flow_dir_path=flow_dir_path,
+                    flow_id=flow_id,
+                    phase=phase,
+                    attempt_no=attempt_no,
+                    message=str(supervisor_decision.get("next_action") or "run_executor").strip(),
                     payload=dict(supervisor_decision),
                 )
                 trace_store.append_event(
@@ -2259,6 +2682,7 @@ class FlowRuntime:
                     self._write_flow_state(flow_dir_path, flow_state)
                     return 0
                 flow_state["status"] = "running"
+                planned_operator_update = _plan_operator_update_for_attempt(flow_state, attempt_no=attempt_no)
                 self._write_flow_state(flow_dir_path, flow_state)
                 state_store.write_run_state(
                     run_id=flow_id,
@@ -2345,6 +2769,12 @@ class FlowRuntime:
                     )
                 flow_state["attempt_count"] = attempt_no
                 flow_state["last_codex_receipt"] = _serialize_receipt(codex_receipt)
+                flow_state["latest_token_usage"] = _normalize_usage_payload(dict(getattr(codex_receipt, "metadata", {}) or {}))
+                executed_operator_update = _mark_operator_update_executed(
+                    flow_state,
+                    attempt_no=attempt_no,
+                    codex_status=str(getattr(codex_receipt, "status", "") or "").strip(),
+                )
                 self._write_flow_state(flow_dir_path, flow_state)
                 trace_store.append_event(
                     flow_id,
@@ -2385,12 +2815,25 @@ class FlowRuntime:
                     flow_state["auto_fix_round_count"] = safe_int(flow_state.get("auto_fix_round_count"), 0) + 1
                 else:
                     flow_state["auto_fix_round_count"] = 0
+                if issue_kind == "service_fault":
+                    flow_state["service_fault_streak"] = safe_int(flow_state.get("service_fault_streak"), 0) + 1
+                else:
+                    flow_state["service_fault_streak"] = 0
                 recovery_instruction = self._maybe_recovery_instruction(
                     flow_state,
                     codex_status=str(getattr(codex_receipt, "status", "") or "").strip(),
                     judge_decision=dict(decision or {}),
                 )
                 flow_state["pending_codex_prompt"] = str(decision.get("next_codex_prompt") or recovery_instruction).strip()
+                if flow_state.get("service_fault_streak") and safe_int(flow_state.get("service_fault_streak"), 0) >= 2:
+                    shrink_prefix = (
+                        "Service instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, "
+                        "and verify the smallest forward step first."
+                    )
+                    followup = str(flow_state.get("pending_codex_prompt") or "").strip()
+                    flow_state["pending_codex_prompt"] = (
+                        f"{shrink_prefix}\n\n{followup}".strip() if followup else shrink_prefix
+                    )
                 flow_state["phase_history"] = list(flow_state.get("phase_history") or []) + [
                     {
                         "at": now_text(),
@@ -2399,6 +2842,8 @@ class FlowRuntime:
                         "codex_status": str(getattr(codex_receipt, "status", "") or "").strip(),
                         "cursor_status": str(getattr(cursor_receipt, "status", "") or "").strip(),
                         "decision": dict(decision or {}),
+                        "token_usage": dict(flow_state.get("latest_token_usage") or {}),
+                        "executed_operator_update_id": str(executed_operator_update.get("update_id") or "").strip(),
                     }
                 ]
                 if flow_state.get("workflow_kind") in {PROJECT_LOOP_KIND, MANAGED_FLOW_KIND}:
@@ -2614,6 +3059,7 @@ class FlowRuntime:
                     )
                     return 0
                 if next_phase != phase:
+                    _append_phase_snapshot(flow_state, phase=phase, attempt_no=attempt_no, reason=f"phase_transition:{phase}->{next_phase}")
                     flow_state["current_phase"] = next_phase
                     flow_state["phase_attempt_count"] = 0
                     flow_state["active_role_id"] = next_role_id

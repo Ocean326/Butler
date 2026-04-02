@@ -110,6 +110,7 @@
   - [0401 当日总纲](../daily-upgrade/0401/00_当日总纲.md)
   - [0402 当日总纲](../daily-upgrade/0402/00_当日总纲.md)
   - [0402 Butler Flow Manage Center 资产中心升级与会话式交互落地](../daily-upgrade/0402/02_butler-flow_manage-center资产中心升级与会话式交互落地.md)
+  - [0402 Butler Flow 长流治理与 supervisor 可观测性升级](../daily-upgrade/0402/11_butler-flow_长流治理与supervisor可观测性升级.md)
   - [0401 前台 Butler Flow 入口收口与 New 向导 V1](../daily-upgrade/0401/01_前台ButlerFlow入口收口与New向导V1.md)
   - [0401 Claude Code 对 Butler Flow 工作台化升级与 TUI 信息架构计划](../daily-upgrade/0401/02_ClaudeCode对ButlerFlow工作台化升级与TUI信息架构计划.md)
   - [系统分层与事件契约](../runtime/System_Layering_and_Event_Contracts.md)
@@ -145,7 +146,7 @@
   - 当前纯文本路由固定为：`manage -> manager chat`、`flow -> supervisor queue`、`history -> reject`
   - 若改 `/manage` 输入协议，先看 `butler_main/butler_flow/tui/manage_interaction.py` 与 `tui/app.py` 的 bare target/`$target` 解析、mention picker 7 项窗口、manager queue/session 续接；不要再把 manager chat 误接回 `manage_flow()` 的 builtin edit 分支
   - 若涉及 builtin 修改，必须核对当前是否仍要求显式 `clone` 或 `edit`，不要回退到隐式原地修改
-  - 若涉及静态资产，补看 shared JSON 是否带有 `asset_state / lineage / instance_defaults / review_checklist / bundle_manifest`
+  - 若涉及静态资产，补看 shared JSON 是否带有 `asset_state / lineage / instance_defaults / review_checklist / role_guidance / bundle_manifest`
   - 若涉及 runtime 注入，补看 instance `flow_definition.json` 是否已写入 `source_asset_key / source_asset_kind / source_asset_version`，以及 bundle 中 `supervisor.md + derived/supervisor_knowledge.json` 是否仍由 compiler/runtime 混合注入
   - 若涉及 `approval_state / judge / operator receipt / runtime events`，先核对它们是进入 transcript、rail 还是 detail，不要继续散落在 `/status`、`actions.jsonl` 和 raw timeline 之间
   - 若涉及 flow 管理，补看 repo-local `butler_main/butler_bot_code/assets/flows/{builtin,templates,instances}` 是否仍是唯一存储树；其中 `/manage` 只管 `builtin + template`，`instances` 只是 runtime/兼容布局
@@ -159,7 +160,7 @@
   - `workspace` / single flow 负责 instance runtime；`/manage` 只负责 `builtin + template` shared assets；`/list` 与 `/manage` 同义；`/flows` 仅是迁移提示
   - 若改 `/manage`，优先检查 `build_manage_payload()`、`manage_flow()`、`tui/app.py` 的 transcript-first shell 与 `$asset` suggester，而不是回退到 `flows-list + flows-detail` 的卡片心智
   - `free` 设计链路固定是“setup -> /manage template:new -> template:<id> -> launch instance”，不要再把它写回 `/flows` 设计页
-  - 若涉及角色运行时，先确认 `execution_mode` 与 `session_strategy`；当前口径是 `simple=shared`、`medium=role_bound`、`complex=per_activation(预留合同)`
+  - 若涉及角色运行时，先确认 `execution_mode` 与 `session_strategy`；当前口径是 `simple=shared`、`medium=role_bound`、`complex=per_activation(预留合同)`；再确认 `role_guidance` 是否仍只是 manager/supervisor 的轻量参考，而不是硬 team contract
   - 再看 `role_packs/<pack>/<role>.md` 与 `sources.json`；当前 role pack 只是前台 L1 prompt 资产，不是 L3 协议真源
   - 若排查 role handoff，优先看 `role_sessions.json`、`handoffs.jsonl`、`artifacts.json` 的 role visibility 字段，不要直接假设共享 thread 历史
   - 若改 supervisor/retry 语义，先核对当前是否已经有显式 `fix` turn、`issue_kind / followup_kind` 和 auto-fix 上限；当前只有 `issue_kind=agent_cli_fault + followup_kind=fix` 才能进入 `fix`，不要再把 supervisor 改成直接执行 repo 修复

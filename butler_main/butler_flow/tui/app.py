@@ -42,7 +42,7 @@ from butler_main.butler_flow.constants import (
 from butler_main.butler_flow.events import FlowUiEvent
 from butler_main.butler_flow.models import PreparedFlowRun
 
-TRANSCRIPT_FILTERS = ("all", "assistant", "system", "judge", "operator")
+TRANSCRIPT_FILTERS = ("all", "assistant", "system", "judge", "operator", "supervisor")
 HISTORY_STEP_PREVIEW_LIMIT = 6
 WORKING_DOT_FRAMES = ("·", "•", "◦", "∙", "•", "·")
 WORKING_WORD_FRAMES = ("Working", "WOrking", "WoRking", "WorKing", "WorkIng", "WorkiNg", "WorkinG")
@@ -921,6 +921,22 @@ class ButlerFlowTuiApp(App[int]):
         supervisor_load_profile = str(pointers.get("supervisor_load_profile") or "").strip()
         if supervisor_load_profile:
             lines.append(f"supervisor_load_profile={supervisor_load_profile}")
+        runtime_elapsed = int(pointers.get("runtime_elapsed_seconds") or 0)
+        max_runtime = int(pointers.get("max_runtime_seconds") or 0)
+        if max_runtime > 0:
+            lines.append(f"runtime_budget={runtime_elapsed}s/{max_runtime}s")
+        governor = dict(pointers.get("context_governor") or {})
+        governor_mode = str(governor.get("mode") or "").strip()
+        if governor_mode:
+            lines.append(f"context_governor={governor_mode}")
+        queued_updates = list(pointers.get("queued_operator_updates") or [])
+        if queued_updates:
+            lines.append(f"queued_operator_updates={len(queued_updates)}")
+        latest_usage = dict(pointers.get("latest_token_usage") or {})
+        input_tokens = int(latest_usage.get("input_tokens") or 0)
+        output_tokens = int(latest_usage.get("output_tokens") or 0)
+        if input_tokens or output_tokens:
+            lines.append(f"latest_tokens=in:{input_tokens} out:{output_tokens}")
         latest_mutation = dict(pointers.get("latest_mutation") or {})
         if latest_mutation:
             lines.append(
@@ -1319,7 +1335,13 @@ class ButlerFlowTuiApp(App[int]):
             return "\n".join(["Auto Follow", f"current={'on' if prefs.get('auto_follow') else 'off'}", "Enter toggles transcript auto-follow."])
         if key == "show_runtime_events":
             return "\n".join(["Runtime Events", f"current={'on' if prefs.get('show_runtime_events') else 'off'}", "Enter toggles codex runtime event visibility."])
-        return "\n".join(["Transcript Filter", f"current={prefs.get('transcript_filter') or 'all'}", "Enter cycles all -> assistant -> system -> judge -> operator."])
+        return "\n".join(
+            [
+                "Transcript Filter",
+                f"current={prefs.get('transcript_filter') or 'all'}",
+                "Enter cycles all -> assistant -> system -> judge -> operator -> supervisor.",
+            ]
+        )
 
     def _refresh_settings_screen(self) -> None:
         rows = self._settings_rows()
@@ -1397,6 +1419,7 @@ class ButlerFlowTuiApp(App[int]):
         lineage = dict(asset.get("lineage") or definition.get("lineage") or {})
         bundle_manifest = dict(asset.get("bundle_manifest") or definition.get("bundle_manifest") or {})
         review_checklist = list(asset.get("review_checklist") or definition.get("review_checklist") or [])
+        role_guidance = dict(asset.get("role_guidance") or definition.get("role_guidance") or {})
         lines = [
             "Managed Asset",
             f"asset={asset.get('asset_key') or '-'}",
@@ -1424,6 +1447,23 @@ class ButlerFlowTuiApp(App[int]):
             lines.append(f"source_asset={source_asset_key}")
         if review_checklist:
             lines.extend(["", "Review Checklist", *[f"- {item}" for item in review_checklist]])
+        if role_guidance:
+            lines.extend(["", "Role Guidance"])
+            suggested_roles = list(role_guidance.get("suggested_roles") or [])
+            suggested_specialists = list(role_guidance.get("suggested_specialists") or [])
+            activation_hints = list(role_guidance.get("activation_hints") or [])
+            promotion_candidates = list(role_guidance.get("promotion_candidates") or [])
+            manager_notes = str(role_guidance.get("manager_notes") or "").strip()
+            if suggested_roles:
+                lines.append(f"suggested_roles={', '.join(str(item) for item in suggested_roles)}")
+            if suggested_specialists:
+                lines.append(f"suggested_specialists={', '.join(str(item) for item in suggested_specialists)}")
+            if activation_hints:
+                lines.extend(["activation_hints"] + [f"- {item}" for item in activation_hints])
+            if promotion_candidates:
+                lines.append(f"promotion_candidates={', '.join(str(item) for item in promotion_candidates)}")
+            if manager_notes:
+                lines.append(f"manager_notes={manager_notes}")
         if lineage:
             lines.extend(["", "Lineage"] + [f"{key}={value}" for key, value in lineage.items() if str(value).strip()])
         if bundle_manifest:
@@ -1925,6 +1965,10 @@ class ButlerFlowTuiApp(App[int]):
             if raw_text and raw_text != str(entry.get("title") or "").strip():
                 return "raw_output"
             return "raw_meta"
+        if family == "input":
+            return "action"
+        if family == "output":
+            return "raw_output"
         if family == "decision" or kind == "judge_result":
             return "decision"
         if family == "approval":
@@ -2033,14 +2077,17 @@ class ButlerFlowTuiApp(App[int]):
     def _split_manage_prompt(self, text: str) -> tuple[str, str]:
         return split_manage_prompt(text)
 
-    def _event_category(self, kind: str) -> str:
-        token = str(kind or "").strip()
-        if token == "codex_segment":
-            return "assistant"
+    def _event_category(self, entry: dict[str, Any]) -> str:
+        token = str(entry.get("kind") or "").strip()
+        lane = self._event_lane(entry)
         if token == "judge_result":
             return "judge"
         if token == "operator_action_applied":
             return "operator"
+        if lane == "supervisor":
+            return "supervisor"
+        if token == "codex_segment":
+            return "assistant"
         return "system"
 
     def _event_visible(self, entry: dict[str, Any]) -> bool:
@@ -2052,7 +2099,7 @@ class ButlerFlowTuiApp(App[int]):
         current_filter = str(self._session_preferences.get("transcript_filter") or "all").strip().lower() or "all"
         if current_filter == "all":
             return True
-        return self._event_category(kind) == current_filter
+        return self._event_category(entry) == current_filter
 
     def _render_timeline_entry(self, entry: dict[str, Any]) -> None:
         event_id = str(entry.get("event_id") or "").strip()
@@ -2067,6 +2114,8 @@ class ButlerFlowTuiApp(App[int]):
         payload = dict(entry.get("payload") or {})
         lane = self._event_lane(entry)
         family = str(entry.get("family") or "").strip().lower()
+        if kind == "codex_segment" and lane == "supervisor":
+            family = "output"
         title = str(entry.get("title") or "").strip()
         transcript = self._transcript()
         if kind == "codex_segment":

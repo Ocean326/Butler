@@ -72,6 +72,11 @@ def build_flow_board(flow_state: dict[str, Any], *, latest_handoff_summary: dict
         "risk_level": _text(flow_state.get("risk_level")) or "normal",
         "autonomy_profile": _text(flow_state.get("autonomy_profile")) or "default",
         "pending_codex_prompt": _text(flow_state.get("pending_codex_prompt")),
+        "queued_operator_updates": [dict(item or {}) for item in list(flow_state.get("queued_operator_updates") or [])[-3:]],
+        "max_runtime_seconds": int(flow_state.get("max_runtime_seconds") or 0),
+        "runtime_elapsed_seconds": int(flow_state.get("runtime_elapsed_seconds") or 0),
+        "context_governor": dict(flow_state.get("context_governor") or {}),
+        "latest_token_usage": dict(flow_state.get("latest_token_usage") or {}),
         "source_asset_key": _text(asset_context.get("source_asset_key") or flow_state.get("source_asset_key")),
         "source_asset_kind": _text(asset_context.get("source_asset_kind") or flow_state.get("source_asset_kind")),
         "source_asset_version": _text(asset_context.get("source_asset_version") or flow_state.get("source_asset_version")),
@@ -80,6 +85,7 @@ def build_flow_board(flow_state: dict[str, Any], *, latest_handoff_summary: dict
             for item in list(asset_context.get("review_checklist") or flow_state.get("review_checklist") or [])
             if str(item or "").strip()
         ],
+        "role_guidance": dict(asset_context.get("role_guidance") or flow_state.get("role_guidance") or {}),
         "bundle_manifest": dict(asset_context.get("bundle_manifest") or flow_state.get("bundle_manifest") or {}),
     }
 
@@ -184,6 +190,124 @@ def governance_policy_for_target(target_role: str) -> dict[str, Any]:
     }
 
 
+def _trim_text(value: Any, *, limit: int) -> str:
+    text = _text(value)
+    if len(text) <= max(0, int(limit or 0)):
+        return text
+    if limit <= 3:
+        return text[:limit]
+    return f"{text[: limit - 3]}..."
+
+
+def _trim_phase_history(rows: list[dict[str, Any]], *, limit: int, keep_reason_only: bool = False) -> list[dict[str, Any]]:
+    trimmed: list[dict[str, Any]] = []
+    for row in list(rows or [])[-max(1, int(limit or 1)) :]:
+        item = dict(row or {})
+        if keep_reason_only:
+            decision = dict(item.get("decision") or {})
+            trimmed.append(
+                {
+                    "at": _text(item.get("at")),
+                    "attempt_no": int(item.get("attempt_no") or 0),
+                    "phase": _text(item.get("phase")),
+                    "decision": {
+                        "decision": _text(decision.get("decision")),
+                        "reason": _trim_text(decision.get("reason"), limit=220),
+                    },
+                }
+            )
+        else:
+            trimmed.append(item)
+    return trimmed
+
+
+def _compact_flow_board(flow_board: FlowBoardV1, *, load_profile: str) -> FlowBoardV1:
+    normalized = dict(flow_board or {})
+    if load_profile == "full":
+        return normalized
+    if load_profile == "compact":
+        normalized["phase_plan"] = list(normalized.get("phase_plan") or [])[-4:]
+        normalized["recent_phase_history"] = _trim_phase_history(list(normalized.get("recent_phase_history") or []), limit=2)
+        normalized["pending_codex_prompt"] = _trim_text(normalized.get("pending_codex_prompt"), limit=800)
+        normalized["bundle_manifest"] = {}
+        return normalized
+    normalized["phase_plan"] = list(normalized.get("phase_plan") or [])[-2:]
+    normalized["recent_phase_history"] = _trim_phase_history(
+        list(normalized.get("recent_phase_history") or []),
+        limit=1,
+        keep_reason_only=True,
+    )
+    normalized["latest_supervisor_decision"] = {
+        "decision": _text(dict(normalized.get("latest_supervisor_decision") or {}).get("decision")),
+        "reason": _trim_text(dict(normalized.get("latest_supervisor_decision") or {}).get("reason"), limit=200),
+    }
+    normalized["latest_judge_decision"] = {
+        "decision": _text(dict(normalized.get("latest_judge_decision") or {}).get("decision")),
+        "reason": _trim_text(dict(normalized.get("latest_judge_decision") or {}).get("reason"), limit=200),
+        "issue_kind": _text(dict(normalized.get("latest_judge_decision") or {}).get("issue_kind")),
+        "followup_kind": _text(dict(normalized.get("latest_judge_decision") or {}).get("followup_kind")),
+    }
+    normalized["latest_operator_action"] = {
+        "action_type": _text(dict(normalized.get("latest_operator_action") or {}).get("action_type")),
+        "result_summary": _trim_text(dict(normalized.get("latest_operator_action") or {}).get("result_summary"), limit=200),
+    }
+    normalized["queued_operator_updates"] = [
+        {
+            "status": _text(item.get("status")),
+            "instruction": _trim_text(item.get("instruction"), limit=220),
+        }
+        for item in list(normalized.get("queued_operator_updates") or [])[-1:]
+        if isinstance(item, dict)
+    ]
+    normalized["pending_codex_prompt"] = _trim_text(normalized.get("pending_codex_prompt"), limit=320)
+    normalized["review_checklist"] = list(normalized.get("review_checklist") or [])[:3]
+    normalized["bundle_manifest"] = {}
+    return normalized
+
+
+def _compact_role_board(role_board: RoleBoardV1, *, load_profile: str) -> RoleBoardV1:
+    normalized = dict(role_board or {})
+    if load_profile == "full":
+        return normalized
+    normalized["role_charter"] = _trim_text(normalized.get("role_charter"), limit=1200 if load_profile == "compact" else 320)
+    normalized["role_charter_addendum"] = _trim_text(normalized.get("role_charter_addendum"), limit=400 if load_profile == "compact" else 160)
+    normalized["visible_artifacts"] = list(normalized.get("visible_artifacts") or [])[-(2 if load_profile == "compact" else 1) :]
+    if load_profile == "delta":
+        normalized["session_binding"] = {
+            "session_id": _text(dict(normalized.get("session_binding") or {}).get("session_id")),
+            "status": _text(dict(normalized.get("session_binding") or {}).get("status")),
+        }
+    return normalized
+
+
+def _compact_turn_task_packet(turn_task_packet: TurnTaskPacketV1, *, load_profile: str) -> TurnTaskPacketV1:
+    normalized = dict(turn_task_packet or {})
+    if load_profile == "full":
+        return normalized
+    normalized["next_instruction"] = _trim_text(normalized.get("next_instruction"), limit=1000 if load_profile == "compact" else 360)
+    if load_profile == "delta":
+        normalized["constraints"] = list(normalized.get("constraints") or [])[:2]
+        normalized["success_criteria"] = list(normalized.get("success_criteria") or [])[:1]
+        normalized["output_contract"] = list(normalized.get("output_contract") or [])[:1]
+    return normalized
+
+
+def _compact_asset_context(asset_context: dict[str, Any], *, load_profile: str) -> dict[str, Any]:
+    normalized = dict(asset_context or {})
+    if load_profile == "full":
+        return normalized
+    compacted = {
+        "source_asset_key": _text(normalized.get("source_asset_key")),
+        "source_asset_kind": _text(normalized.get("source_asset_kind")),
+        "source_asset_version": _text(normalized.get("source_asset_version")),
+        "review_checklist": list(normalized.get("review_checklist") or [])[:3],
+        "role_guidance": dict(normalized.get("role_guidance") or {}),
+    }
+    if load_profile == "compact":
+        compacted["bundle_manifest"] = {}
+    return compacted
+
+
 def compile_packet(
     *,
     target_role: str,
@@ -201,18 +325,29 @@ def compile_packet(
         "role_kind": _text(role_board.get("role_kind")) or "stable",
         "base_role_id": _text(role_board.get("base_role_id")),
     }
+    normalized_load_profile = _text(load_profile) or "full"
+    compiled_flow_board = _compact_flow_board(flow_board, load_profile=normalized_load_profile)
+    compiled_role_board = _compact_role_board(role_board, load_profile=normalized_load_profile)
+    compiled_turn_task = _compact_turn_task_packet(turn_task_packet, load_profile=normalized_load_profile)
+    compiled_asset_context = _compact_asset_context(asset_context or {}, load_profile=normalized_load_profile)
+    compiled_supervisor_knowledge = dict(supervisor_knowledge or {})
+    if normalized_load_profile != "full":
+        compiled_supervisor_knowledge["knowledge_text"] = _trim_text(
+            compiled_supervisor_knowledge.get("knowledge_text"),
+            limit=3600 if normalized_load_profile == "compact" else 1200,
+        )
     packet: CompiledPromptPacketV1 = {
         "packet_kind": f"{_text(target_role)}_packet",
         "target_role": _text(target_role),
         "session_mode": _text(session_mode),
-        "load_profile": _text(load_profile),
-        "flow_board": dict(flow_board),
-        "role_board": dict(role_board),
-        "turn_task_packet": dict(turn_task_packet),
+        "load_profile": normalized_load_profile,
+        "flow_board": dict(compiled_flow_board),
+        "role_board": dict(compiled_role_board),
+        "turn_task_packet": dict(compiled_turn_task),
         "governance_policy": governance_policy,
         "role_charter": role_charter,
-        "asset_context": dict(asset_context or {}),
-        "supervisor_knowledge": dict(supervisor_knowledge or {}),
+        "asset_context": dict(compiled_asset_context),
+        "supervisor_knowledge": dict(compiled_supervisor_knowledge),
     }
     packet["rendered_prompt"] = render_packet(packet)
     return packet
@@ -271,6 +406,7 @@ def render_packet(packet: CompiledPromptPacketV1) -> str:
             - You may change the next local path inside this flow.
             - You must not rewrite global flow definitions or role catalogs.
             - If you use an ephemeral role, it must inherit from a known base role.
+            - Treat any role_guidance in the shared asset context as advisory only for temporary-node choice or promotion, not a rigid team contract.
 
             Runtime mode:
             - Session mode: {session_mode}

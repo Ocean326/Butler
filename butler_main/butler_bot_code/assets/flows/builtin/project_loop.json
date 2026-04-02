@@ -32,6 +32,27 @@
       "next_phase_id": ""
     }
   ],
+  "role_guidance": {
+    "suggested_roles": [
+      "planner",
+      "implementer",
+      "reviewer"
+    ],
+    "suggested_specialists": [
+      "creator",
+      "product-manager",
+      "user-simulator"
+    ],
+    "activation_hints": [
+      "当交付被环境缺口、缺少领域知识或缺少 enabling asset 卡住时，优先考虑 creator",
+      "当目标变成产品化、用户价值取舍或范围重排时，优先考虑 product-manager",
+      "当需要真实试用、可用性反馈或用户视角挑错时，优先考虑 user-simulator"
+    ],
+    "promotion_candidates": [
+      "creator"
+    ],
+    "manager_notes": "保持轻量参考：默认仍以 planner/implementer/reviewer 为主，specialist 仅在真实堵点出现时再临时调用。"
+  },
   "default_role_pack": "coding_flow",
   "allowed_execution_modes": [
     "simple",

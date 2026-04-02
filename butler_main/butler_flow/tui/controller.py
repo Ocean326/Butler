@@ -86,7 +86,7 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec(name="new", usage="/new", summary="Open the setup picker for a new flow."),
     CommandSpec(name="resume", usage="/resume [flow_id|last]", summary="Resume or attach to a persisted flow."),
     CommandSpec(name="follow", usage="/follow [on|off]", summary="Toggle transcript auto-follow."),
-    CommandSpec(name="filter", usage="/filter <all|assistant|system|judge|operator>", summary="Set transcript display filter."),
+    CommandSpec(name="filter", usage="/filter <all|assistant|system|judge|operator|supervisor>", summary="Set transcript display filter."),
     CommandSpec(name="runtime-events", usage="/runtime-events [on|off]", summary="Toggle runtime event visibility."),
     CommandSpec(
         name="pause",
@@ -139,7 +139,10 @@ _OPERATOR_COMMANDS = tuple(spec.name for spec in COMMAND_SPECS if spec.action_ty
 _SILENT_ALIAS_COMMANDS = {"history", "flows"}
 _TIMELINE_KIND_ORDER = {
     "run_started": 10,
+    "supervisor_input": 15,
+    "supervisor_output": 18,
     "supervisor_decided": 20,
+    "supervisor_decision_applied": 21,
     "operator_action_applied": 30,
     "codex_segment": 40,
     "codex_runtime_event": 50,
@@ -155,7 +158,10 @@ _TIMELINE_KIND_ORDER = {
     "run_interrupted": 90,
 }
 _LANE_BY_KIND = {
+    "supervisor_input": "supervisor",
+    "supervisor_output": "supervisor",
     "supervisor_decided": "supervisor",
+    "supervisor_decision_applied": "supervisor",
     "judge_result": "supervisor",
     "approval_state_changed": "supervisor",
     "operator_action_applied": "supervisor",
@@ -172,7 +178,10 @@ _LANE_BY_KIND = {
     "run_interrupted": "system",
 }
 _FAMILY_BY_KIND = {
+    "supervisor_input": "input",
+    "supervisor_output": "output",
     "supervisor_decided": "decision",
+    "supervisor_decision_applied": "decision",
     "judge_result": "decision",
     "approval_state_changed": "approval",
     "operator_action_applied": "action",
@@ -286,6 +295,8 @@ class FlowTuiController:
         row = dict(entry or {})
         row["lane"] = self._infer_lane(row)
         row["family"] = self._infer_family(row)
+        if row.get("lane") == "supervisor" and str(row.get("kind") or "").strip() == "codex_segment":
+            row["family"] = "output"
         if "title" not in row or not str(row.get("title") or "").strip():
             row["title"] = str(row.get("message") or row.get("kind") or "").strip()
         if "raw_text" not in row or row.get("raw_text") is None:
@@ -305,6 +316,38 @@ class FlowTuiController:
         if not path.exists():
             return []
         return _read_jsonl(path)
+
+    def _format_supervisor_output(self, decision: dict[str, Any]) -> str:
+        payload = dict(decision or {})
+        if not payload:
+            return ""
+
+        def _add(parts: list[str], label: str, value: Any) -> None:
+            token = str(value or "").strip()
+            if token:
+                parts.append(f"{label}={token}")
+
+        parts: list[str] = []
+        _add(parts, "decision", payload.get("decision"))
+        _add(parts, "next_action", payload.get("next_action"))
+        _add(parts, "turn_kind", payload.get("turn_kind"))
+        _add(parts, "active_role", payload.get("active_role_id"))
+        _add(parts, "session_mode", payload.get("session_mode"))
+        _add(parts, "load_profile", payload.get("load_profile"))
+        issue_kind = str(payload.get("issue_kind") or "").strip()
+        if issue_kind and issue_kind != "none":
+            parts.append(f"issue={issue_kind}")
+        followup_kind = str(payload.get("followup_kind") or "").strip()
+        if followup_kind and followup_kind != "none":
+            parts.append(f"followup={followup_kind}")
+        confidence = payload.get("confidence")
+        if confidence is not None:
+            try:
+                parts.append(f"confidence={float(confidence):.2f}")
+            except (TypeError, ValueError):
+                _add(parts, "confidence", confidence)
+
+        return " | ".join(parts) if parts else json.dumps(payload, ensure_ascii=False)
 
     def _timeline_event(
         self,
@@ -391,6 +434,32 @@ class FlowTuiController:
             phase = str(row.get("phase") or "").strip()
             attempt_no = int(row.get("attempt_no") or 0)
             supervisor = dict(row.get("supervisor_decision") or {})
+            instruction = str(supervisor.get("instruction") or "").strip()
+            if instruction:
+                timeline.append(
+                    self._timeline_event(
+                        flow_id=flow_id,
+                        kind="supervisor_input",
+                        created_at=str(row.get("started_at") or flow_state.get("updated_at") or now_text()).strip(),
+                        phase=phase,
+                        attempt_no=attempt_no,
+                        message=instruction,
+                        payload={"instruction": instruction, "decision": supervisor, "synthetic": True},
+                    )
+                )
+            output_summary = self._format_supervisor_output(supervisor)
+            if output_summary:
+                timeline.append(
+                    self._timeline_event(
+                        flow_id=flow_id,
+                        kind="supervisor_output",
+                        created_at=str(row.get("started_at") or flow_state.get("updated_at") or now_text()).strip(),
+                        phase=phase,
+                        attempt_no=attempt_no,
+                        message=output_summary,
+                        payload={"summary": output_summary, "decision": supervisor, "synthetic": True},
+                    )
+                )
             if supervisor:
                 timeline.append(
                     self._timeline_event(
@@ -728,6 +797,9 @@ class FlowTuiController:
             "effective_phase": str(status.get("effective_phase") or flow_state.get("current_phase") or "").strip(),
             "attempt_count": int(flow_state.get("attempt_count") or 0),
             "max_attempts": int(flow_state.get("max_attempts") or 0),
+            "max_phase_attempts": int(flow_state.get("max_phase_attempts") or 0),
+            "max_runtime_seconds": int(flow_state.get("max_runtime_seconds") or 0),
+            "runtime_elapsed_seconds": int(flow_state.get("runtime_elapsed_seconds") or 0),
             "goal": str(flow_state.get("goal") or "").strip(),
             "guard_condition": str(flow_state.get("guard_condition") or "").strip(),
             "approval_state": str(flow_state.get("approval_state") or "").strip() or "not_required",
@@ -739,6 +811,9 @@ class FlowTuiController:
             "latest_judge_decision": latest_judge,
             "last_operator_action": str(last_operator_action.get("action_type") or "").strip(),
             "latest_operator_action": last_operator_action,
+            "queued_operator_updates": list(flow_state.get("queued_operator_updates") or []),
+            "latest_token_usage": dict(flow_state.get("latest_token_usage") or {}),
+            "context_governor": dict(flow_state.get("context_governor") or {}),
             "latest_handoff_summary": self._latest_handoff_summary(handoffs),
         }
 
@@ -814,10 +889,15 @@ class FlowTuiController:
             "pointers": {
                 "approval_state": summary.get("approval_state"),
                 "pending_codex_prompt": str(flow_state.get("pending_codex_prompt") or "").strip(),
+                "queued_operator_updates": list(flow_state.get("queued_operator_updates") or []),
                 "latest_supervisor_decision": latest_supervisor,
                 "latest_judge_decision": dict(flow_state.get("latest_judge_decision") or flow_state.get("last_cursor_decision") or {}),
                 "latest_operator_action": dict(flow_state.get("last_operator_action") or {}),
                 "latest_handoff_summary": summary.get("latest_handoff_summary"),
+                "max_runtime_seconds": int(flow_state.get("max_runtime_seconds") or 0),
+                "runtime_elapsed_seconds": int(flow_state.get("runtime_elapsed_seconds") or 0),
+                "latest_token_usage": dict(flow_state.get("latest_token_usage") or {}),
+                "context_governor": dict(flow_state.get("context_governor") or {}),
                 "risk_level": str(runtime_plan.get("risk_level") or flow_state.get("risk_level") or "").strip(),
                 "autonomy_profile": str(runtime_plan.get("autonomy_profile") or flow_state.get("autonomy_profile") or "").strip(),
                 "supervisor_session_mode": str(latest_supervisor.get("session_mode") or "").strip(),

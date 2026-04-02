@@ -59,6 +59,66 @@ def normalize_manage_stage(stage: str) -> str:
     return "commit"
 
 
+def _dedupe_text_list(value: Any) -> list[str]:
+    rows: list[str] = []
+    seen: set[str] = set()
+    for item in list(value or []):
+        token = str(item or "").strip()
+        if not token:
+            continue
+        normalized = token.casefold()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        rows.append(token)
+    return rows
+
+
+def normalize_role_guidance_payload(
+    raw: Any,
+    *,
+    current: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = dict(raw or {}) if isinstance(raw, dict) else {}
+    existing = dict(current or {})
+
+    def _pick_list(*keys: str) -> list[str]:
+        for key in keys:
+            if key in payload:
+                return _dedupe_text_list(payload.get(key))
+        for key in keys:
+            if key in existing:
+                return _dedupe_text_list(existing.get(key))
+        return []
+
+    def _pick_text(*keys: str) -> str:
+        for key in keys:
+            if key in payload:
+                return str(payload.get(key) or "").strip()
+        for key in keys:
+            if key in existing:
+                return str(existing.get(key) or "").strip()
+        return ""
+
+    normalized: dict[str, Any] = {}
+    suggested_roles = _pick_list("suggested_roles", "roles", "prebuilt_roles")
+    suggested_specialists = _pick_list("suggested_specialists", "specialists", "temporary_roles")
+    activation_hints = _pick_list("activation_hints", "activation_triggers", "hints")
+    promotion_candidates = _pick_list("promotion_candidates", "promotion_roles", "promotable_roles")
+    manager_notes = _pick_text("manager_notes", "notes", "manager_note")
+    if suggested_roles:
+        normalized["suggested_roles"] = suggested_roles
+    if suggested_specialists:
+        normalized["suggested_specialists"] = suggested_specialists
+    if activation_hints:
+        normalized["activation_hints"] = activation_hints
+    if promotion_candidates:
+        normalized["promotion_candidates"] = promotion_candidates
+    if manager_notes:
+        normalized["manager_notes"] = manager_notes
+    return normalized
+
+
 def build_manage_prompt(
     *,
     flow_state: dict[str, Any] | None,
@@ -144,13 +204,21 @@ def build_manage_prompt(
             '  "phase_plan": [\n'
             '    {"phase_id":"plan","title":"Plan","objective":"...","done_when":"...","retry_phase_id":"plan","fallback_phase_id":"plan","next_phase_id":"imp"}\n'
             "  ],\n"
+            '  "role_guidance": {\n'
+            '    "suggested_roles": ["planner","implementer","reviewer"],\n'
+            '    "suggested_specialists": ["creator","product-manager","user-simulator"],\n'
+            '    "activation_hints": ["when capability or environment gaps block progress"],\n'
+            '    "promotion_candidates": ["creator"],\n'
+            '    "manager_notes": "lightweight advisory notes only"\n'
+            "  },\n"
             '  "operator_guidance": "how the user should manage this flow next",\n'
             '  "confirmation_prompt": "one concise confirmation sentence"\n'
             "}\n\n"
             "Rules:\n"
             "- Keep the phase plan ordered and minimal.\n"
             "- Do not create arbitrary DAGs.\n"
-            "- Match asset_kind to the target.\n\n"
+            "- Match asset_kind to the target.\n"
+            "- role_guidance is advisory only: it helps manager creation and gives supervisor lightweight temporary-role hints, not a rigid team contract.\n\n"
             f"Negotiation payload:\n{_compact_json(payload)}\n"
         )
     return (
@@ -173,6 +241,13 @@ def build_manage_prompt(
         '  "phase_plan": [\n'
         '    {"phase_id":"plan","title":"Plan","objective":"...","done_when":"...","retry_phase_id":"plan","fallback_phase_id":"plan","next_phase_id":"imp"}\n'
         "  ],\n"
+        '  "role_guidance": {\n'
+        '    "suggested_roles": ["planner","implementer","reviewer"],\n'
+        '    "suggested_specialists": ["creator","product-manager","user-simulator"],\n'
+        '    "activation_hints": ["when capability or environment gaps block progress"],\n'
+        '    "promotion_candidates": ["creator"],\n'
+        '    "manager_notes": "lightweight advisory notes only"\n'
+        "  },\n"
         '  "operator_guidance": "how the user should manage this flow next",\n'
         '  "confirmation_prompt": "one concise confirmation sentence"\n'
         "}\n\n"
@@ -181,6 +256,7 @@ def build_manage_prompt(
         "- Keep the phase plan ordered and minimal.\n"
         "- Do not create arbitrary DAGs.\n"
         "- Match asset_kind to the target. Use instance for runnable flow instances, template for reusable editable assets, builtin for repo-owned builtins.\n"
+        "- role_guidance is advisory only: it should guide manager design and give supervisor lightweight role references, not impose a rigid team contract.\n"
         "- The summary should read like a user handoff note.\n\n"
         f"Negotiation payload:\n{_compact_json(payload)}\n"
     )
@@ -207,6 +283,7 @@ def build_manage_chat_prompt(
             "if a specific asset is targeted, ground the answer in that asset's phases, static fields, lineage, bundle, and handoff",
             "if the request implies editing a builtin/template, explain the correct next action instead of mutating files in chat mode",
             "suggest when a supervisor prompt or bundled static asset should also be updated",
+            "treat role guidance as a lightweight default skill set for manager and supervisor, not a rigid team contract",
         ],
     }
     return (
@@ -237,6 +314,7 @@ def build_manage_chat_prompt(
         "- If the target is a builtin asset, mention clone/edit requirements when relevant.\n"
         "- If a builtin mutation is ready, set action_builtin_mode explicitly to clone or edit.\n"
         "- If the user asks about phases/static assets/supervisor prompt coupling, answer concretely from the supplied asset state.\n"
+        "- When discussing design quality, recommend lightweight role_guidance for manager creation and supervisor temporary-node reference.\n"
         "- Keep the response concise but specific.\n\n"
         f"Conversation payload:\n{_compact_json(payload)}\n"
     )
@@ -269,6 +347,10 @@ def normalize_manage_result(
         for item in list(result.get("review_checklist") or current.get("review_checklist") or [])
         if str(item or "").strip()
     ]
+    role_guidance = normalize_role_guidance_payload(
+        result.get("role_guidance") or {},
+        current=dict(current.get("role_guidance") or dict(current.get("manage_handoff") or {}).get("role_guidance") or {}),
+    )
     return {
         "summary": str(result.get("summary") or f"managed flow prepared for {goal or 'foreground work'}").strip(),
         "label": label,
@@ -282,6 +364,7 @@ def normalize_manage_result(
         "autonomy_profile": str(result.get("autonomy_profile") or current.get("autonomy_profile") or "default").strip() or "default",
         "phase_plan": phase_plan,
         "review_checklist": review_checklist,
+        "role_guidance": role_guidance,
         "instance_defaults": dict(result.get("instance_defaults") or current.get("instance_defaults") or {}),
         "lineage": dict(result.get("lineage") or current.get("lineage") or {}),
         "asset_state": dict(result.get("asset_state") or current.get("asset_state") or {}),
@@ -647,6 +730,7 @@ __all__ = [
     "normalize_design_result",
     "normalize_manage_chat_result",
     "normalize_manage_result",
+    "normalize_role_guidance_payload",
     "normalize_manage_stage_result",
     "normalize_manage_stage",
     "run_manage_chat_agent",
