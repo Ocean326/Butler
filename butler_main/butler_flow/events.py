@@ -7,6 +7,15 @@ from uuid import uuid4
 from .state import now_text
 
 
+def _mapping_payload(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return dict(value)
+    try:
+        return dict(value or {})
+    except Exception:
+        return {}
+
+
 @dataclass(slots=True)
 class FlowUiEvent:
     kind: str
@@ -36,8 +45,8 @@ class FlowUiEvent:
             "attempt_no": int(self.attempt_no or 0),
             "created_at": str(self.created_at or "").strip(),
             "message": str(self.message or ""),
-            "payload": dict(self.payload or {}),
-            "refs": dict(self.refs or {}),
+            "payload": _mapping_payload(self.payload),
+            "refs": _mapping_payload(self.refs),
             "raw_text": str(self.raw_text or ""),
             "display_priority": int(self.display_priority or 0),
         }
@@ -71,8 +80,8 @@ def build_flow_ui_event(
         phase=str(phase or "").strip(),
         attempt_no=int(attempt_no or 0),
         message=str(message or ""),
-        payload=dict(payload or {}),
-        refs=dict(refs or {}),
+        payload=_mapping_payload(payload),
+        refs=_mapping_payload(refs),
         raw_text=str(raw_text or ""),
         display_priority=int(display_priority or 0),
     )

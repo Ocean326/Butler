@@ -417,6 +417,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                                 "title": "stdout",
                                 "message": "stdout line 1",
                                 "raw_text": "stdout line 1",
+                                "payload": {"kind": "stdout", "role_id": "implementer", "active_role_id": "implementer"},
                                 "created_at": "2026-04-01 10:00:04",
                             },
                             ensure_ascii=False,
@@ -430,6 +431,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                                 "title": "stdout",
                                 "message": "stdout line 2",
                                 "raw_text": "stdout line 2",
+                                "payload": {"kind": "stdout", "role_id": "implementer", "active_role_id": "implementer"},
                                 "created_at": "2026-04-01 10:00:05",
                             },
                             ensure_ascii=False,
@@ -442,6 +444,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                                 "family": "artifact",
                                 "title": "report.md",
                                 "message": "report.md",
+                                "payload": {"artifact_ref": "artifact:7:plan", "producer_role_id": "implementer", "phase": "plan", "attempt_no": 1},
                                 "created_at": "2026-04-01 10:00:06",
                             },
                             ensure_ascii=False,
@@ -455,6 +458,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                                 "title": "stdout",
                                 "message": "stdout line 3",
                                 "raw_text": "stdout line 3",
+                                "payload": {"kind": "stdout", "role_id": "reviewer", "active_role_id": "reviewer"},
                                 "created_at": "2026-04-01 10:00:07",
                             },
                             ensure_ascii=False,
@@ -489,11 +493,11 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause(0.1)
                 workflow_lines = [line.rstrip() for line in _transcript_text(app).splitlines()]
                 self.assertEqual(workflow_lines.count("[workflow/raw_execution]"), 2)
-                self.assertIn(" stdout line 1", workflow_lines)
-                self.assertIn(" stdout line 2", workflow_lines)
+                self.assertIn(" implementer · stdout line 1", workflow_lines)
+                self.assertIn(" implementer · stdout line 2", workflow_lines)
                 self.assertIn("[workflow/artifact]", workflow_lines)
-                self.assertIn(" report.md", workflow_lines)
-                self.assertIn(" stdout line 3", workflow_lines)
+                self.assertIn(" artifact:7:plan · role=implementer · phase=plan · attempt=1", workflow_lines)
+                self.assertIn(" reviewer · stdout line 3", workflow_lines)
 
     async def test_meta_transcript_messages_use_grouped_system_titles(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1117,7 +1121,11 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                         "title": "supervisor raw output",
                         "message": "{\"decision\":\"execute\"}",
                         "raw_text": "{\"decision\":\"execute\"}",
-                        "payload": {"segment": "{\"decision\":\"execute\"}", "source": "supervisor_runtime"},
+                        "payload": {
+                            "segment": "{\"decision\":\"execute\"}",
+                            "source": "supervisor_runtime",
+                            "active_role_id": "planner",
+                        },
                     }
                 ],
             )
@@ -1135,6 +1143,120 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 transcript = _transcript_text(app)
                 self.assertIn("{\"decision\":\"execute\"}", transcript)
                 self.assertIn("[supervisor/output]", transcript)
+                self.assertIn("active_role=planner", transcript)
+
+    async def test_supervisor_input_output_render_actual_body_not_titles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            state = new_flow_state(
+                workflow_id="flow_supervisor_titles",
+                workflow_kind="project_loop",
+                workspace_root=str(root),
+                goal="alpha",
+                guard_condition="done",
+                max_attempts=4,
+                max_phase_attempts=2,
+            )
+            flow_path = flow_dir(root, "flow_supervisor_titles")
+            write_json_atomic(flow_path / "workflow_state.json", state)
+            _write_jsonl(
+                flow_events_path(flow_path),
+                [
+                    {
+                        "event_id": "evt_sup_input",
+                        "kind": "supervisor_input",
+                        "lane": "supervisor",
+                        "family": "input",
+                        "flow_id": "flow_supervisor_titles",
+                        "phase": "plan",
+                        "attempt_no": 1,
+                        "created_at": "2026-04-02 10:00:00",
+                        "title": "supervisor heuristic input",
+                        "message": "Please focus on the unresolved blockers.",
+                        "raw_text": "Please focus on the unresolved blockers.",
+                        "payload": {"active_role_id": "implementer"},
+                    },
+                    {
+                        "event_id": "evt_sup_output",
+                        "kind": "supervisor_output",
+                        "lane": "supervisor",
+                        "family": "output",
+                        "flow_id": "flow_supervisor_titles",
+                        "phase": "plan",
+                        "attempt_no": 1,
+                        "created_at": "2026-04-02 10:00:01",
+                        "title": "supervisor heuristic output",
+                        "message": "decision=execute | next_action=run_executor",
+                        "raw_text": "",
+                        "payload": {"active_role_id": "implementer"},
+                    },
+                ],
+            )
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test(size=(120, 28)) as pilot:
+                await pilot.pause(0.2)
+                app._focus_flow("flow_supervisor_titles")
+                app._back_to_flow()
+                await pilot.pause(0.1)
+
+                transcript = _transcript_text(app)
+                self.assertIn("Please focus on the unresolved blockers.", transcript)
+                self.assertIn("decision=execute | next_action=run_executor", transcript)
+                self.assertNotIn("supervisor heuristic input", transcript)
+                self.assertNotIn("supervisor heuristic output", transcript)
+
+    async def test_supervisor_event_with_non_mapping_payload_does_not_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            state = new_flow_state(
+                workflow_id="flow_supervisor_bad_payload",
+                workflow_kind="project_loop",
+                workspace_root=str(root),
+                goal="alpha",
+                guard_condition="done",
+                max_attempts=4,
+                max_phase_attempts=2,
+            )
+            flow_path = flow_dir(root, "flow_supervisor_bad_payload")
+            write_json_atomic(flow_path / "workflow_state.json", state)
+            _write_jsonl(
+                flow_events_path(flow_path),
+                [
+                    {
+                        "event_id": "evt_sup_bad_payload",
+                        "kind": "supervisor_decided",
+                        "lane": "supervisor",
+                        "family": "decision",
+                        "flow_id": "flow_supervisor_bad_payload",
+                        "phase": "synthesize",
+                        "attempt_no": 32,
+                        "created_at": "2026-04-02 10:00:00",
+                        "title": "",
+                        "message": "follow pending instruction from previous judge/recovery via role=implementer",
+                        "raw_text": "",
+                        "payload": "corrupted-payload",
+                    }
+                ],
+            )
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test(size=(120, 28)) as pilot:
+                await pilot.pause(0.2)
+                app._focus_flow("flow_supervisor_bad_payload")
+                app._back_to_flow()
+                await pilot.pause(0.1)
+
+                transcript = _transcript_text(app)
+                self.assertIn("follow pending instruction from previous judge/recovery via role=implementer", transcript)
 
     async def test_history_plain_text_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

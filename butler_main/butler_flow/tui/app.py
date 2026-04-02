@@ -48,6 +48,15 @@ WORKING_DOT_FRAMES = ("·", "•", "◦", "∙", "•", "·")
 WORKING_WORD_FRAMES = ("Working", "WOrking", "WoRking", "WorKing", "WorkIng", "WorkiNg", "WorkinG")
 
 
+def _mapping_payload(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return dict(value)
+    try:
+        return dict(value or {})
+    except Exception:
+        return {}
+
+
 class UiEventMessage(Message):
     def __init__(self, event: FlowUiEvent) -> None:
         super().__init__()
@@ -71,7 +80,7 @@ class RunErroredMessage(Message):
 class DesignBuildMessage(Message):
     def __init__(self, *, payload: dict[str, Any], error_text: str = "") -> None:
         super().__init__()
-        self.payload = dict(payload or {})
+        self.payload = _mapping_payload(payload)
         self.error_text = str(error_text or "").strip()
 
 
@@ -79,7 +88,7 @@ class ManageChatMessage(Message):
     def __init__(self, *, request: ManagePromptRequest, payload: dict[str, Any], error_text: str = "") -> None:
         super().__init__()
         self.request = request
-        self.payload = dict(payload or {})
+        self.payload = _mapping_payload(payload)
         self.error_text = str(error_text or "").strip()
 
 
@@ -87,7 +96,7 @@ class ManageFlowMessage(Message):
     def __init__(self, *, manage_target: str, payload: dict[str, Any], error_text: str = "") -> None:
         super().__init__()
         self.manage_target = str(manage_target or "").strip()
-        self.payload = dict(payload or {})
+        self.payload = _mapping_payload(payload)
         self.error_text = str(error_text or "").strip()
 
 
@@ -1073,7 +1082,7 @@ class ButlerFlowTuiApp(App[int]):
         role_payload = dict(payload.get("roles") or {})
         handoffs = list(role_payload.get("handoffs") or [])
         latest_handoff = dict(payload.get("multi_agent", {}).get("latest_handoff_summary") or self._latest_handoff_summary(handoffs))
-        payload_for_steps = dict(payload)
+        payload_for_steps = _mapping_payload(payload)
         receipts = dict(payload.get("receipts") or {})
         payload_for_steps["turns"] = list(receipts.get("turns") or [])
         source_kind = str(flow_state.get("catalog_flow_id") or row.get("catalog_flow_id") or "").strip() or "-"
@@ -1946,7 +1955,7 @@ class ButlerFlowTuiApp(App[int]):
         title = str(entry.get("title") or "").strip().lower()
         message = str(entry.get("message") or "").strip().lower()
         raw_text = str(entry.get("raw_text") or "").strip()
-        payload = dict(entry.get("payload") or {})
+        payload = _mapping_payload(entry.get("payload"))
         raw_kind = str(payload.get("kind") or payload.get("stream") or payload.get("event") or "").strip().lower()
         raw_summary = " ".join(part for part in (title, message, raw_kind) if part)
         if kind in {"error", "run_failed"} or family == "error":
@@ -2101,6 +2110,84 @@ class ButlerFlowTuiApp(App[int]):
             return True
         return self._event_category(entry) == current_filter
 
+    def _entry_role_context(self, entry: dict[str, Any]) -> tuple[str, str]:
+        payload = _mapping_payload(entry.get("payload"))
+        decision = dict(payload.get("decision") or {})
+        role_id = str(
+            payload.get("role_id")
+            or payload.get("producer_role_id")
+            or payload.get("source_role_id")
+            or decision.get("role_id")
+            or ""
+        ).strip()
+        active_role_id = str(payload.get("active_role_id") or decision.get("active_role_id") or "").strip()
+        return role_id, active_role_id
+
+    def _compose_entry_body(self, entry: dict[str, Any], text: str) -> str:
+        body = str(text or "").rstrip("\n")
+        if not body:
+            return ""
+        kind = str(entry.get("kind") or "").strip().lower()
+        lane = self._event_lane(entry)
+        family = str(entry.get("family") or "").strip().lower()
+        payload = _mapping_payload(entry.get("payload"))
+        role_id, active_role_id = self._entry_role_context(entry)
+
+        prefix = ""
+        if kind == "artifact_registered":
+            parts = [body]
+            producer_role = role_id or active_role_id
+            if producer_role:
+                parts.append(f"role={producer_role}")
+            phase = str(payload.get("phase") or entry.get("phase") or "").strip()
+            if phase:
+                parts.append(f"phase={phase}")
+            attempt_no = int(payload.get("attempt_no") or entry.get("attempt_no") or 0)
+            if attempt_no > 0:
+                parts.append(f"attempt={attempt_no}")
+            return " · ".join(parts)
+        if lane == "workflow" and family == "raw_execution":
+            prefix = role_id or active_role_id
+        elif lane == "supervisor" and family == "input":
+            target_role = active_role_id or role_id
+            if target_role:
+                prefix = f"target={target_role}"
+        elif lane == "supervisor" and family in {"output", "decision"}:
+            target_role = active_role_id or role_id
+            if target_role and target_role != "supervisor":
+                prefix = f"active_role={target_role}"
+        if not prefix:
+            return body
+        if "\n" in body:
+            return f"{prefix}\n{body}"
+        return f"{prefix} · {body}"
+
+    def _entry_display_body(self, entry: dict[str, Any], *, fallback: str = "") -> str:
+        kind = str(entry.get("kind") or "").strip().lower()
+        family = str(entry.get("family") or "").strip().lower()
+        payload = _mapping_payload(entry.get("payload"))
+        title = str(entry.get("title") or "").strip()
+        message = str(entry.get("message") or "")
+        raw_text = str(entry.get("raw_text") or "")
+        if kind == "artifact_registered":
+            text = str(payload.get("artifact_ref") or message or title or payload.get("summary") or payload.get("text") or "")
+            return self._compose_entry_body(entry, text)
+        if family in {"input", "output", "raw_execution"}:
+            text = str(
+                fallback
+                or raw_text
+                or message
+                or payload.get("segment")
+                or payload.get("text")
+                or title
+                or payload.get("summary")
+                or payload.get("kind")
+                or ""
+            )
+            return self._compose_entry_body(entry, text)
+        text = str(fallback or message or title or payload.get("summary") or payload.get("text") or payload.get("kind") or "")
+        return self._compose_entry_body(entry, text)
+
     def _render_timeline_entry(self, entry: dict[str, Any]) -> None:
         event_id = str(entry.get("event_id") or "").strip()
         if event_id and event_id in self._transcript_event_ids:
@@ -2111,7 +2198,7 @@ class ButlerFlowTuiApp(App[int]):
             return
         kind = str(entry.get("kind") or "").strip()
         message = str(entry.get("message") or "")
-        payload = dict(entry.get("payload") or {})
+        payload = _mapping_payload(entry.get("payload"))
         lane = self._event_lane(entry)
         family = str(entry.get("family") or "").strip().lower()
         if kind == "codex_segment" and lane == "supervisor":
@@ -2123,27 +2210,26 @@ class ButlerFlowTuiApp(App[int]):
             if snapshot.startswith(self._latest_segment):
                 delta = snapshot[len(self._latest_segment) :]
                 if delta:
+                    body = self._entry_display_body(entry, fallback=delta.rstrip("\n")) if not self._latest_segment else delta.rstrip("\n")
                     self._transcript_formatter.write_group(
                         transcript,
                         lane=lane or "workflow",
                         family=family or "raw_execution",
-                        body=delta.rstrip("\n"),
+                        body=body,
                         tone="raw_output",
                     )
             elif snapshot and snapshot != self._latest_segment:
+                body = self._entry_display_body(entry, fallback=snapshot.rstrip("\n"))
                 self._transcript_formatter.write_group(
                     transcript,
                     lane=lane or "workflow",
                     family=family or "raw_execution",
-                    body=snapshot.rstrip("\n"),
+                    body=body,
                     tone="raw_output",
                 )
             self._latest_segment = snapshot
         else:
-            if family == "raw_execution":
-                line = str(entry.get("raw_text") or message or payload.get("text") or title or payload.get("summary") or payload.get("kind") or "")
-            else:
-                line = title or message or str(payload.get("summary") or payload.get("text") or payload.get("kind") or "")
+            line = self._entry_display_body(entry)
             if line:
                 self._transcript_formatter.write_group(
                     transcript,
@@ -2306,7 +2392,7 @@ class ButlerFlowTuiApp(App[int]):
             self._refresh_design_screen()
             self.notify(message.error_text, severity="error")
             return
-        payload = dict(message.payload or {})
+        payload = _mapping_payload(message.payload)
         self._design_payload = payload
         self._design_flow_id = str(payload.get("flow_id") or "").strip()
         self._design_error = ""
@@ -2327,7 +2413,7 @@ class ButlerFlowTuiApp(App[int]):
             self._write_manage_note(family="error", body=message.error_text, tone="error")
             self.notify(message.error_text, severity="error")
         else:
-            payload = dict(message.payload or {})
+            payload = _mapping_payload(message.payload)
             session_id = str(payload.get("manager_session_id") or "").strip()
             if session_id:
                 self._manage_chat_session_id = session_id
@@ -2373,7 +2459,7 @@ class ButlerFlowTuiApp(App[int]):
             self._write_manage_note(family="error", body=message.error_text, tone="error")
             self.notify(message.error_text, severity="error")
             return
-        payload = dict(message.payload or {})
+        payload = _mapping_payload(message.payload)
         asset_key = str(payload.get("asset_key") or message.manage_target or "").strip()
         if asset_key:
             self._manage_cursor_asset_key = asset_key
