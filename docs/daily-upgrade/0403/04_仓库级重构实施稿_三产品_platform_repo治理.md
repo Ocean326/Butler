@@ -1,7 +1,7 @@
 # 0403 仓库级重构实施稿：三产品 / Platform / Repo Governance
 
 日期：2026-04-03  
-状态：实施稿 / 未落代码  
+状态：实施中 / Wave 2 首批已落代码
 所属层级：文档治理 / 仓库治理
 
 关联：
@@ -16,10 +16,27 @@
 
 | 项 | 内容 |
 | --- | --- |
-| 目标功能 | 把仓库级重构从“目录终态草图”改成可分波执行的实施稿，明确三产品、platform 与 repo governance 的分工，并给出目录迁移顺序与验收口径。 |
-| 所属层级 | 仓库治理 / docs-only / 跨层。 |
-| 当前真源文档 | 仓库根 `README.md`、`docs/README.md`、`docs/project-map/03_truth_matrix.md`、`docs/project-map/04_change_packets.md`、`0403/03_跨机器开发仓库收口与私有层隔离.md`。 |
-| 计划查看的代码目录和测试 | 代码只做目录映射参考：`butler_main/`、`tools/`、根 `runtime_os/`；本轮不改代码，不跑功能测试。 |
+| 目标功能 | 把仓库级重构从“目录终态草图”推进到第一波真实代码实施：落 canonical tree，先迁 `butler-flow`，其余高耦合目录先保 compat 壳。 |
+| 所属层级 | 仓库治理 / 跨层。 |
+| 当前真源文档 | 仓库根 `README.md`、`docs/README.md`、`docs/project-map/02_feature_map.md`、`docs/project-map/03_truth_matrix.md`、`docs/project-map/04_change_packets.md`、`0403/03_跨机器开发仓库收口与私有层隔离.md`。 |
+| 计划查看的代码目录和测试 | `butler_main/products/`、`butler_main/platform/`、`butler_main/compat/`、`butler_main/incubation/`、`butler_main/butler_flow/` compat 壳、`tools/butler-flow`；测试至少跑 `test_repo_product_namespace.py`、`test_butler_flow.py`、`test_butler_flow_surface.py`、`test_butler_flow_tui_app.py`、`test_butler_flow_tui_controller.py`、`test_chat_cli_runner.py`、`test_butler_cli.py`、`test_chat_module_exports.py`。 |
+
+## 0. 本轮已落代码
+
+本轮先按“能安全落地、不中断现有入口”的标准，完成 Wave 2 首批实施：
+
+1. 已新增 canonical 目录树：
+   - `butler_main/products/`
+   - `butler_main/platform/`
+   - `butler_main/compat/`
+   - `butler_main/incubation/`
+2. 已把 `butler_main/butler_flow/` 真实迁移到 `butler_main/products/butler_flow/`。
+3. 已为旧入口补 compat 包：
+   - `butler_main/butler_flow/__init__.py`
+   - `butler_main/butler_flow/__main__.py`
+4. `chat / orchestrator / campaign / runtime_os / agents_os / multi_agents_os / skills / research` 当前只先落 canonical alias 包，不做真实物理搬迁。
+5. `tools/butler-flow`、`butler_main/__main__.py`、`butler_main/butler_cli.py` 已开始优先走 canonical tree。
+6. `vibe_close` 已识别新目录前缀，避免收口时把 `products/platform/compat/incubation` 当成未知路径。
 
 ## 1. 一句话实施裁决
 
@@ -121,17 +138,17 @@ butler_main/
 
 | 当前目录 | 目标归属 | 实施说明 |
 | --- | --- | --- |
-| `butler_main/butler_flow/` | `products/butler_flow/` | 第一条产品线，优先搬 |
-| `butler_main/chat/` | `products/chat/` | 第二条产品线，优先搬 |
-| `butler_main/orchestrator/` | `products/campaign_orchestrator/` | 第三条产品线外壳 |
-| `butler_main/domains/campaign/` | `products/campaign_orchestrator/` | 第三条产品线领域真源 |
-| `butler_main/console/` | `products/campaign_orchestrator/` | 第三条产品线 operator surface |
-| `butler_main/butler_bot_code/` | `platform/host_runtime/` | 运行体与服务包装层 |
-| `butler_main/runtime_os/` | `platform/runtime/` | 现役 runtime 主体 |
-| `butler_main/agents_os/` | `compat/agents_os/` | 兼容层 |
-| `butler_main/multi_agents_os/` | `compat/multi_agents_os/` | 兼容层 |
-| `butler_main/sources/skills/` | `platform/skills/` | skill 真源 |
-| `butler_main/research/` | `incubation/research/` | 研究/孵化目录 |
+| `butler_main/butler_flow/` | `products/butler_flow/` | 已真实迁移；旧路径保留 compat 包 |
+| `butler_main/chat/` | `products/chat/` | 已落 canonical alias；物理目录暂不迁 |
+| `butler_main/orchestrator/` | `products/campaign_orchestrator/orchestrator/` | 已落 canonical alias；物理目录暂不迁 |
+| `butler_main/domains/campaign/` | `products/campaign_orchestrator/campaign/` | 已落 canonical alias；物理目录暂不迁 |
+| `butler_main/console/` | `products/campaign_orchestrator/console/` | 已落 canonical alias；物理目录暂不迁 |
+| `butler_main/butler_bot_code/` | `platform/host_runtime/` | 已落 canonical alias；物理目录暂不迁 |
+| `butler_main/runtime_os/` | `platform/runtime/` | 已落 canonical alias；物理目录暂不迁 |
+| `butler_main/agents_os/` | `compat/agents_os/` | 已落 canonical alias；物理目录暂不迁 |
+| `butler_main/multi_agents_os/` | `compat/multi_agents_os/` | 已落 canonical alias；物理目录暂不迁 |
+| `butler_main/sources/skills/` | `platform/skills/` | 已落 canonical alias；物理目录暂不迁 |
+| `butler_main/research/` | `incubation/research/` | 已落 canonical alias；物理目录暂不迁 |
 
 ## 4. Repo Governance Plane 的实施口径
 
@@ -217,6 +234,12 @@ butler_main/
 
 - 任何产品相关改动，都能一跳定位到单条产品线
 
+当前回写：
+
+- canonical `products/` 目录树已落
+- `products/butler_flow/` 已真实承接现役代码
+- `products/chat/` 与 `products/campaign_orchestrator/*` 当前先用 alias 包承接“新的读写目标”，等待后续 path contract 收敛后再做物理搬迁
+
 ## Wave 3：platform / compat 分层
 
 目标：
@@ -263,6 +286,13 @@ butler_main/
 3. 再做物理目录搬迁
 4. 再做 import path 清理
 5. 最后清旧 alias 和候选目录名
+
+本轮实际执行到：
+
+1. 文档和治理协议已先回写
+2. canonical tree 与 compat alias 已落
+3. 只对 `butler-flow` 做首个真实物理迁移
+4. `chat`、`campaign + orchestrator`、`platform/skills/runtime` 仍等待路径合同清理后再进下一波物理搬迁
 
 禁止的错误顺序：
 

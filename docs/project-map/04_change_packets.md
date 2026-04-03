@@ -26,7 +26,8 @@
   - [0402 Chat Router 选会话能力升级回写](../daily-upgrade/0402/01_chat_router选会话能力升级回写.md)
   - [0326 Harness 全系统稳定态运行梳理](../daily-upgrade/0326/03_Harness全系统稳定态运行梳理.md)
 - 默认代码目录：
-  - `butler_main/chat/`
+  - `butler_main/products/chat/`（canonical alias）
+  - `butler_main/chat/`（physical compat）
   - `butler_main/orchestrator/interfaces/`
   - `butler_main/agents_os/execution/cli_runner.py`
   - `butler_main/chat/frontdoor_cli_router.py`
@@ -67,6 +68,8 @@
   - [0327 Skill Exposure Plane 与 Codex 消费边界](../daily-upgrade/0327/02_SkillExposurePlane与Codex消费边界.md)
   - [0326 稳定 Harness 之后的下一阶段主线](../daily-upgrade/0326/04_稳定Harness之后的下一阶段主线_Anthropic长运行Harness吸收版.md)
 - 默认代码目录：
+  - `butler_main/products/campaign_orchestrator/orchestrator/`（canonical alias）
+  - `butler_main/products/campaign_orchestrator/campaign/`（canonical alias）
   - `butler_main/orchestrator/`
   - `butler_main/domains/campaign/`
 - 默认测试：
@@ -91,6 +94,9 @@
   - [0329 Codex 主备默认自动切换](../daily-upgrade/0329/01_Codex主备默认自动切换.md)
   - [0331 前台 Workflow Shell 收口](../daily-upgrade/0331/02_前台WorkflowShell收口.md)
 - 默认代码目录：
+  - `butler_main/platform/runtime/`（canonical alias）
+  - `butler_main/compat/agents_os/`（canonical alias）
+  - `butler_main/compat/multi_agents_os/`（canonical alias）
   - `butler_main/runtime_os/process_runtime/`
   - `butler_main/runtime_os/durability_substrate/`
   - `butler_main/runtime_os/multi_agent_protocols/`
@@ -131,9 +137,11 @@
   - [0329 Codex 主备默认自动切换](../daily-upgrade/0329/01_Codex主备默认自动切换.md)
   - [0329 Chat 显式模式与 Project 循环收口](../daily-upgrade/0329/02_Chat显式模式与Project循环收口.md)
 - 默认代码目录：
-  - `butler_main/butler_flow/`
-  - `butler_main/butler_flow/role_packs/`
+  - `butler_main/products/butler_flow/`
+  - `butler_main/products/butler_flow/role_packs/`
+  - `butler_main/butler_flow/`（compat shell）
   - `butler_main/__main__.py`
+  - `butler_main/platform/runtime/`（canonical alias）
   - `butler_main/runtime_os/agent_runtime/`
   - `tools/butler-flow`
   - `tools/install-butler-flow`
@@ -213,6 +221,9 @@
   - [Workflow IR 正式口径](../runtime/WORKFLOW_IR.md)
   - [0327 Butler 系统分层与事件契约收口](../daily-upgrade/0327/03_Butler系统分层与事件契约收口.md)
 - 默认代码目录：
+  - `butler_main/platform/runtime/`（canonical alias）
+  - `butler_main/compat/multi_agents_os/`（canonical alias）
+  - `butler_main/products/campaign_orchestrator/orchestrator/`（canonical alias）
   - `butler_main/runtime_os/`
   - `butler_main/multi_agents_os/`
   - `butler_main/orchestrator/`

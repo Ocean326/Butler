@@ -22,7 +22,7 @@ def _legacy_catalog_root() -> Path:
 
 
 def _repo_catalog_root() -> Path:
-    return Path(__file__).resolve().parents[2] / "butler_main" / "butler_bot_code" / "assets" / "flows" / "builtin"
+    return resolve_butler_root(Path(__file__).resolve()) / "butler_main" / "butler_bot_code" / "assets" / "flows" / "builtin"
 
 
 def _catalog_roots(workspace: str | Path | None = None) -> list[Path]:

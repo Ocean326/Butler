@@ -30,6 +30,7 @@
 - 补充：[0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](./daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
 - 补充：[0403 跨机器开发仓库收口与私有层隔离](./daily-upgrade/0403/03_跨机器开发仓库收口与私有层隔离.md)
 - 补充：[0403 仓库级重构实施稿：三产品 / Platform / Repo Governance](./daily-upgrade/0403/04_仓库级重构实施稿_三产品_platform_repo治理.md)
+- 补充：`0403/04` 当前已进入 Wave 2 首批代码实施：canonical `products / platform / compat / incubation` 已落，`products/butler_flow/` 已真实迁移，其余高耦合目录先保 alias + compat 壳
 - 补充：[跨机器开发仓库启动说明](./concepts/跨机器开发仓库启动说明.md)
 - 补充：[仓库级重构远景规划（产品 / Platform / Repo Governance 版）](./远景草稿/仓库级重构.md)
 - 补充：0403 同日继续回写了 Manage Center manager 的 `session/draft/pending_action` 持久化与 `draft_payload` 提交口径；同日再补了 manager chat 的 target sticky、悬空 `$` 清理、非 JSON reply 的 `parse_status / raw_reply / error_text` 透传，以及 `resume` 失败后同 provider fresh Codex exec 的自愈口径；随后再把 manager 从“长 prompt 约束”进一步收口到 `skill-style` 机制：`manager skill registry + reference progressive disclosure + lightweight asset/session summary + draft ownership/action validator`，正文收口在 [0402 Butler Flow Manage Center 资产中心升级与会话式交互落地](./daily-upgrade/0402/02_butler-flow_manage-center资产中心升级与会话式交互落地.md)
