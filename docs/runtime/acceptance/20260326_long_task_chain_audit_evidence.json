@@ -83,7 +83,7 @@
       "feedback_doc_state": "not_observed",
       "feedback_push_state": "not_observed",
       "evidence_refs": [
-        "butler_main/chat/data/hot/recent_memory/scopes/aa50cd9b1e8acb57/recent_raw_turns.json"
+        "runtime-local recent memory capture used during audit; live scope payload intentionally omitted from the portable repo snapshot"
       ]
     }
   ],

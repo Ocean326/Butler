@@ -51,9 +51,9 @@ class SkillExposureTests(unittest.TestCase):
     def test_render_skill_exposure_prompt_renders_shortlist_and_direct_bindings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            registry = root / "butler_main" / "sources" / "skills" / "collections" / "registry.json"
-            alpha = root / "butler_main" / "sources" / "skills" / "pool" / "research" / "paper-search"
-            beta = root / "butler_main" / "sources" / "skills" / "pool" / "general" / "pdf-read"
+            registry = root / "butler_main" / "platform" / "skills" / "collections" / "registry.json"
+            alpha = root / "butler_main" / "platform" / "skills" / "pool" / "research" / "paper-search"
+            beta = root / "butler_main" / "platform" / "skills" / "pool" / "general" / "pdf-read"
             registry.parent.mkdir(parents=True, exist_ok=True)
             alpha.mkdir(parents=True, exist_ok=True)
             beta.mkdir(parents=True, exist_ok=True)
@@ -72,8 +72,8 @@ class SkillExposureTests(unittest.TestCase):
                         "collections": {
                             "codex_default": {
                                 "skills": [
-                                    "./butler_main/sources/skills/pool/research/paper-search",
-                                    "./butler_main/sources/skills/pool/general/pdf-read",
+                                    "./butler_main/platform/skills/pool/research/paper-search",
+                                    "./butler_main/platform/skills/pool/general/pdf-read",
                                 ]
                             }
                         },
@@ -107,9 +107,9 @@ class SkillExposureTests(unittest.TestCase):
     def test_build_skill_exposure_observation_surfaces_selected_families_and_skills(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            registry = root / "butler_main" / "sources" / "skills" / "collections" / "registry.json"
-            alpha = root / "butler_main" / "sources" / "skills" / "pool" / "research" / "paper-search"
-            beta = root / "butler_main" / "sources" / "skills" / "pool" / "general" / "pdf-read"
+            registry = root / "butler_main" / "platform" / "skills" / "collections" / "registry.json"
+            alpha = root / "butler_main" / "platform" / "skills" / "pool" / "research" / "paper-search"
+            beta = root / "butler_main" / "platform" / "skills" / "pool" / "general" / "pdf-read"
             registry.parent.mkdir(parents=True, exist_ok=True)
             alpha.mkdir(parents=True, exist_ok=True)
             beta.mkdir(parents=True, exist_ok=True)
@@ -128,8 +128,8 @@ class SkillExposureTests(unittest.TestCase):
                         "collections": {
                             "codex_default": {
                                 "skills": [
-                                    "./butler_main/sources/skills/pool/research/paper-search",
-                                    "./butler_main/sources/skills/pool/general/pdf-read",
+                                    "./butler_main/platform/skills/pool/research/paper-search",
+                                    "./butler_main/platform/skills/pool/general/pdf-read",
                                 ]
                             }
                         },

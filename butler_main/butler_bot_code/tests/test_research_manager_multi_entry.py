@@ -91,11 +91,11 @@ class ResearchManagerMultiEntryTests(unittest.TestCase):
         )
         self.assertEqual(
             result.route["unit_root"],
-            "butler_main/research/units/paper_manager/progress_summary",
+            "butler_main/incubation/research/units/paper_manager/progress_summary",
         )
         self.assertEqual(
             result.payload["dispatch"]["unit_root"],
-            "butler_main/research/units/paper_manager/progress_summary",
+            "butler_main/incubation/research/units/paper_manager/progress_summary",
         )
 
     def test_result_includes_scenario_workflow_projection(self) -> None:

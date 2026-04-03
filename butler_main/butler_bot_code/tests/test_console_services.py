@@ -40,7 +40,7 @@ class ConsoleServicesTests(unittest.TestCase):
       "owner": "butler",
       "default_injection_mode": "shortlist",
       "skills": [
-        "./butler_main/sources/skills/pool/ops/sample-skill"
+        "./butler_main/platform/skills/pool/ops/sample-skill"
       ]
     }
   }

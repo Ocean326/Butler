@@ -1,0 +1,23 @@
+---
+title: "Section 1. Background and Current Landscape"
+subtitle: "Overleaf-ready Markdown handoff"
+---
+
+# 1 Background and Current Landscape
+
+## Problem definition
+Road-network-constrained trajectory recovery asks how to reconstruct a dense trajectory, a route-segment sequence, or a complete path from sparse and partially missing observations while preserving explicit topological feasibility on the underlying road network. Unlike conventional map matching, the task is not exhausted by aligning observed points to candidate roads; it must jointly infer latent positions, connecting segments, and path legality over missing intervals under one coherent formulation. The problem is therefore a coupled estimation problem over road topology, spatiotemporal dependence, and uncertainty induced by low sampling rates, long missing spans, and irregular intervals. For this reason, the literature has converged on map-constrained sparse-GPS recovery as the dominant benchmark setting, while camera-based recovery, multimodal recovery, and generative completion are better understood as boundary extensions than replacements of the core problem definition. (Trace to the evidence map for representative paper ids before replacing these notes with `\cite{...}` commands in the final ACM manuscript.)
+
+## Method evolution
+Methodologically, the field first grew out of constrained path inference and sequence restoration, where sparse observations were completed by searching road-feasible transitions and learning map-aware recovery under strong structural priors. It then shifted toward graph-enhanced and transformer-style designs, where richer spatial representations, longer-range road dependencies, and interval-aware temporal modeling moved performance beyond local transition heuristics. Recent studies have widened the design space again by introducing pretrained models, streaming inference, multimodal cues, and generative mechanisms to better absorb longer missing spans, irregular intervals, and higher uncertainty. Across these transitions, however, sparse-GPS road-network reconstruction remains the dominant evaluation anchor, which means newer paradigms are still judged by how well they preserve or extend the core recovery setting rather than by novelty alone. (Insert final citations using the paper ids listed in `docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md`.)
+
+## Limitations of prior work
+Despite rapid progress, prior work still optimizes point-wise reconstruction more directly than route legality or segment-level fidelity, so gains on MAE- or RMSE-style metrics do not automatically translate into stronger path recovery quality. A second limitation is that road-network knowledge remains unevenly incorporated: lighter methods often underuse structural priors, whereas stronger graph or semantic designs commonly rely on heavier assumptions, curated inputs, or higher transfer costs across cities and sensing regimes. Generalization evidence is also notably thinner than in-distribution accuracy evidence, especially under irregular intervals, observation shift, and cross-domain deployment. Foundation-model and generative directions broaden the modeling space, but they still leave unresolved how expressive recovery can remain topology-consistent, data-efficient, and operationally stable under strict road constraints. (Replace this trace note with KDD-style citations once the bibliography mirror is restored.)
+
+## This paper's entry point
+This paper therefore does not position itself as merely another deeper recovery backbone. Instead, it treats sparse trajectory recovery as a unified point-level and segment-level problem under explicit road-network constraints and argues that route legality, reconstruction fidelity, and transferability should be modeled and evaluated together rather than as loosely connected local improvements. Our entry point is to reorganize prior work around the missing synthesis between road priors, spatiotemporal dynamics, and robustness to irregular or shifted observations. This framing gives the next methodological step a sharper target: success should be judged by coherent recovery quality and cross-scenario robustness, not only by isolated gains on a single recovery submetric.
+
+## Notes for Overleaf
+- Replace trace notes with `\cite{...}` using the representative paper ids in `docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md`.
+- Move this section into the ACM manuscript body and keep the section title aligned with the final paper outline.
+- Keep `docs/0402/kdd_template_pdf_build.md` as the packaging checklist for the eventual ACM/KDD PDF build.

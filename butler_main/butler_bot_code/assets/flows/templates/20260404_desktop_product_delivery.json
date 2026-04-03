@@ -1,0 +1,203 @@
+{
+  "flow_id": "20260404_desktop_product_delivery",
+  "definition_id": "20260404_desktop_product_delivery",
+  "asset_kind": "template",
+  "label": "Desktop Product Delivery",
+  "description": "reusable desktop product flow",
+  "workflow_kind": "managed_flow",
+  "goal": "ship a desktop app increment safely",
+  "guard_condition": "handoff is release-ready",
+  "phase_plan": [
+    {
+      "phase_id": "plan",
+      "title": "Plan",
+      "objective": "plan",
+      "done_when": "done",
+      "retry_phase_id": "plan",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "build"
+    },
+    {
+      "phase_id": "build",
+      "title": "Build",
+      "objective": "build",
+      "done_when": "done",
+      "retry_phase_id": "build",
+      "fallback_phase_id": "plan",
+      "next_phase_id": ""
+    }
+  ],
+  "default_role_pack": "coding_flow",
+  "allowed_execution_modes": [
+    "simple",
+    "medium"
+  ],
+  "launch_mode": "flow",
+  "catalog_flow_id": "",
+  "execution_mode": "medium",
+  "session_strategy": "role_bound",
+  "role_pack_id": "coding_flow",
+  "execution_context": "repo_bound",
+  "risk_level": "normal",
+  "autonomy_profile": "default",
+  "manager_handoff": {
+    "summary": "template:20260404_desktop_product_delivery managed_flow · ship a desktop app increment safely",
+    "label": "Desktop Product Delivery",
+    "description": "reusable desktop product flow",
+    "goal": "ship a desktop app increment safely",
+    "guard_condition": "handoff is release-ready",
+    "workflow_kind": "managed_flow",
+    "asset_kind": "template",
+    "mutation": "create",
+    "phase_plan": [
+      {
+        "phase_id": "plan",
+        "title": "Plan",
+        "objective": "plan",
+        "done_when": "done",
+        "retry_phase_id": "plan",
+        "fallback_phase_id": "plan",
+        "next_phase_id": "build"
+      },
+      {
+        "phase_id": "build",
+        "title": "Build",
+        "objective": "build",
+        "done_when": "done",
+        "retry_phase_id": "build",
+        "fallback_phase_id": "plan",
+        "next_phase_id": ""
+      }
+    ],
+    "review_checklist": [
+      "check delivery scope",
+      "check release notes"
+    ],
+    "role_guidance": {},
+    "control_profile": {
+      "task_archetype": "repo_delivery",
+      "packet_size": "medium",
+      "evidence_level": "standard",
+      "gate_cadence": "phase",
+      "repo_binding_policy": "disabled",
+      "repo_contract_paths": [],
+      "manager_notes": "",
+      "force_gate_next_turn": false,
+      "force_doctor_next_turn": false
+    },
+    "doctor_policy": {},
+    "supervisor_profile": {
+      "archetype": "delivery_manager",
+      "primary_posture": "steady_delivery",
+      "quality_bar": "reviewable_increment",
+      "risk_bias": "balanced",
+      "review_focus": [
+        "release readiness",
+        "user-visible regression"
+      ],
+      "done_policy": {
+        "must_block_on": [
+          "broken build"
+        ],
+        "can_defer_with_note": [
+          "minor polish"
+        ]
+      },
+      "manager_notes": "Prefer stable weekly delivery."
+    },
+    "run_brief": "Use this template when the work needs clear delivery cadence.",
+    "source_bindings": [
+      {
+        "kind": "doc",
+        "label": "PRD",
+        "ref": "docs/daily-upgrade/0402/prd.md",
+        "notes": "Desktop product direction"
+      }
+    ],
+    "manage_stage": "commit"
+  },
+  "asset_state": {
+    "status": "active",
+    "stage": "commit"
+  },
+  "lineage": {},
+  "instance_defaults": {
+    "execution_mode": "medium",
+    "session_strategy": "role_bound",
+    "role_pack_id": "coding_flow",
+    "execution_context": "repo_bound",
+    "launch_mode": "flow"
+  },
+  "review_checklist": [
+    "check delivery scope",
+    "check release notes"
+  ],
+  "role_guidance": {},
+  "control_profile": {
+    "task_archetype": "repo_delivery",
+    "packet_size": "medium",
+    "evidence_level": "standard",
+    "gate_cadence": "phase",
+    "repo_binding_policy": "disabled",
+    "repo_contract_paths": [],
+    "manager_notes": "",
+    "force_gate_next_turn": false,
+    "force_doctor_next_turn": false
+  },
+  "doctor_policy": {},
+  "supervisor_profile": {
+    "archetype": "delivery_manager",
+    "primary_posture": "steady_delivery",
+    "quality_bar": "reviewable_increment",
+    "risk_bias": "balanced",
+    "review_focus": [
+      "release readiness",
+      "user-visible regression"
+    ],
+    "done_policy": {
+      "must_block_on": [
+        "broken build"
+      ],
+      "can_defer_with_note": [
+        "minor polish"
+      ]
+    },
+    "manager_notes": "Prefer stable weekly delivery."
+  },
+  "run_brief": "Use this template when the work needs clear delivery cadence.",
+  "source_bindings": [
+    {
+      "kind": "doc",
+      "label": "PRD",
+      "ref": "docs/daily-upgrade/0402/prd.md",
+      "notes": "Desktop product direction"
+    }
+  ],
+  "bundle_manifest": {
+    "bundle_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery",
+    "manager_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/manager.md",
+    "supervisor_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/supervisor.md",
+    "doctor_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/doctor.md",
+    "doctor_skill_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/skills/doctor/SKILL.md",
+    "sources_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/sources.json",
+    "manager_prompt": "manager.md",
+    "supervisor_prompt": "supervisor.md",
+    "doctor_prompt": "doctor.md",
+    "sources_path": "sources.json",
+    "references_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/references",
+    "doctor_references_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/references/doctor",
+    "assets_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/assets",
+    "derived_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/derived",
+    "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+    "derived_supervisor_knowledge": "bundles/templates/20260404_desktop_product_delivery/derived/supervisor_knowledge.json",
+    "derived": {
+      "supervisor_compiled": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_desktop_product_delivery/derived/supervisor_knowledge.json"
+    }
+  },
+  "source_asset_key": "",
+  "source_asset_kind": "",
+  "source_asset_version": "",
+  "version": "1.3.0",
+  "created_at": "2026-04-04 00:34:48",
+  "updated_at": "2026-04-04 00:34:48"
+}

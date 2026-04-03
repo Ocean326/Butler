@@ -23,17 +23,17 @@ class SkillWorkspaceLayoutTests(unittest.TestCase):
         path = skill_temp_dir(REPO_ROOT, "verify")
         self.assertEqual(
             path,
-            REPO_ROOT / "butler_main" / "sources" / "skills" / "temp" / "verify",
+            REPO_ROOT / "butler_main" / "platform" / "skills" / "temp" / "verify",
         )
 
     def test_upstream_runtime_uses_public_skill_name_for_output(self) -> None:
         self.assertEqual(SOURCE_OUTPUT_NAMES["trafilatura-web-extract"], "web-article-extract")
         self.assertEqual(SOURCE_OUTPUT_NAMES["feedparser-rss-ingest"], "rss-feed-watch")
 
-    def test_skill_source_root_points_to_sources_skills(self) -> None:
+    def test_skill_source_root_points_to_platform_skills(self) -> None:
         self.assertEqual(
             skill_source_root(REPO_ROOT),
-            REPO_ROOT / "butler_main" / "sources" / "skills",
+            REPO_ROOT / "butler_main" / "platform" / "skills",
         )
 
 

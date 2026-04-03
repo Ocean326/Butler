@@ -104,7 +104,7 @@ def _arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "paths",
         nargs="*",
-        default=["butler_main/chat", "butler_main/orchestrator", "butler_main/butler_bot_code/tests"],
+        default=["butler_main/products/chat", "butler_main/products/campaign_orchestrator/orchestrator", "butler_main/butler_bot_code/tests"],
         help="Files or directories to scan.",
     )
     parser.add_argument("--write", action="store_true", help="Apply safe import rewrites in place.")

@@ -1,0 +1,580 @@
+[
+  {
+    "source_root": "legacy",
+    "path": "./butler_main/butler_bot_agent/skills/daily-inspection",
+    "name": "daily-inspection",
+    "description": "每日启动与收口的例行巡检流程。当用户要求做「每日巡检」「今日启动」「今日收口」或确认当日待办/明日优先级时使用，按 WORKFLOW 调用 orchestrator、secretary、file-manager 等并产出到公司目录。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "legacy",
+    "path": "./butler_main/butler_bot_agent/skills/feishu-doc-sync",
+    "name": "feishu-doc-sync",
+    "description": "创建/更新飞书云文档，并把文档链接发到聊天；支持后台自动流程将任务摘要同步到一份「任务云文档」。",
+    "category": "feishu",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "legacy",
+    "path": "./butler_main/butler_bot_agent/skills/feishu-webhook-tools",
+    "name": "feishu-webhook-tools",
+    "description": "通过 PowerShell 向飞书 Webhook 推送消息，或执行 Cursor Agent 后把输出转发到飞书。用于轻量通知、自动化摘要推送和脚本化集成。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "legacy",
+    "path": "./butler_main/butler_bot_agent/skills/feishu_chat_history",
+    "name": "feishu_chat_history",
+    "description": "飞书会话历史消息的获取、分页拉取与导出。当需要「获取/下载/访问/查找历史聊天记录」、按时间范围或关键词梳理对话、将会话记录导出到本地时使用。基于飞书开放平台「获取会话历史消息」API（im v1 message list），独立于主代码，避免 butler_bot 臃肿。",
+    "category": "feishu",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "legacy",
+    "path": "./butler_main/butler_bot_agent/skills/feishu_doc_read",
+    "name": "feishu-doc-read",
+    "description": "读取飞书云文档内容（纯文本/富文本块/Markdown）。当用户分享飞书文档链接、要求获取/阅读/抓取/解析飞书云文档时使用。基于飞书开放平台 docx/v1 API，独立于主代码。",
+    "category": "feishu",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "legacy",
+    "path": "./butler_main/butler_bot_agent/skills/proactive-talk",
+    "name": "proactive-talk",
+    "description": "后台主动沟通技能。用于在合适窗口向用户对话窗发送轻量跟进（tell_user），例如阶段完成、阻塞提醒、下一步建议、小结回执。避免只在后台流程里自言自语。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "legacy",
+    "path": "./butler_main/butler_bot_agent/skills/skill-library-explore",
+    "name": "skill-library-explore",
+    "description": "从公开技能库与代码仓库（GitHub / PyPI / npm / Skills.sh）搜索可复用工具或 skill，产出结构化探索报告（含安全审阅要点）。用于 Butler 缺能力时\"先找轮子再造轮子\"的首轮探索。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "legacy",
+    "path": "./butler_main/butler_bot_agent/skills/web-image-ocr-cn",
+    "name": "web-image-ocr-cn",
+    "description": "下载并识别中文网页抓取里的图片内容（OCR）的旧方案。当前已不再作为默认链路，优先改用 web-note-capture-cn 下载图片后由 agent 直接按本地路径读图整理。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "legacy",
+    "path": "./butler_main/butler_bot_agent/skills/web-note-capture-cn",
+    "name": "web-note-capture-cn",
+    "description": "抓取知乎专栏、小红书分享页等中文网页内容，并在落盘时把图片下载到本地，供 agent 直接按图片路径读图整理。用于用户给出 zhihu/xiaohongshu/xhslink 链接并要求提取标题、正文、作者、图片、互动数据、导出 Markdown/JSON 的场景。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/chat/daily-inspection",
+    "name": "daily-inspection",
+    "description": "每日启动与收口的例行巡检流程。当用户要求做「每日巡检」「今日启动」「今日收口」或确认当日待办/明日优先级时使用，按 WORKFLOW 调用 orchestrator、secretary、file-manager 等并产出到公司目录。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "automation_safe"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/chat/feishu-doc-sync",
+    "name": "feishu-doc-sync",
+    "description": "创建/更新飞书云文档，并把文档链接发到聊天；支持后台自动流程将任务摘要同步到一份「任务云文档」。",
+    "category": "feishu",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "chat_content_share"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/chat/feishu-webhook-tools",
+    "name": "feishu-webhook-tools",
+    "description": "通过 PowerShell 向飞书 Webhook 推送消息，或执行 Cursor Agent 后把输出转发到飞书。用于轻量通知、自动化摘要推送和脚本化集成。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "automation_safe"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/chat/feishu_chat_history",
+    "name": "feishu_chat_history",
+    "description": "飞书会话历史消息的获取、分页拉取与导出。当需要「获取/下载/访问/查找历史聊天记录」、按时间范围或关键词梳理对话、将会话记录导出到本地时使用。基于飞书开放平台「获取会话历史消息」API（im v1 message list），独立于主代码，避免 butler_bot 臃肿。",
+    "category": "feishu",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "codex_default"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/chat/feishu_doc_read",
+    "name": "feishu-doc-read",
+    "description": "读取飞书云文档内容（纯文本/富文本块/Markdown）。当用户分享飞书文档链接、要求获取/阅读/抓取/解析飞书云文档时使用。基于飞书开放平台 docx/v1 API，独立于主代码。",
+    "category": "feishu",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "chat_content_share",
+      "codex_default"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/chat/proactive-talk",
+    "name": "proactive-talk",
+    "description": "后台主动沟通技能。用于在合适窗口向用户对话窗发送轻量跟进（tell_user），例如阶段完成、阻塞提醒、下一步建议、小结回执。避免只在后台流程里自言自语。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "automation_safe"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/chat/skill-library-explore",
+    "name": "skill-library-explore",
+    "description": "从公开技能库与代码仓库（GitHub / PyPI / npm / Skills.sh）搜索可复用工具或 skill，产出结构化探索报告（含安全审阅要点）。用于 Butler 缺能力时\"先找轮子再造轮子\"的首轮探索。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "codex_default",
+      "automation_safe"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/chat/web-note-capture-cn",
+    "name": "web-note-capture-cn",
+    "description": "抓取知乎专栏、小红书分享页等中文网页内容，并在落盘时把图片下载到本地，供 agent 直接按图片路径读图整理。用于用户给出 zhihu/xiaohongshu/xhslink 链接并要求提取标题、正文、作者、图片、互动数据、导出 Markdown/JSON 的场景。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "chat_content_share",
+      "codex_default"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/forum/discourse-topic-read",
+    "name": "discourse-topic-read",
+    "description": "读取 Discourse 最新话题或指定 topic，用于社区论坛公告、支持贴和讨论串整理。",
+    "category": "forum",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/forum/github-discussions-read",
+    "name": "github-discussions-read",
+    "description": "读取 GitHub Discussions 列表或单条讨论，适合开源社区支持区、路线图讨论和 FAQ 整理。",
+    "category": "forum",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/forum/hackernews-thread-watch",
+    "name": "hackernews-thread-watch",
+    "description": "读取 Hacker News 热门或指定线程，输出标题、分数、评论摘要，适合开发工具和 AI 讨论跟踪。",
+    "category": "forum",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "codex_default",
+      "automation_safe",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/forum/reddit-thread-read",
+    "name": "reddit-thread-read",
+    "description": "读取 Reddit 主题帖或 subreddit 列表，输出标题、分数、评论摘要，适合做社区舆情和帖子梳理。",
+    "category": "forum",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/forum/stackexchange-search",
+    "name": "stackexchange-search",
+    "description": "搜索 Stack Exchange / Stack Overflow 问答，输出问题标题、答案数和链接，适合技术问题对照检索。",
+    "category": "forum",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "codex_default",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/general/rss-feed-watch",
+    "name": "rss-feed-watch",
+    "description": "拉取 RSS / Atom feed，输出最近条目摘要，适合做订阅监控、更新跟踪和摘要生成。",
+    "category": "general",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "codex_default",
+      "automation_safe",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/general/web-article-extract",
+    "name": "web-article-extract",
+    "description": "抓取普通网页正文并生成结构化摘录，优先用于博客、公告页、论坛正文页和研究页的轻量提取。",
+    "category": "general",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/imported/magicskills-c-to-ast",
+    "name": "c-to-ast",
+    "description": "Parse C source code into an Abstract Syntax Tree (AST). Use when analyzing C programs, understanding code structure, performing static analysis, or preparing code for further program analysis (e.g., CFG, DFG, vulnerability detection).",
+    "category": "",
+    "status": "active",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/forum/discourse-api-monitor",
+    "name": "discourse-api-monitor",
+    "description": "Incubating Butler wrapper spec for upstream 'Discourse API'.",
+    "category": "forum",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/forum/github-discussions-graphql",
+    "name": "github-discussions-graphql",
+    "description": "Incubating Butler wrapper spec for upstream 'GitHub Discussions GraphQL API'.",
+    "category": "forum",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/forum/hackernews-api-ingest",
+    "name": "hackernews-api-ingest",
+    "description": "Incubating Butler wrapper spec for upstream 'Hacker News API'.",
+    "category": "forum",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/forum/praw-reddit-ingest",
+    "name": "praw-reddit-ingest",
+    "description": "Incubating Butler wrapper spec for upstream 'PRAW'.",
+    "category": "forum",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/forum/stackexchange-api-ingest",
+    "name": "stackexchange-api-ingest",
+    "description": "Incubating Butler wrapper spec for upstream 'Stack Exchange API'.",
+    "category": "forum",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/general/feedparser-rss-ingest",
+    "name": "feedparser-rss-ingest",
+    "description": "Incubating Butler wrapper spec for upstream 'feedparser'.",
+    "category": "general",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/general/reader-feed-workbench",
+    "name": "reader-feed-workbench",
+    "description": "Incubating Butler wrapper spec for upstream 'reader'.",
+    "category": "general",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/general/trafilatura-web-extract",
+    "name": "trafilatura-web-extract",
+    "description": "Incubating Butler wrapper spec for upstream 'Trafilatura'.",
+    "category": "general",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/research/arxiv-py-paper-retrieval",
+    "name": "arxiv-py-paper-retrieval",
+    "description": "Incubating Butler wrapper spec for upstream 'arxiv.py'.",
+    "category": "research",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/research/crossref-rest-metadata",
+    "name": "crossref-rest-metadata",
+    "description": "Incubating Butler wrapper spec for upstream 'Crossref REST API'.",
+    "category": "research",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/research/europepmc-rest-biomed",
+    "name": "europepmc-rest-biomed",
+    "description": "Incubating Butler wrapper spec for upstream 'Europe PMC RESTful Web Service'.",
+    "category": "research",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/research/openalex-pyalex",
+    "name": "openalex-pyalex",
+    "description": "Incubating Butler wrapper spec for upstream 'OpenAlex plus PyAlex'.",
+    "category": "research",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/incubating/research/semantic-scholar-api",
+    "name": "semantic-scholar-api",
+    "description": "Incubating Butler wrapper spec for upstream 'Semantic Scholar API'.",
+    "category": "research",
+    "status": "incubating",
+    "missing_fields": [],
+    "collections": []
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/ops/memory-curation",
+    "name": "memory-curation",
+    "description": "盘点、整理并修复 Butler chat 记忆资产，覆盖 recent/local memory 的 hot/cold 分层、legacy 路径残留、可疑编码污染、镜像冗余与归档整理建议。用于 recent memory 迁移后巡检、local memory 治理、历史路径批量清洗、记忆数据整理报告生成。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "skill_ops"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/ops/skill-github-import",
+    "name": "skill-github-import",
+    "description": "从 GitHub 公共仓库按目录导入 skill 到 Butler 的 `sources/skills/pool/`，用于把外部 skill 样例或可复用 skill 真正落到本地 skill 池，而不是只停留在搜索结果。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "codex_default",
+      "skill_ops"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/ops/skill-incubating-promote",
+    "name": "skill-incubating-promote",
+    "description": "将 `sources/skills/pool/incubating/` 下的候选 skill 提升为真实可执行的 active skill；若命中未转换候选，先做转换，再供后续复用。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "skill_ops"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/ops/skill-pool-maintain",
+    "name": "skill-pool-maintain",
+    "description": "盘点、整理并生成 Butler 全局 skill 池的维护报告，重点检查目录布局、frontmatter 完整度、可迁移建议与 collection 暴露建议。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "skill_ops"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/ops/skill-pool-verify",
+    "name": "skill-pool-verify",
+    "description": "校验 Butler skill 池与 collection registry 的完整性，识别坏路径、重复 skill 名、缺少 `SKILL.md`、缺 frontmatter、未命中的 collection 暴露项。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "skill_ops"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/ops/skill-upstream-intake-review",
+    "name": "skill-upstream-intake-review",
+    "description": "将外部 API / library 候选上游导入 Butler 本地 incubating skill 池，生成逐项审阅结果和落库报告，解决“不是现成 SKILL 仓库、但值得转成 Butler skill”的 intake/review 问题。",
+    "category": "operations",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "skill_ops"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/research/arxiv-search",
+    "name": "arxiv-search",
+    "description": "搜索 arXiv 论文并输出标题、作者、摘要和链接，适合研究主题跟踪和论文初筛。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "chat_default",
+      "codex_default",
+      "automation_safe",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/research/crossref-doi-enrich",
+    "name": "crossref-doi-enrich",
+    "description": "按 DOI 或 bibliographic query 获取 Crossref 元数据，适合 DOI 补全和参考文献规范化。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "automation_safe",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/research/europepmc-search",
+    "name": "europepmc-search",
+    "description": "搜索 Europe PMC 文献，适合生物医药和生命科学文献检索。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "automation_safe",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/research/openalex-search",
+    "name": "openalex-search",
+    "description": "搜索 OpenAlex works / authors 等实体，适合研究图谱、机构作者和主题全景检索。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "upstream_active"
+    ]
+  },
+  {
+    "source_root": "source",
+    "path": "./butler_main/platform/skills/pool/research/semantic-scholar-search",
+    "name": "semantic-scholar-search",
+    "description": "搜索 Semantic Scholar 文献或指定 paper id，输出摘要、引用数和链接，适合 citation 扩展。",
+    "category": "research",
+    "status": "active",
+    "missing_fields": [],
+    "collections": [
+      "codex_default",
+      "upstream_active"
+    ]
+  }
+]

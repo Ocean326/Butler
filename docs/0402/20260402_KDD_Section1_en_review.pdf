@@ -1,0 +1,176 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 3620 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+14 TL
+() Tj
+T*
+(1 Background and Current Landscape) Tj
+T*
+() Tj
+T*
+(Problem definition) Tj
+T*
+(Road-network-constrained trajectory recovery studies how to reconstruct a dense trajectory,) Tj
+T*
+(a route-segment sequence, or a complete path from sparse and partially missing observations) Tj
+T*
+(while preserving explicit topological feasibility on the road network. Unlike conventional) Tj
+T*
+(map matching, the task is not limited to aligning observed points to candidate roads; it) Tj
+T*
+(must also infer latent locations, connecting segments, and path legality over the missing) Tj
+T*
+(intervals under a unified model. The problem is therefore a coupled estimation task over) Tj
+T*
+(topology, spatiotemporal dependence, and uncertainty induced by low sampling rates, long) Tj
+T*
+(missing spans, and irregular sampling intervals. As a result, the literature has converged) Tj
+T*
+(on map-constrained sparse-GPS recovery as the core benchmark setting, while camera-based) Tj
+T*
+(recovery, multimodal recovery, and generative completion extend the task boundary rather) Tj
+T*
+(than replace its main formulation. \(Trace to the evidence map for representative paper ids) Tj
+T*
+(before replacing these notes with `\\cite{...}` commands in the final ACM manuscript.\)) Tj
+T*
+() Tj
+T*
+(Method evolution) Tj
+T*
+(The methodological line first grew from constrained path inference and sequence restoration,) Tj
+T*
+(where sparse observations were completed by searching road-feasible transitions and learning) Tj
+T*
+(map-aware recovery under strong structural priors. It then moved toward graph-enhanced and) Tj
+T*
+(transformer-style recovery, where richer spatial representations, longer-range road) Tj
+T*
+(dependencies, and interval-aware temporal modeling improved performance beyond local) Tj
+T*
+(transition heuristics. More recent work broadens the design space again by incorporating) Tj
+T*
+(pretrained models, streaming inference, multimodal cues, and generative mechanisms to better) Tj
+T*
+(handle longer missing spans, irregular intervals, and higher uncertainty. Across these) Tj
+T*
+(shifts, however, sparse-GPS road-network reconstruction remains the dominant evaluation) Tj
+T*
+(anchor, so newer paradigms are still judged by how well they preserve or extend this core) Tj
+T*
+(recovery setting. \(Insert final citations using the paper ids listed in) Tj
+T*
+(`docs/0402/20260402_KDD??_???????_v2_????.md`.\)) Tj
+T*
+() Tj
+T*
+(Limitations of prior work) Tj
+T*
+(Despite rapid progress, prior studies still optimize point-wise reconstruction more directly) Tj
+T*
+(than route validity or segment-level fidelity, so gains on MAE- or RMSE-style metrics do not) Tj
+T*
+(necessarily imply stronger path recovery quality. A second limitation is that road-network) Tj
+T*
+(knowledge remains unevenly incorporated: weaker methods underuse structural priors, whereas) Tj
+T*
+(stronger graph or semantic designs often introduce heavier assumptions, curated inputs, or) Tj
+T*
+(higher transfer cost across cities and sensing regimes. Generalization evidence is also) Tj
+T*
+(thinner than in-distribution accuracy evidence, especially under irregular intervals,) Tj
+T*
+(observation shift, and cross-domain deployment. Finally, foundation-model and generative) Tj
+T*
+(directions enlarge the modeling space, but they still leave unresolved how to maintain) Tj
+T*
+(topology consistency, data efficiency, and operational stability under strict road) Tj
+T*
+(constraints. \(Replace this trace note with KDD-style citations once the bibliography mirror) Tj
+T*
+(is restored.\)) Tj
+T*
+() Tj
+T*
+(This paper's entry point) Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+4 0 obj
+<< /Length 1321 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+14 TL
+(This paper therefore does not position itself as merely another deeper recovery backbone.) Tj
+T*
+(Instead, it treats sparse trajectory recovery as a unified point-level and segment-level) Tj
+T*
+(problem under explicit road-network constraints, and argues that route legality,) Tj
+T*
+(reconstruction fidelity, and transferability should be modeled and evaluated together rather) Tj
+T*
+(than as loosely connected local improvements. Our entry point is to organize prior work) Tj
+T*
+(around the missing synthesis between road priors, spatiotemporal dynamics, and robustness to) Tj
+T*
+(irregular or shifted observations. This framing gives the next methodological step a clearer) Tj
+T*
+(target: success should be judged by coherent recovery quality and cross-scenario robustness,) Tj
+T*
+(not only by isolated benchmark gains on a single recovery submetric.) Tj
+T*
+() Tj
+T*
+(Notes for Overleaf) Tj
+T*
+(- Replace trace notes with `\\cite{...}` using the representative paper ids in) Tj
+T*
+(`docs/0402/20260402_KDD??_???????_v2_????.md`.) Tj
+T*
+(- Move this section into the ACM manuscript body and keep the section title aligned with the) Tj
+T*
+(final paper outline.) Tj
+T*
+(- Keep `docs/0402/kdd_template_pdf_build.md` as the packaging checklist for the eventual) Tj
+T*
+(ACM/KDD PDF build.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Type /Pages /Kids [ 3 0 R 5 0 R ] /Count 2 >>
+endobj
+7 0 obj
+<< /Type /Catalog /Pages 6 0 R >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000085 00000 n 
+0000003757 00000 n 
+0000003883 00000 n 
+0000005256 00000 n 
+0000005382 00000 n 
+0000005447 00000 n 
+trailer
+<< /Size 8 /Root 7 0 R >>
+startxref
+5496
+%%EOF

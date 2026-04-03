@@ -1,528 +1,469 @@
-# Butler-flow Desktop V2.1 PRD（main 分支对齐 / flow CLI 入口分析 / TUI + Desktop 双轨）
+# Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）
 
 - 日期：2026-04-02
-- 版本：V2.1 更新版
-- 适用范围：**Butler-flow / orchestrator / workflow_session / flow CLI / TUI / Desktop**
-- 分支基准：**main**
-- 文档目标：在此前 V2.1 的基础上，进一步确认 `main` 分支下 **flow CLI 的真实操作入口**，并据此修正 Butler-flow 的终端与桌面双轨计划
+- 版本：V2.1 更新版（前台 flow 对齐）
+- 适用范围：**仅前台 `butler-flow` / flow CLI / Textual TUI / 未来 Desktop**
+- 分支基准：`main`
+- 文档目标：把此前混入 `orchestrator / mission / branch / workflow_session` 的规划线剥离掉，改为严格以前台 `butler-flow` 当前真源、CLI 入口、sidecar 状态和已落地 TUI 为基准来定义 Desktop V2.1
 
 ---
 
-## 0. 本次更新的关键结论
+## 改前四件事
 
-相比上一版 V2.1，这次最重要的新结论是：
+| 项 | 内容 |
+| --- | --- |
+| 目标功能 | 去掉后台 `orchestrator` 线后，重新定义 `butler-flow` 的前台桌面/TUI 双轨计划，并把 Desktop 规划贴住当前 foreground flow 真源。 |
+| 所属层级 | 主落 L1 `Agent Execution Runtime`，辅用 L2 本地状态与 sidecars。 |
+| 当前真源文档 | `0331/02` 定义前台 CLI 总入口；`0401/01` 定义 `new/resume/exec + setup picker`；`0401/02` 定义 `workspace / single flow / /manage` 信息架构；`0402/02` 与 `0402/11` 定义 manage center 与 supervisor 观测流。 |
+| 计划查看的代码与测试 | `butler_main/butler_flow/`、`butler_main/butler_flow/tui/`、`tools/butler-flow`、`butler_main/__main__.py`；相关测试为 `test_butler_flow.py`、`test_butler_flow_tui_controller.py`、`test_butler_flow_tui_app.py`。 |
 
-> **Butler 当前的终端链路不是“两层”，而是“三层”。**
+## 0. 本次修正的核心结论
 
-### 第一层：系统级 terminal control plane（已存在）
-即：
-- `butler_main/butler_bot_code/manager.ps1`
+相比此前版本，这次最重要的修正是：
 
-职责：
-- 主进程 / 心跳 / 状态 / PID / 日志的启动、停止、重启、查看
-- 系统级运维与排障
+> **Butler-flow Desktop V2.1 必须严格跟随前台 `butler-flow` 真源，不再借用后台 `orchestrator` 的 `mission / branch / workflow_session` 作为桌面产品对象模型。**
 
-### 第二层：flow runtime CLI（已存在）
-即：
-- `butler_main/orchestrator/runner.py`
-- 真实逻辑位于 `butler_main/orchestrator/interfaces/runner.py`
+原因不是后台线无价值，而是它与当前前台 `butler-flow` 的现役边界冲突：
 
-职责：
-- 启动 orchestrator runner
-- 执行 tick / dispatch / execute / recover
-- 推进 mission / node / branch 的生命周期
-- 写 run_state / watchdog_state / pid / note
+1. 当前前台 `butler-flow` 明确是 **foreground attached runtime**，不进入 `campaign/orchestrator` 主链。
+2. 当前前台 `butler-flow` 的真源是本地 `workflow_state.json + flow_definition.json + turns/actions/events/artifacts/role_sessions/handoffs`。
+3. 当前 Textual TUI 已经不是空壳，而是已有：
+   - `workspace`
+   - `single flow`
+   - `supervisor / workflow` 双流
+   - `/manage` transcript-first shell
+4. 因此前台 Desktop 规划不该再从后台 mission board 反推，而应从**现有前台 flow payload 与 sidecar 投影**继续抽象。
 
-### 第三层：flow-native interactive TUI（待补齐）
-也就是未来要实现的：
-- flow list
-- active children
-- workflow session detail
-- runtime / contracts / events quick view
-- flow actions
+一句话：
 
-因此，V2.1 更新版最核心的修正是：
-
-> **不要再把 `manager.ps1` 和未来的 TUI 之间缺失的那一层忽略掉。当前真正会推进 flow 的 CLI 入口，其实已经存在，并且就是 orchestrator runner CLI。**
+> **这次不是“给 orchestrator 做桌面”，而是“让现有 `butler-flow` 形成 desktop-ready foreground surface”。**
 
 ---
 
-## 1. main 分支上已确认的 flow CLI 入口
+## 1. main 分支上已确认的前台 flow 入口
 
-## 1.1 runner.py 现在只是薄入口
+## 1.1 当前公共入口不是 `runner.py`，而是 `butler-flow`
 
-在 `main` 分支上，`butler_main/orchestrator/runner.py` 已经不再承载主要实现，而是一个薄转发入口：
+在 `main` 分支上，前台 flow 的公共入口已经固定为：
 
-- 从 `butler_main/orchestrator/interfaces/runner.py` 导入：
-  - `main`
-  - `run_orchestrator_cycle`
-  - `run_orchestrator_service`
-  - runtime state 相关常量与 builder
-- 最后通过 `if __name__ == "__main__": sys.exit(main())` 作为脚本入口
+- `butler-flow`
+- `butler-flow new`
+- `butler-flow resume`
+- `butler-flow exec`
+- `tools/butler-flow ...`
+- `python -m butler_main ...`
 
-这说明：
+当前公开能力围绕这几类命令展开：
 
-1. `runner.py` 仍然是 CLI 可调用入口
-2. 真实 CLI 协议和行为已经被整理进 `interfaces/runner.py`
-3. `main` 分支的 orchestrator 正在向“接口层 + 入口薄壳”收口
+- `new`
+- `resume`
+- `exec new / exec resume`
+- `status`
+- `list`
+- `preflight`
+- `action`
+- `tui`
 
----
+因此，Desktop V2.1 必须承认一个现实：
 
-## 1.2 真正的 flow CLI 协议在 interfaces/runner.py
+> **Butler-flow 已经有 flow-native CLI；缺的不是“flow CLI”，而是更清晰的 shared surface 与更完整的 desktop shell。**
 
-`butler_main/orchestrator/interfaces/runner.py` 已确认提供了完整 CLI 行为。
+## 1.2 当前前台链路应理解为三层
 
-### 直接可见的 CLI 参数
+### Layer A：系统暴露与安装层（已存在）
 
-当前 `main()` 里通过 argparse 暴露：
-
-- `--config`（必填）
-- `--once`（可选）
-
-这说明 runner CLI 至少支持两种运行模式：
-
-### A. 单次循环模式
-- 通过 `--once`
-- 用于：
-  - 单轮 tick / dispatch / execute 检查
-  - 调试
-  - 冒烟测试
-  - 未来 TUI 的“手动 refresh / 单次推进”后端支撑
-
-### B. 常驻服务模式
-- 不带 `--once`
-- 进入循环执行 `run_orchestrator_service(...)`
-- 用于：
-  - 后台常驻推进 flow
-  - 周期性调度
-  - 自动恢复
-  - 自动派发
-  - 自动执行
-
-这意味着当前 flow CLI 本质上不是“交互式命令菜单”，而是：
-
-> **一个 daemon-style / runner-style 的执行入口。**
-
----
-
-## 1.3 当前 runner 默认已经是“主动推进型”而不是“只观察型”
-
-这是本次分析里最关键的技术事实之一。
-
-在 `interfaces/runner.py` 中：
-
-- `_auto_dispatch_enabled(config_snapshot)` 默认值是 `True`
-- `_auto_execute_enabled(config_snapshot)` 默认值也是 `True`
-
-这意味着：
-
-### 当前默认行为不是：
-- 只看有哪些 mission
-- 只做 observation
-- 只打印状态
-
-### 当前默认行为实际上是：
-- tick
-- 找 ready nodes
-- dispatch branches
-- 根据 workflow_vm / execution_bridge / research_bridge 自动执行
-- 回写结果
-- 生成 summary/note/run_state/watchdog_state
-
-换句话说：
-
-> **当前 flow CLI 的现实形态，是“会主动跑 flow 的后台 runner”，不是“只供人观察的 flow console”。**
-
-这对后续产品规划影响非常大：
-
-- 未来 TUI 不应该和 runner CLI 混成一个进程
-- TUI 主要做观察 + 控制
-- runner CLI 继续做后台推进
-
----
-
-## 1.4 当前 runner 还负责“恢复中断 branch”
-
-`interfaces/runner.py` 里还有一层非常重要的逻辑：
-
-- `_recover_interrupted_branches(...)`
-
-它会：
-- 扫描状态为 `queued / leased / running` 的 branch
-- 判断是否需要恢复
-- 将其置为失败并把 node 拉回 `ready`
-- 根据是否有 session 决定 `recovery_action = resume / retry`
-- 追加 `branch_recovered_after_restart` 事件
-
-这说明 runner CLI 不只是执行器，还承担：
-
-- 启动时修复现场
-- 重启后续跑
-- 中断恢复
-
-因此，当前 flow CLI 更准确的定义不是“命令行工具”，而是：
-
-> **orchestrator runtime service entry**
-
----
-
-## 1.5 当前 runner 还负责进度 note / 状态文件输出
-
-`interfaces/runner.py` 明确维护：
-
-- PID
-- watchdog state
-- run state
-- phase
-- note
-
-并通过 `_write_progress(...)` 持续写入运行状态。
-
-它输出的 note 会反映：
-- cycle started
-- dispatch 了哪些 branches
-- execute 了哪些 branches
-- recovered branches
-- missions / ready_nodes / running_nodes / executed / failed / completed 等统计
-
-这件事对未来 TUI / Desktop 很重要，因为它意味着：
-
-### 未来前端不一定要直接把 runner 当黑盒
-而是可以消费：
-- runner state file
-- runner summary DTO
-- progress note
-
-因此，V2.1 更新后应当把 `RunnerStatusDTO` 的优先级进一步提高。
-
----
-
-## 2. flow CLI 的现实分层：V2.1 更新版定义
-
-本节是对上一版 V2.1 的正式修订。
-
-## 2.1 现在 Butler 的终端链路应拆成三层
-
-### Layer A：System Control Plane（已存在）
 入口：
-- `butler_main/butler_bot_code/manager.ps1`
+
+- `tools/install-butler-flow`
+- `tools/butler-flow`
+- `python -m butler_main`
 
 职责：
-- start / stop / restart / status
-- Butler 系统进程级控制
-- 主链路健康检查
-- 日志 / pid / run 状态排障
 
-### Layer B：Flow Runtime CLI（已存在）
+- 提供系统命令暴露
+- 提供仓库内兼容入口
+- 提供模块级 fallback 入口
+
+### Layer B：flow-native runtime CLI（已存在）
+
 入口：
-- `butler_main/orchestrator/runner.py`
-- `butler_main/orchestrator/interfaces/runner.py`
+
+- `butler-flow new/resume/exec/status/list/preflight/action`
 
 职责：
-- 加载 orchestrator config
-- build runtime stack / service
-- tick / dispatch / execute
-- 恢复中断 branches
-- 写 run/watchdog state
-- 输出 phase/note
 
-### Layer C：Flow-native Interactive TUI（待实现或待继续核对）
-目标：
-- 面向人交互的 flow 观察与控制界面
-- flow list
-- active children
-- workflow session detail
-- runtime / contracts / events
-- flow actions
+- 创建和恢复前台 flow
+- 驱动 foreground flow runtime
+- 写本地 sidecars
+- 在 plain / exec 模式下输出状态与 JSONL receipt
 
-这个三层结构是 V2.1 的核心修正。
+### Layer C：interactive shell / future Desktop（部分已存在，部分待补）
 
----
+当前已存在：
 
-## 2.2 现在真正缺的不是“flow CLI”，而是“interactive flow CLI / TUI”
+- Textual launcher
+- `workspace`
+- `single flow`
+- `/manage`
+- `/settings`
 
-过去容易产生一种误判：
-- 以为 Butler 还没有 flow CLI 入口
+未来待补：
 
-但从 `main` 上的代码看，这个判断已经不准确。
+- desktop adapter
+- desktop shell
+- richer artifact/preview/drill-down 体验
 
-更准确的说法应该是：
+因此，V2.1 的正确修正不是“找出 runner 那一层”，而是：
 
-### 已经有：
-- system CLI / process CLI
-- flow runtime CLI / runner CLI
-
-### 还缺：
-- interactive flow CLI / flow TUI
-
-所以规划上不能再写成：
-- “先做 TUI，补一个 flow CLI”
-
-而应该写成：
-- “在已有 system CLI 与 flow runtime CLI 基础上，补 flow-native interactive TUI”
+> **承认 `butler-flow` 自己已经形成 foreground flow CLI + TUI，再在其上抽 desktop-ready surface。**
 
 ---
 
-## 3. V2.1 对 shared flow surface 的修正
+## 2. 当前前台 flow 的真实对象面
 
-有了 flow runtime CLI 这一层后，shared flow surface 的定位更清楚了。
+## 2.1 当前核心真源对象
 
-## 3.1 shared flow surface 不只是给 Desktop 用
+当前前台 `butler-flow` 真正稳定的对象不是后台的 `Mission/Branch`，而是：
 
-它要同时服务三类消费方：
+- `FlowState`
+- `flow_definition.json`
+- `turns.jsonl`
+- `actions.jsonl`
+- `events.jsonl`
+- `artifacts.json`
+- `role_sessions.json`
+- `handoffs.jsonl`
+- `runtime_plan.json`
+- `prompt_packets.jsonl`
+- `strategy_trace.jsonl`
+- `mutations.jsonl`
 
-### A. Flow-native TUI
-需要：
-- flow list
-- flow detail
-- child detail
-- workflow session detail
-- runner summary
-- actions
+从产品视角，可映射为：
 
-### B. Desktop
-需要：
-- richer cards
-- session stream
-- drawer
-- child drill-down
+- `Flow` = 一条前台 instance flow
+- `Flow Definition` = 当前实例的 materialized static/runtime definition
+- `Supervisor View` = 主脑判断流
+- `Workflow View` = runtime 输出流
+- `Role Session` = medium/complex 语义下的角色会话绑定
+- `Handoff` = 角色切换与 bounded truth 交接
+- `Manage Asset` = `builtin + template` shared assets
 
-### C. Runtime status readers
-需要：
-- runner 状态摘要
-- progress/note
-- phase
+## 2.2 当前现役产品投影已经存在
 
-因此，shared flow surface 里除了 mission / branch / session DTO 外，还应明确包括：
+`butler_main/butler_flow/tui/controller.py` 里，当前已经有几组现役 payload：
 
-- `RunnerStatusDTO`
-- `RuntimeProgressDTO`
+- `workspace_payload()`
+- `single_flow_payload()`
+- `manage_center_payload()`
+- `detail_payload()`
+- `role_strip_payload()`
+- `operator_rail_payload()`
+- `flow_console_payload()`
 
----
+其中真正贴近未来 shared surface 的，是：
 
-## 3.2 shared flow surface 的输入源现在应写成“双真源输入”
+- `workspace_payload`
+- `single_flow_payload`
+- `manage_center_payload`
+- `detail_payload`
 
-V2 里更偏向写成 orchestrator service 单源；
-V2.1 更新后应改为：
+这意味着当前仓库已经有一层“准 surface”，只是还长在 TUI controller 里。
 
-### 业务对象真源
-- `OrchestratorService`
-- `WorkflowSession`
-- `WorkflowIR`
-- `LedgerEvent`
+因此 V2.1 的重点不是重新从零定义桌面对象，而是：
 
-### 运行状态真源
-- `interfaces/runner.py` 输出的 run_state / watchdog_state / summary / note
-
-因此，shared flow surface 应承担两件事：
-
-1. 业务对象 DTO 化
-2. runner 状态 DTO 化
+> **把 controller 内已经稳定的 foreground payload 抽成 `butler_flow` 自己的 shared surface。**
 
 ---
 
-## 4. 对 flow-native TUI 的计划修正
+## 3. shared flow surface 的修正定义
 
-## 4.1 TUI 不负责“跑 flow”
+## 3.1 shared surface 不再挂到 `orchestrator`
 
-这是 V2.1 最重要的规划修正之一。
+此前版本默认想新增：
 
-既然现在已经存在 runner CLI，并且默认主动 dispatch + execute，那么未来的 TUI 就不应承担：
+```text
+butler_main/flow_surface/
+```
 
-- 后台循环推进 flow
-- 直接替代 runner
-- 混合运行控制与交互展示
+并让它直接包 `orchestrator.service` 与 `runner.py`。
 
-未来 TUI 的职责应收束为：
+这个方向现在要修正为：
 
-### 观察
-- 当前有哪些 flows
-- 哪些 children active
-- 哪些 workflow sessions 在运行
-- 当前 phase / note 是什么
+```text
+butler_main/butler_flow/surface/
+```
 
-### 控制
-- pause / resume / cancel flow
-- append user feedback
-- 可能的 dispatch / single-step action（后续可选）
+职责：
 
-### 深入
-- 查看 workflow session
-- 查看 runtime / contracts / recent events
+- 对前台 `butler-flow` 的 sidecar 真源做 DTO 化
+- 承接当前 `FlowTuiController` 的现役 payload
+- 为 Textual TUI 与 future Desktop 提供统一对象结构
+- 不引入第二真源
+- 不把后台 `mission / branch / workflow_session` 混进前台 flow 模型
 
-简言之：
+## 3.2 推荐 DTO
 
-> **runner CLI 是 engine，TUI 是 console。**
+### `FlowSummaryDTO`
+
+用于 `workspace` 列表与 Desktop 左栏：
+
+- `flow_id`
+- `workflow_kind`
+- `effective_status`
+- `effective_phase`
+- `goal`
+- `approval_state`
+- `execution_mode`
+- `session_strategy`
+- `active_role_id`
+- `role_pack_id`
+- `latest_judge_decision`
+- `latest_operator_action`
+- `latest_handoff_summary`
+- `updated_at`
+
+### `FlowDetailDTO`
+
+用于 `single flow` / Desktop 主工作台：
+
+- `flow`
+- `summary`
+- `step_history`
+- `timeline`
+- `artifacts`
+- `turns`
+- `actions`
+- `handoffs`
+- `runtime_snapshot`
+- `flow_definition`
+
+### `SupervisorViewDTO`
+
+用于 supervisor 主视图：
+
+- `header`
+- `events`
+- `approval_state`
+- `pending_codex_prompt`
+- `latest_supervisor_decision`
+- `latest_judge_decision`
+- `latest_operator_action`
+- `latest_handoff_summary`
+- `latest_token_usage`
+- `context_governor`
+- `latest_mutation`
+
+### `WorkflowViewDTO`
+
+用于 workflow 输出视图：
+
+- `events`
+- `runtime_summary`
+- `artifact_refs`
+
+### `ManageCenterDTO`
+
+用于 `/manage` 与 future Desktop manage center：
+
+- `assets`
+- `selected_asset`
+- `role_guidance`
+- `review_checklist`
+- `bundle_manifest`
+- `manager_notes`
+
+### `RoleRuntimeDTO`
+
+用于 detail drill-down：
+
+- `active_role_id`
+- `role_sessions`
+- `pending_handoffs`
+- `recent_handoffs`
+- `latest_handoff_summary`
+
+## 3.3 shared surface 的边界
+
+shared surface 现在只服务：
+
+1. 当前 Textual TUI
+2. 未来 Desktop
+3. 未来可能的轻量只读 adapter / API
+
+shared surface 当前**不服务**：
+
+- `campaign/orchestrator` 后台 operator console
+- chat frontdoor
+- visual console 后台 campaign graph
 
 ---
 
-## 4.2 TUI 第一阶段最该做的是“读 runner + 读 service”
+## 4. 对 TUI 的计划修正
 
-第一版 interactive TUI 的最小闭环应是：
+## 4.1 当前 TUI 不是待从零实现，而是待抽象与瘦身
 
-### 左侧
-- flows
+此前版本把 interactive TUI 写成“待补齐”；这已经不准确。
 
-### 顶部
-- runner status bar
-- phase
-- note
-- executed / failed / completed counters
+更准确的说法是：
 
-### 中间
-- selected flow summary
-- nodes / branches / active children
+- 当前 Textual TUI 已落地一轮实现
+- 现在的问题不是“有没有”
+- 而是“controller payload 还没有正式沉淀成 desktop-ready surface”
 
-### 右侧或下方
-- selected child / selected workflow session detail
-- recent events
-- contracts / runtime summary
+因此 TUI 第一阶段不该推倒重来，而应：
 
-注意：
-第一版 TUI 不追求模拟 ChatGPT / Codex 的会话感，而是优先做：
-- 状态清晰
-- drill-down 清晰
-- 远程机上可用
-- 与 runner 职责不冲突
+1. 保持当前 `workspace / single flow / /manage` 产品壳
+2. 将 payload 从 controller 抽到 `butler_flow/surface`
+3. 让 TUI 变成 shared surface 的第一消费方
+
+## 4.2 TUI 第一阶段应做什么
+
+### 必做
+
+- `workspace` 改为消费 `FlowSummaryDTO`
+- `single flow` 改为消费 `FlowDetailDTO + SupervisorViewDTO + WorkflowViewDTO`
+- `/manage` 改为消费 `ManageCenterDTO`
+- inspector/detail 改为消费 `RoleRuntimeDTO + runtime/detail DTO`
+
+### 不做
+
+- 不回退到卡片式 `/flows`
+- 不把 `/manage` 再做成 assets-only 卡片页
+- 不引入后台 `mission / branch` 列表
+- 不把 TUI 变成第二条 runtime daemon
 
 ---
 
 ## 5. 对 Desktop 的计划修正
 
-Desktop 的定位不变，但优先级继续后移一步。
+## 5.1 Desktop 继续后移，但目标更清楚
 
-此前 V1 很容易让人以为：
-- 桌面端是 flow 的第一前台
+Desktop 的目标不再是“补一个更漂亮的 orchestrator 工作台”，而是：
 
-但现在从 `main` 看，更合理的顺序应是：
+> **复用 foreground `butler-flow` 的 shared surface，提供更强的浏览、预览、artifact 打开和多面板信息密度。**
 
-1. system control plane 已存在
-2. flow runtime CLI 已存在
-3. 先补 interactive flow TUI
-4. 再让 Desktop 复用 shared flow surface
+## 5.2 Desktop 最小结构
 
-因此，Desktop 的实施前提现在更明确了：
+### Desktop Home
 
-### 必须先有
-- RunnerStatusDTO
-- FlowSurfaceService
-- TUI 验证过的 object model
+- 左栏：flow list
+- 中栏：selected flow summary + supervisor/workflow switch
+- 右栏：detail drawer
+- 底部：action / status rail
 
-### 再做
-- richer session stream
-- cards / tray / drawer
-- artifact UX
-- breadcrumb / drill-down
+### Desktop Flow Workbench
+
+- `supervisor` / `workflow` 双主视图
+- artifact preview
+- phase / role / approval / operator explain
+- prompt packet / mutation / handoff drill-down
+
+### Desktop Manage Center
+
+- 与 `/manage` 同一对象模型
+- transcript-first
+- asset detail
+- review checklist
+- bundle / lineage / role guidance
+
+## 5.3 Desktop 当前不应该先做什么
+
+- 不先接 Electron-specific API
+- 不先做复杂动画和 graph editor
+- 不把主视图重新做成 chat-first transcript app
+- 不把后台 `campaign` console 心智搬到前台 desktop
 
 ---
 
 ## 6. V2.1 更新后的实施顺序
 
-### Phase 0：对齐 main 分支入口
-冻结以下三个事实：
+### Phase 0：冻结 foreground 真源
 
-- `manager.ps1` = system control plane
-- `interfaces/runner.py` = flow runtime CLI
-- `OrchestratorService` = flow business truth source
+冻结以下事实：
 
-### Phase 1：抽 shared flow surface
-新增：
-- mission / branch / session DTO
-- runner status DTO
-- runtime progress DTO
+- 公共入口以 `butler-flow` 为准
+- 真源是前台 flow sidecars，不是后台 mission/branch
+- TUI 当前已有 `workspace / single flow / /manage`
 
-### Phase 2：先补 interactive flow TUI
+### Phase 1：抽 `butler_flow/surface`
+
 目标：
-- 不取代 runner
-- 读取 service + runner status
-- 提供 flow 观察与 flow 控制
 
-### Phase 3：Desktop 复用 shared flow surface
+- 新增 `butler_main/butler_flow/surface/`
+- 承接 `FlowTuiController` 里的现役 payload
+- 形成稳定 DTO
+
+### Phase 2：让现有 TUI 薄改接 surface
+
 目标：
-- richer workbench
-- session stream
+
+- controller 只负责交互与命令编排
+- 取数逻辑转入 surface
+- 当前 UI 外观尽量不大改
+
+### Phase 3：补 Desktop adapter
+
+目标：
+
+- 定义 Desktop 需要的 adapter / API 边界
+- 不直接吃 raw sidecars
+- 只消费 `butler_flow/surface`
+
+### Phase 4：Desktop workbench
+
+目标：
+
+- flow list
+- flow workbench
+- manage center
+- artifact preview
 - detail drawer
-- active children tray
-
-### Phase 4：体验增强
-- artifact open
-- route/runtime/contracts 更丰富表达
-- 更好的 recovery / feedback 可视化
 
 ---
 
-## 7. 给 Codex 的更新版执行要求
+## 7. 给 Codex / butler-flow 的更新版执行要求
 
-本节用于替换此前较模糊的执行描述。
+## 7.1 禁止事项
 
-## 7.1 必须明确三层入口，不允许混写
+1. 禁止把后台 `orchestrator` 重新引入为 Butler-flow Desktop 主真源
+2. 禁止把 `Mission / Branch / WorkflowSession` 写成前台 `butler-flow` 当前对象模型
+3. 禁止推翻当前 `workspace / single flow / /manage` 信息架构
+4. 禁止把 `/manage` 再做回栏式 asset cards
+5. 禁止让 Desktop 直接读取 raw sidecars 或 controller 内部兼容 payload
 
-在实现文档、注释、PR 描述里，必须明确区分：
+## 7.2 实现优先级
 
-### system control plane
-- manager.ps1
+### P0
 
-### flow runtime CLI
-- orchestrator runner / interfaces.runner
+- `butler_flow/surface` DTO
+- surface query/detail/builders
+- TUI 薄改接 surface
 
-### interactive flow TUI
-- 新实现的终端工作台
+### P1
 
-禁止把这三者写成同一个“CLI”。
+- Desktop adapter / API
+- Desktop home/workbench/manage 骨架
 
----
+### P2
 
-## 7.2 先补 shared flow surface，再补 TUI
-
-shared flow surface 现在至少应包含：
-
-- `FlowSummaryDTO`
-- `FlowDetailDTO`
-- `ChildDTO`
-- `WorkflowSessionDTO`
-- `FlowObservationDTO`
-- `RunnerStatusDTO`
-- `RuntimeProgressDTO`
-
-其中：
-- 前五个主要来自 `OrchestratorService`
-- 后两个来自 runner summary / state file / note
-
----
-
-## 7.3 TUI 不能直接嵌 runner 主循环
-
-Codex 实现时应遵守：
-
-### 可以做
-- 读取 runner 状态
-- 调 service 查询详情
-- 发 control_mission / append_user_feedback
-- 未来发单步动作
-
-### 不应做
-- 在 TUI 进程里接管常驻 `run_orchestrator_service(...)`
-- 把 TUI 变成新的 daemon
-- 让 UI 生命周期和 runner 生命周期强耦合
+- artifact UX
+- richer drill-down
+- layout polish
 
 ---
 
 ## 8. V2.1 更新版结论
 
-**现在 Butler-flow 的终端入口已经不是空白。**
+**现在需要去掉的不是一层 CLI，而是一整条“后台 orchestrator 线”的错误借用。**
 
-在 `main` 分支上，已经可以明确拆成三层：
+修正后，Butler-flow Desktop V2.1 的正确路线是：
 
-1. **manager.ps1**：系统级 terminal control plane
-2. **orchestrator runner CLI**：flow runtime CLI，负责真正推进 flow
-3. **未来 interactive TUI**：flow-native 观察与控制界面
+1. 以前台 `butler-flow` CLI 和 sidecars 为真源
+2. 承认当前 Textual TUI 已经存在
+3. 把 controller 里的现役 payload 抽成 `butler_flow/surface`
+4. 先让 TUI 成为第一消费方
+5. 再让 Desktop 复用这套 foreground surface
 
-所以，V2.1 更新后的正确路线是：
+因此，V2.1 更新后的正确一句话定义是：
 
-> **main 对齐 -> 明确三层 CLI/terminal 结构 -> 抽 shared flow surface -> 先补 interactive TUI -> Desktop 复用**
-
-而不是：
-
-> 继续把“终端入口”笼统写成 TUI，或者继续把桌面端当第一落点。
-
-这版更新的意义在于，它终于把 Butler 当前已经存在的 runtime CLI 能力写进了规划，从而让后续的 TUI / Desktop 设计真正贴住现实代码。
+> **Butler-flow Desktop V2.1 = 以 foreground `butler-flow` 状态与现役 TUI payload 为真源的 desktop-ready flow workbench；TUI 与 Desktop 共用同一套前台 flow surface。**

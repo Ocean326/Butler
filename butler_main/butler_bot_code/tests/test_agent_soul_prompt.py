@@ -54,9 +54,9 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
                 self.assertIn("优先读取当前用户画像；若不存在再参考模板", prompt)
                 self.assertIn("少量自然 emoji", prompt)
                 self.assertNotIn("butler-agent.md", prompt)
-                self.assertIn("./butler_main/chat/assets/roles/chat-agent.md", prompt)
-                self.assertIn("./butler_main/chat/assets/dialogues/feishu-dialogue.md", prompt)
-                self.assertIn("真源：@./butler_main/chat/assets/dialogues/feishu-dialogue.md", prompt)
+                self.assertIn("./butler_main/products/chat/assets/roles/chat-agent.md", prompt)
+                self.assertIn("./butler_main/products/chat/assets/dialogues/feishu-dialogue.md", prompt)
+                self.assertIn("真源：@./butler_main/products/chat/assets/dialogues/feishu-dialogue.md", prompt)
                 self.assertIn("摘要：", prompt)
         finally:
             module.CONFIG.clear()
@@ -65,7 +65,7 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
     def test_build_prompt_includes_skills_when_provided(self):
         prompt = module.build_feishu_agent_prompt(
             "帮我用 skill 整理飞书历史消息",
-            skills_prompt="[feishu]\n- feishu-chat-history @ ./butler_main/sources/skills/pool/chat/feishu_chat_history",
+            skills_prompt="[feishu]\n- feishu-chat-history @ ./butler_main/platform/skills/pool/chat/feishu_chat_history",
         )
 
         self.assertIn("【可复用 Skills】", prompt)
@@ -76,7 +76,7 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
     def test_build_prompt_includes_skills_shortlist_even_without_skill_keyword(self):
         prompt = module.build_feishu_agent_prompt(
             "帮我处理这个链接里的内容",
-            skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/sources/skills/pool/chat/web-note-capture-cn",
+            skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/platform/skills/pool/chat/web-note-capture-cn",
         )
 
         self.assertIn("【可复用 Skills】", prompt)
@@ -198,7 +198,7 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
     def test_build_prompt_uses_share_mode_for_shared_links(self):
         prompt = module.build_feishu_agent_prompt(
             "Ocean:\n一个文件让 Claude Code 战斗力翻倍 http://xhslink.com/o/AirylJSxpim\n复制后打开【小红书】查看笔记！",
-            skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/sources/skills/pool/chat/web-note-capture-cn",
+            skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/platform/skills/pool/chat/web-note-capture-cn",
             raw_user_prompt="Ocean:\n一个文件让 Claude Code 战斗力翻倍 http://xhslink.com/o/AirylJSxpim\n复制后打开【小红书】查看笔记！",
         )
 
@@ -273,19 +273,19 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
         prompt = module.build_feishu_agent_prompt(
             "帮我直接回复一句测试成功",
             raw_user_prompt="帮我直接回复一句测试成功",
-            skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/sources/skills/pool/chat/web-note-capture-cn",
+            skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/platform/skills/pool/chat/web-note-capture-cn",
             prompt_purity={"level": 2},
         )
 
         self.assertIn("【纯净模式】", prompt)
         self.assertNotIn("【角色设置】@", prompt)
-        self.assertNotIn("./butler_main/chat/assets/dialogues/feishu-dialogue.md", prompt)
+        self.assertNotIn("./butler_main/products/chat/assets/dialogues/feishu-dialogue.md", prompt)
         self.assertNotIn("【可复用 Skills】", prompt)
 
     def test_build_prompt_uses_compact_codex_prompt_without_path_refs(self):
         prompt = module.build_feishu_agent_prompt(
             "帮我直接回复一句测试成功",
-            skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/sources/skills/pool/chat/web-note-capture-cn",
+            skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/platform/skills/pool/chat/web-note-capture-cn",
             skill_collection_id="codex_default",
             agent_capabilities_prompt="【Codex 原生并行协作】并行能力由运行时原生提供。",
             raw_user_prompt="帮我直接回复一句测试成功",
@@ -399,7 +399,7 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
         self.assertIn("【当前对话】", prompt)
         self.assertIn("CLI 对话", prompt)
         self.assertIn("纯文本终端对话", prompt)
-        self.assertIn("./butler_main/chat/assets/dialogues/cli-dialogue.md", prompt)
+        self.assertIn("./butler_main/products/chat/assets/dialogues/cli-dialogue.md", prompt)
         self.assertIn("【交付方式】", prompt)
         self.assertNotIn("【decide】若需发送产出文件给用户", prompt)
         self.assertNotIn("飞书聊天", prompt)
@@ -414,7 +414,7 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
         self.assertIn("【当前对话】", prompt)
         self.assertIn("微信对话", prompt)
         self.assertIn("聊天消息，文本优先，也可补充图片和文件", prompt)
-        self.assertIn("./butler_main/chat/assets/dialogues/weixin-dialogue.md", prompt)
+        self.assertIn("./butler_main/products/chat/assets/dialogues/weixin-dialogue.md", prompt)
         self.assertIn("【decide】若需发送产出文件给用户", prompt)
         self.assertNotIn("飞书聊天", prompt)
 
@@ -437,19 +437,19 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
                         "继续按我的偏好回复",
                         raw_user_prompt="继续按我的偏好回复",
                         channel="feishu",
-                        skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/sources/skills/web_note_capture_cn",
+                        skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/platform/skills/web_note_capture_cn",
                     ),
                     "weixin": module.build_chat_agent_prompt(
                         "继续按我的偏好回复",
                         raw_user_prompt="继续按我的偏好回复",
                         channel="weixin",
-                        skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/sources/skills/web_note_capture_cn",
+                        skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/platform/skills/web_note_capture_cn",
                     ),
                     "cli": module.build_chat_agent_prompt(
                         "继续按我的偏好回复",
                         raw_user_prompt="继续按我的偏好回复",
                         channel="cli",
-                        skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/sources/skills/web_note_capture_cn",
+                        skills_prompt="[web]\n- web-note-capture-cn @ ./butler_main/platform/skills/web_note_capture_cn",
                     ),
                 }
 
@@ -459,9 +459,9 @@ class ButlerAgentSoulPromptTests(unittest.TestCase):
                 self.assertIn("web-note-capture-cn", prompts["feishu"])
                 self.assertIn("web-note-capture-cn", prompts["weixin"])
                 self.assertIn("web-note-capture-cn", prompts["cli"])
-                self.assertIn("./butler_main/chat/assets/dialogues/feishu-dialogue.md", prompts["feishu"])
-                self.assertIn("./butler_main/chat/assets/dialogues/weixin-dialogue.md", prompts["weixin"])
-                self.assertIn("./butler_main/chat/assets/dialogues/cli-dialogue.md", prompts["cli"])
+                self.assertIn("./butler_main/products/chat/assets/dialogues/feishu-dialogue.md", prompts["feishu"])
+                self.assertIn("./butler_main/products/chat/assets/dialogues/weixin-dialogue.md", prompts["weixin"])
+                self.assertIn("./butler_main/products/chat/assets/dialogues/cli-dialogue.md", prompts["cli"])
         finally:
             module.CONFIG.clear()
             module.CONFIG.update(original_config)

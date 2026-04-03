@@ -1,0 +1,217 @@
+{
+  "flow_id": "20260404_project_loop_variant",
+  "definition_id": "20260404_project_loop_variant",
+  "asset_kind": "template",
+  "label": "Project Loop Variant",
+  "description": "cloned from builtin",
+  "workflow_kind": "project_loop",
+  "goal": "ship managed work",
+  "guard_condition": "review passes",
+  "phase_plan": [
+    {
+      "phase_id": "plan",
+      "title": "Plan",
+      "objective": "plan",
+      "done_when": "ready",
+      "retry_phase_id": "plan",
+      "fallback_phase_id": "plan",
+      "next_phase_id": "imp"
+    },
+    {
+      "phase_id": "imp",
+      "title": "Implement",
+      "objective": "build",
+      "done_when": "done",
+      "retry_phase_id": "imp",
+      "fallback_phase_id": "plan",
+      "next_phase_id": ""
+    }
+  ],
+  "default_role_pack": "coding_flow",
+  "allowed_execution_modes": [
+    "simple",
+    "medium"
+  ],
+  "launch_mode": "flow",
+  "catalog_flow_id": "",
+  "execution_mode": "medium",
+  "session_strategy": "role_bound",
+  "role_pack_id": "coding_flow",
+  "execution_context": "repo_bound",
+  "risk_level": "normal",
+  "autonomy_profile": "guarded",
+  "manager_handoff": {
+    "summary": "template:20260404_project_loop_variant project_loop · ship managed work",
+    "label": "Project Loop Variant",
+    "description": "cloned from builtin",
+    "goal": "ship managed work",
+    "guard_condition": "review passes",
+    "workflow_kind": "project_loop",
+    "asset_kind": "template",
+    "mutation": "create",
+    "risk_level": "normal",
+    "autonomy_profile": "guarded",
+    "phase_plan": [
+      {
+        "phase_id": "plan",
+        "title": "Plan",
+        "objective": "plan",
+        "done_when": "ready",
+        "retry_phase_id": "plan",
+        "fallback_phase_id": "plan",
+        "next_phase_id": "imp"
+      },
+      {
+        "phase_id": "imp",
+        "title": "Implement",
+        "objective": "build",
+        "done_when": "done",
+        "retry_phase_id": "imp",
+        "fallback_phase_id": "plan",
+        "next_phase_id": ""
+      }
+    ],
+    "review_checklist": [],
+    "role_guidance": {
+      "suggested_roles": [
+        "planner",
+        "implementer",
+        "reviewer"
+      ],
+      "suggested_specialists": [
+        "creator",
+        "product-manager",
+        "user-simulator"
+      ],
+      "activation_hints": [
+        "当交付被环境缺口、缺少领域知识或缺少 enabling asset 卡住时，优先考虑 creator",
+        "当目标变成产品化、用户价值取舍或范围重排时，优先考虑 product-manager",
+        "当需要真实试用、可用性反馈或用户视角挑错时，优先考虑 user-simulator"
+      ],
+      "promotion_candidates": [
+        "creator"
+      ],
+      "manager_notes": "保持轻量参考：默认仍以 planner/implementer/reviewer 为主，specialist 仅在真实堵点出现时再临时调用。"
+    },
+    "control_profile": {
+      "task_archetype": "repo_delivery",
+      "packet_size": "medium",
+      "evidence_level": "standard",
+      "gate_cadence": "phase",
+      "repo_binding_policy": "disabled",
+      "repo_contract_paths": [],
+      "manager_notes": "",
+      "force_gate_next_turn": false,
+      "force_doctor_next_turn": false
+    },
+    "doctor_policy": {},
+    "instance_defaults": {},
+    "lineage": {},
+    "asset_state": {},
+    "bundle_manifest": {
+      "bundle_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop",
+      "manager_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/manager.md",
+      "supervisor_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/supervisor.md",
+      "doctor_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/doctor.md",
+      "doctor_skill_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/skills/doctor/SKILL.md",
+      "sources_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/sources.json",
+      "manager_prompt": "manager.md",
+      "supervisor_prompt": "supervisor.md",
+      "doctor_prompt": "doctor.md",
+      "sources_path": "sources.json",
+      "references_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/references",
+      "doctor_references_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/references/doctor",
+      "assets_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/assets",
+      "derived_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/derived",
+      "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+      "derived_supervisor_knowledge": "bundles/builtin/project_loop/derived/supervisor_knowledge.json",
+      "derived": {
+        "supervisor_compiled": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/derived/supervisor_knowledge.json"
+      }
+    },
+    "operator_guidance": "review before launch",
+    "confirmation_prompt": "confirm clone",
+    "managed_at": "2026-04-04 00:34:48",
+    "manage_stage": "commit",
+    "manager_session_id": ""
+  },
+  "asset_state": {
+    "status": "active",
+    "stage": "commit",
+    "mode": "clone"
+  },
+  "lineage": {
+    "cloned_from_asset_key": "builtin:project_loop"
+  },
+  "instance_defaults": {
+    "execution_mode": "medium",
+    "session_strategy": "role_bound",
+    "role_pack_id": "coding_flow",
+    "execution_context": "repo_bound",
+    "launch_mode": "flow"
+  },
+  "review_checklist": [],
+  "role_guidance": {
+    "suggested_roles": [
+      "planner",
+      "implementer",
+      "reviewer"
+    ],
+    "suggested_specialists": [
+      "creator",
+      "product-manager",
+      "user-simulator"
+    ],
+    "activation_hints": [
+      "当交付被环境缺口、缺少领域知识或缺少 enabling asset 卡住时，优先考虑 creator",
+      "当目标变成产品化、用户价值取舍或范围重排时，优先考虑 product-manager",
+      "当需要真实试用、可用性反馈或用户视角挑错时，优先考虑 user-simulator"
+    ],
+    "promotion_candidates": [
+      "creator"
+    ],
+    "manager_notes": "保持轻量参考：默认仍以 planner/implementer/reviewer 为主，specialist 仅在真实堵点出现时再临时调用。"
+  },
+  "control_profile": {
+    "task_archetype": "repo_delivery",
+    "packet_size": "medium",
+    "evidence_level": "standard",
+    "gate_cadence": "phase",
+    "repo_binding_policy": "disabled",
+    "repo_contract_paths": [],
+    "manager_notes": "",
+    "force_gate_next_turn": false,
+    "force_doctor_next_turn": false
+  },
+  "doctor_policy": {},
+  "supervisor_profile": {},
+  "run_brief": "",
+  "source_bindings": [],
+  "bundle_manifest": {
+    "bundle_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant",
+    "manager_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/manager.md",
+    "supervisor_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/supervisor.md",
+    "doctor_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/doctor.md",
+    "doctor_skill_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/skills/doctor/SKILL.md",
+    "sources_ref": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/sources.json",
+    "manager_prompt": "manager.md",
+    "supervisor_prompt": "supervisor.md",
+    "doctor_prompt": "doctor.md",
+    "sources_path": "sources.json",
+    "references_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/references",
+    "doctor_references_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/references/doctor",
+    "assets_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/assets",
+    "derived_root": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/derived",
+    "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+    "derived_supervisor_knowledge": "bundles/templates/20260404_project_loop_variant/derived/supervisor_knowledge.json",
+    "derived": {
+      "supervisor_compiled": "/home/ocean/Desktop/SuperButler-repo-refactor/butler_main/butler_bot_code/assets/flows/bundles/templates/20260404_project_loop_variant/derived/supervisor_knowledge.json"
+    }
+  },
+  "source_asset_key": "builtin:project_loop",
+  "source_asset_kind": "builtin",
+  "source_asset_version": "",
+  "version": "1.3.0",
+  "created_at": "2026-04-04 00:34:48",
+  "updated_at": "2026-04-04 00:34:48"
+}

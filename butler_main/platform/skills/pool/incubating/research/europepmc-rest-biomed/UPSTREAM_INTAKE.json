@@ -1,0 +1,28 @@
+{
+  "candidate": {
+    "id": "europepmc-rest-biomed",
+    "name": "Europe PMC RESTful Web Service",
+    "category": "research_information",
+    "priority": "P1",
+    "maturity": "high",
+    "upstream_type": "official_api",
+    "repo_url": "https://europepmc.org/RestfulWebService",
+    "docs_url": "https://europepmc.org/RestfulWebService",
+    "butler_skill_shape": "biomedical literature retrieval, abstract fetch, grant and preprint monitoring",
+    "why_recommended": [
+      "Strong specialist source for biomedical and life-science research.",
+      "Good complement to Crossref and Semantic Scholar when domain specificity matters."
+    ],
+    "risks": [
+      "Domain-specific. Not necessary for a general research bundle.",
+      "Needs a separate retrieval profile from CS-first sources like arXiv."
+    ],
+    "suggested_collection_ids": [
+      "skill_ops"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/platform/skills/pool/incubating/research/europepmc-rest-biomed",
+  "review_state": "imported_for_review"
+}

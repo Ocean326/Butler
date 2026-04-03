@@ -1,0 +1,320 @@
+{
+  "flow_id": "20260403_template_desktop_product_delivery_release_v1",
+  "definition_id": "20260403_template_desktop_product_delivery_release_v1",
+  "asset_kind": "template",
+  "label": "template_desktop_product_delivery_release_v1",
+  "description": "面向 Butler Flow Desktop 执行版的可复用交付模板：范围澄清、架构定型、核心功能闭环、交互打磨、质量加固、Linux/macOS/Windows 打包发布与终验收口。",
+  "workflow_kind": "managed_flow",
+  "goal": "交付正式桌面产品：功能完整、交互简洁优雅、运行稳定、缺陷控制在可发布水平，并提供官方 Linux、macOS、Windows 安装/分发包与对应发布说明。",
+  "guard_condition": "仅在同时满足时可结案：核心功能已闭环且关键路径可演示；UX 打磨一致、可用性达标；阻断级/高优先级缺陷已清零，或已书面降级并获认可；三平台 release 产物齐备且可复现构建；发布说明、验证与发布检查清单已完成并对照通过。",
+  "phase_plan": [
+    {
+      "phase_id": "clarify_scope",
+      "title": "Clarify scope",
+      "objective": "对齐桌面产品交付边界：用户场景、MVP/非目标、里程碑与“完成”口径；识别跨平台与发布约束；产出可执行的优先级与风险登记表。",
+      "done_when": "书面范围/非目标、验收口径与里程碑确认；主要风险与依赖有负责人与缓解策略；下一阶段架构输入无重大歧义。",
+      "retry_phase_id": "clarify_scope",
+      "fallback_phase_id": "clarify_scope",
+      "next_phase_id": "architecture"
+    },
+    {
+      "phase_id": "architecture",
+      "title": "Architecture",
+      "objective": "为桌面壳层、业务域模块、数据与会话、观测/日志、更新与打包链路做结构定型；确定关键接口、目录边界与最小依赖；明确三平台差异点与构建矩阵。",
+      "done_when": "架构说明与模块边界确定；关键流程序列图/接口清单齐备；构建/运行/调试路径在三大平台上可追溯；核心交付阶段的文件级任务列表已能拆分。",
+      "retry_phase_id": "architecture",
+      "fallback_phase_id": "clarify_scope",
+      "next_phase_id": "core_delivery"
+    },
+    {
+      "phase_id": "core_delivery",
+      "title": "Core delivery",
+      "objective": "实现并接通核心功能闭环：主路径可用、状态持久化与会话策略落地、关键集成点可回归；优先消灭阻断类问题。",
+      "done_when": "核心用户任务端到端可走通；关键自动化/手工验证清单已能覆盖主路径；阻塞缺陷为零或已明确转入下一阶段仍接受的显式例外（需记录）。",
+      "retry_phase_id": "core_delivery",
+      "fallback_phase_id": "architecture",
+      "next_phase_id": "ux_polish"
+    },
+    {
+      "phase_id": "ux_polish",
+      "title": "UX polish",
+      "objective": "统一信息架构与交互节奏：空状态/加载/错误/权限提示一致；键盘与可用性基础到位；视觉层次与文案收敛到“可发布”水平。",
+      "done_when": "关键页面/流程走查通过；一致性与可发现性问题有闭环；对标 guard 的 UX 要求无明显缺口（或已登记为可接受的发布后迭代项并降级说明）。",
+      "retry_phase_id": "ux_polish",
+      "fallback_phase_id": "core_delivery",
+      "next_phase_id": "hardening"
+    },
+    {
+      "phase_id": "hardening",
+      "title": "Hardening",
+      "objective": "强化稳定性与质量：缺陷收敛、边界与失败模式加固、性能与资源占用基线、日志/诊断信息足以支持发布后排障；回归覆盖面提升。",
+      "done_when": "高优先级缺陷清零或完成书面降级；关键路径压力/回归结果可接受；已知残余风险有清单与缓解/监控项。",
+      "retry_phase_id": "hardening",
+      "fallback_phase_id": "ux_polish",
+      "next_phase_id": "packaging_release"
+    },
+    {
+      "phase_id": "packaging_release",
+      "title": "Packaging & release",
+      "objective": "完成 Linux/macOS/Windows 发布工件：可复现构建、版本与渠道元数据、签名/公证（按平台策略）、升级策略说明；补齐发布说明与检查清单。",
+      "done_when": "三平台产物可下载安装验证；构建说明与发布 notes 完整；发布检查清单逐项勾选并有证据链接或附件索引。",
+      "retry_phase_id": "packaging_release",
+      "fallback_phase_id": "hardening",
+      "next_phase_id": "final_acceptance"
+    },
+    {
+      "phase_id": "final_acceptance",
+      "title": "Final acceptance",
+      "objective": "按 guard_condition 做终验：核心演示、跨平台抽样验证、缺陷台账关闭/降级一致性审计；不满足则触发回退修复而非“带病结案”。",
+      "done_when": "终验对照 guard 全绿或剩余项均为已批准降级；Supervisor 记录一次结论与残余风险；流程允许结束。",
+      "retry_phase_id": "final_acceptance",
+      "fallback_phase_id": "hardening",
+      "next_phase_id": ""
+    }
+  ],
+  "default_role_pack": "coding_flow",
+  "allowed_execution_modes": [
+    "simple",
+    "medium"
+  ],
+  "launch_mode": "flow",
+  "catalog_flow_id": "",
+  "execution_mode": "simple",
+  "session_strategy": "shared",
+  "role_pack_id": "coding_flow",
+  "risk_level": "high",
+  "autonomy_profile": "guarded",
+  "manager_handoff": {
+    "summary": "将把 `builtin:project_loop` 克隆为新可复用模板 `template_desktop_product_delivery_release_v1`：七阶段桌面产品交付（范围→架构→核心→UX→加固→三端打包→终验），goal/guard 已按正式桌面版交付与三平台发行写死；提交后请在资产管理中完成 bundle（`manager.md`/`supervisor.md`）落地与一次试跑校验。",
+    "label": "template_desktop_product_delivery_release_v1",
+    "description": "面向 Butler Flow Desktop 执行版的可复用交付模板：范围澄清、架构定型、核心功能闭环、交互打磨、质量加固、Linux/macOS/Windows 打包发布与终验收口。",
+    "goal": "交付正式桌面产品：功能完整、交互简洁优雅、运行稳定、缺陷控制在可发布水平，并提供官方 Linux、macOS、Windows 安装/分发包与对应发布说明。",
+    "guard_condition": "仅在同时满足时可结案：核心功能已闭环且关键路径可演示；UX 打磨一致、可用性达标；阻断级/高优先级缺陷已清零，或已书面降级并获认可；三平台 release 产物齐备且可复现构建；发布说明、验证与发布检查清单已完成并对照通过。",
+    "workflow_kind": "managed_flow",
+    "asset_kind": "template",
+    "mutation": "create",
+    "risk_level": "high",
+    "autonomy_profile": "guarded",
+    "phase_plan": [
+      {
+        "phase_id": "clarify_scope",
+        "title": "Clarify scope",
+        "objective": "对齐桌面产品交付边界：用户场景、MVP/非目标、里程碑与“完成”口径；识别跨平台与发布约束；产出可执行的优先级与风险登记表。",
+        "done_when": "书面范围/非目标、验收口径与里程碑确认；主要风险与依赖有负责人与缓解策略；下一阶段架构输入无重大歧义。",
+        "retry_phase_id": "clarify_scope",
+        "fallback_phase_id": "clarify_scope",
+        "next_phase_id": "architecture"
+      },
+      {
+        "phase_id": "architecture",
+        "title": "Architecture",
+        "objective": "为桌面壳层、业务域模块、数据与会话、观测/日志、更新与打包链路做结构定型；确定关键接口、目录边界与最小依赖；明确三平台差异点与构建矩阵。",
+        "done_when": "架构说明与模块边界确定；关键流程序列图/接口清单齐备；构建/运行/调试路径在三大平台上可追溯；核心交付阶段的文件级任务列表已能拆分。",
+        "retry_phase_id": "architecture",
+        "fallback_phase_id": "clarify_scope",
+        "next_phase_id": "core_delivery"
+      },
+      {
+        "phase_id": "core_delivery",
+        "title": "Core delivery",
+        "objective": "实现并接通核心功能闭环：主路径可用、状态持久化与会话策略落地、关键集成点可回归；优先消灭阻断类问题。",
+        "done_when": "核心用户任务端到端可走通；关键自动化/手工验证清单已能覆盖主路径；阻塞缺陷为零或已明确转入下一阶段仍接受的显式例外（需记录）。",
+        "retry_phase_id": "core_delivery",
+        "fallback_phase_id": "architecture",
+        "next_phase_id": "ux_polish"
+      },
+      {
+        "phase_id": "ux_polish",
+        "title": "UX polish",
+        "objective": "统一信息架构与交互节奏：空状态/加载/错误/权限提示一致；键盘与可用性基础到位；视觉层次与文案收敛到“可发布”水平。",
+        "done_when": "关键页面/流程走查通过；一致性与可发现性问题有闭环；对标 guard 的 UX 要求无明显缺口（或已登记为可接受的发布后迭代项并降级说明）。",
+        "retry_phase_id": "ux_polish",
+        "fallback_phase_id": "core_delivery",
+        "next_phase_id": "hardening"
+      },
+      {
+        "phase_id": "hardening",
+        "title": "Hardening",
+        "objective": "强化稳定性与质量：缺陷收敛、边界与失败模式加固、性能与资源占用基线、日志/诊断信息足以支持发布后排障；回归覆盖面提升。",
+        "done_when": "高优先级缺陷清零或完成书面降级；关键路径压力/回归结果可接受；已知残余风险有清单与缓解/监控项。",
+        "retry_phase_id": "hardening",
+        "fallback_phase_id": "ux_polish",
+        "next_phase_id": "packaging_release"
+      },
+      {
+        "phase_id": "packaging_release",
+        "title": "Packaging & release",
+        "objective": "完成 Linux/macOS/Windows 发布工件：可复现构建、版本与渠道元数据、签名/公证（按平台策略）、升级策略说明；补齐发布说明与检查清单。",
+        "done_when": "三平台产物可下载安装验证；构建说明与发布 notes 完整；发布检查清单逐项勾选并有证据链接或附件索引。",
+        "retry_phase_id": "packaging_release",
+        "fallback_phase_id": "hardening",
+        "next_phase_id": "final_acceptance"
+      },
+      {
+        "phase_id": "final_acceptance",
+        "title": "Final acceptance",
+        "objective": "按 guard_condition 做终验：核心演示、跨平台抽样验证、缺陷台账关闭/降级一致性审计；不满足则触发回退修复而非“带病结案”。",
+        "done_when": "终验对照 guard 全绿或剩余项均为已批准降级；Supervisor 记录一次结论与残余风险；流程允许结束。",
+        "retry_phase_id": "final_acceptance",
+        "fallback_phase_id": "hardening",
+        "next_phase_id": ""
+      }
+    ],
+    "review_checklist": [],
+    "role_guidance": {
+      "suggested_roles": [
+        "manager_planner",
+        "architect",
+        "feature_implementer",
+        "ux_polisher",
+        "qa_hardener",
+        "release_packager",
+        "reviewer_acceptance"
+      ],
+      "suggested_specialists": [
+        "creator",
+        "doctor",
+        "product-manager",
+        "user-simulator"
+      ],
+      "activation_hints": [
+        "manager_planner：全程轻量编排；在 scope/里程碑/验收口径漂移或多角色并行冲突时激活。",
+        "architect：仅在 architecture 阶段主导；输入不足回到 clarify_scope。",
+        "feature_implementer：core_delivery 主责；接口/模块边界争议上升 architect。",
+        "ux_polisher：ux_polish 主责；若问题根因在功能缺陷则回 feature_implementer。",
+        "qa_hardener：hardening 主责；发布阻塞定位在打包链路则并行引入 release_packager。",
+        "release_packager：packaging_release 主责；三平台差异/工具链缺口优先解决再扩功能。",
+        "reviewer_acceptance：final_acceptance 主导对口；失败按闸门回退 hardening/packaging，而非放宽 guard。",
+        "缺资料/资产/脚手架导致停滞：临时 creator；会话/运行时资产异常：doctor；范围产品化取舍：product-manager；真实可用性挑错：user-simulator"
+      ],
+      "promotion_candidates": [
+        "creator"
+      ],
+      "manager_notes": "这是建议性分工边界与产出期望，不是固定编制：默认仍以小步提交+可验证增量为准； Specialist 仅在真实堵点时短暂介入，避免流程变重。"
+    },
+    "doctor_policy": {
+      "enabled": true,
+      "activation_rules": [
+        "repeated_service_fault",
+        "same_resume_failure",
+        "session_binding_invalid"
+      ],
+      "repair_scope": "runtime_assets_first",
+      "framework_bug_action": "pause",
+      "max_rounds_per_episode": 1
+    },
+    "instance_defaults": {},
+    "lineage": {},
+    "asset_state": {},
+    "bundle_manifest": {
+      "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop",
+      "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/manager.md",
+      "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/supervisor.md",
+      "doctor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/doctor.md",
+      "doctor_skill_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/skills/doctor/SKILL.md",
+      "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/sources.json",
+      "manager_prompt": "manager.md",
+      "supervisor_prompt": "supervisor.md",
+      "doctor_prompt": "doctor.md",
+      "sources_path": "sources.json",
+      "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/references",
+      "doctor_references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/references/doctor",
+      "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/assets",
+      "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/derived",
+      "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+      "derived_supervisor_knowledge": "bundles/builtin/project_loop/derived/supervisor_knowledge.json",
+      "derived": {
+        "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/builtin/project_loop/derived/supervisor_knowledge.json"
+      }
+    },
+    "operator_guidance": "先确认新模板 bundle 已从 `builtin:project_loop` 复制并改写 `manager.md`/`supervisor.md`（七阶段闸门、质量阈值、终验失败回退、跨平台发布纪律）；将 `goal`/`guard_condition` 与本 JSON 的 `phase_plan` 写入模板元数据；用最小实例试跑一到两个阶段，校正 prompts 与 `sources.json`，再进入真实 Desktop 计划文档对齐交付。",
+    "confirmation_prompt": "请确认按此 JSON 创建模板 `template_desktop_product_delivery_release_v1` 并立即开始更新对应 bundle prompts 与元数据吗？",
+    "managed_at": "2026-04-03 00:36:29",
+    "manage_stage": "commit",
+    "manager_session_id": ""
+  },
+  "asset_state": {
+    "status": "active",
+    "stage": "commit",
+    "mode": "clone"
+  },
+  "lineage": {
+    "cloned_from_asset_key": "builtin:project_loop"
+  },
+  "instance_defaults": {
+    "execution_mode": "simple",
+    "session_strategy": "shared",
+    "role_pack_id": "coding_flow",
+    "launch_mode": "flow"
+  },
+  "review_checklist": [],
+  "role_guidance": {
+    "suggested_roles": [
+      "manager_planner",
+      "architect",
+      "feature_implementer",
+      "ux_polisher",
+      "qa_hardener",
+      "release_packager",
+      "reviewer_acceptance"
+    ],
+    "suggested_specialists": [
+      "creator",
+      "doctor",
+      "product-manager",
+      "user-simulator"
+    ],
+    "activation_hints": [
+      "manager_planner：全程轻量编排；在 scope/里程碑/验收口径漂移或多角色并行冲突时激活。",
+      "architect：仅在 architecture 阶段主导；输入不足回到 clarify_scope。",
+      "feature_implementer：core_delivery 主责；接口/模块边界争议上升 architect。",
+      "ux_polisher：ux_polish 主责；若问题根因在功能缺陷则回 feature_implementer。",
+      "qa_hardener：hardening 主责；发布阻塞定位在打包链路则并行引入 release_packager。",
+      "release_packager：packaging_release 主责；三平台差异/工具链缺口优先解决再扩功能。",
+      "reviewer_acceptance：final_acceptance 主导对口；失败按闸门回退 hardening/packaging，而非放宽 guard。",
+      "缺资料/资产/脚手架导致停滞：临时 creator；会话/运行时资产异常：doctor；范围产品化取舍：product-manager；真实可用性挑错：user-simulator"
+    ],
+    "promotion_candidates": [
+      "creator"
+    ],
+    "manager_notes": "这是建议性分工边界与产出期望，不是固定编制：默认仍以小步提交+可验证增量为准； Specialist 仅在真实堵点时短暂介入，避免流程变重。"
+  },
+  "doctor_policy": {
+    "enabled": true,
+    "activation_rules": [
+      "repeated_service_fault",
+      "same_resume_failure",
+      "session_binding_invalid"
+    ],
+    "repair_scope": "runtime_assets_first",
+    "framework_bug_action": "pause",
+    "max_rounds_per_episode": 1
+  },
+  "bundle_manifest": {
+    "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1",
+    "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/manager.md",
+    "supervisor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/supervisor.md",
+    "doctor_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/doctor.md",
+    "doctor_skill_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/skills/doctor/SKILL.md",
+    "sources_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/sources.json",
+    "manager_prompt": "manager.md",
+    "supervisor_prompt": "supervisor.md",
+    "doctor_prompt": "doctor.md",
+    "sources_path": "sources.json",
+    "references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/references",
+    "doctor_references_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/references/doctor",
+    "assets_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/assets",
+    "derived_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/derived",
+    "derived_supervisor_prompt": "derived/supervisor_compiled.md",
+    "derived_supervisor_knowledge": "bundles/templates/20260403_template_desktop_product_delivery_release_v1/derived/supervisor_knowledge.json",
+    "derived": {
+      "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/bundles/templates/20260403_template_desktop_product_delivery_release_v1/derived/supervisor_knowledge.json"
+    }
+  },
+  "source_asset_key": "builtin:project_loop",
+  "source_asset_kind": "builtin",
+  "source_asset_version": "",
+  "version": "1.3.0",
+  "created_at": "2026-04-03 00:36:29",
+  "updated_at": "2026-04-03 00:36:29"
+}

@@ -19,4 +19,4 @@ else
 fi
 
 cd "$ROOT_DIR"
-exec "$PYTHON_BIN" -m butler_main.butler_flow "$@"
+exec "$PYTHON_BIN" -m butler_main.products.butler_flow "$@"

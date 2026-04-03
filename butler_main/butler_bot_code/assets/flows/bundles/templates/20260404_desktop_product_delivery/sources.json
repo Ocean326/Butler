@@ -1,0 +1,14 @@
+{
+  "asset_kind": "template",
+  "asset_id": "20260404_desktop_product_delivery",
+  "items": [
+    {
+      "kind": "doc",
+      "label": "PRD",
+      "ref": "docs/daily-upgrade/0402/prd.md",
+      "notes": "Desktop product direction"
+    }
+  ],
+  "updated_at": "2026-04-04 00:34:48",
+  "source_asset_key": ""
+}

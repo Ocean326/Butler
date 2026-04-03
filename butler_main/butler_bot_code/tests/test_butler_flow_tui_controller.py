@@ -133,6 +133,30 @@ class ButlerFlowTuiControllerTests(unittest.TestCase):
         self.assertEqual(payload["response"], "ok")
         self.assertEqual(payload["manager_session_id"], "thread-1")
 
+    def test_manage_flow_passes_structured_draft_payload(self) -> None:
+        controller = _controller()
+
+        class _StubApp:
+            def __init__(self) -> None:
+                self._stdout = io.StringIO()
+                self.received_args = None
+
+            def manage_flow(self, args) -> None:
+                self.received_args = args
+                self._stdout.write(json.dumps({"asset_key": "template:demo"}))
+
+        stub = _StubApp()
+        with mock.patch.object(controller, "_new_plain_app", return_value=stub):
+            payload = controller.manage_flow(
+                config=None,
+                manage_target="template:new",
+                instruction="commit",
+                draft_payload={"goal": "ship demo"},
+            )
+
+        self.assertEqual(payload["asset_key"], "template:demo")
+        self.assertEqual(stub.received_args.draft_payload["goal"], "ship demo")
+
     def test_running_flow_enables_only_running_operator_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -396,6 +420,8 @@ class ButlerFlowTuiControllerTests(unittest.TestCase):
             self.assertEqual(input_event.get("family"), "input")
             self.assertEqual(output_event.get("lane"), "supervisor")
             self.assertEqual(output_event.get("family"), "output")
+            self.assertEqual(dict(input_event.get("payload") or {}).get("decision", {}).get("active_role_id"), "planner")
+            self.assertEqual(dict(output_event.get("payload") or {}).get("decision", {}).get("active_role_id"), "planner")
 
     def test_single_flow_payload_includes_summary_and_phase_steps(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -475,6 +501,59 @@ class ButlerFlowTuiControllerTests(unittest.TestCase):
             self.assertEqual(payload["summary"]["session_strategy"], "role_bound")
             self.assertEqual(payload["summary"]["active_role_id"], "planner")
             self.assertEqual(payload["summary"]["latest_handoff_summary"]["handoff_id"], "handoff-1")
+
+    def test_single_flow_payload_splits_surface_events_by_view(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            controller = _controller()
+            path = _write_flow_state(root, flow_id="flow_split", status="running")
+            _append_jsonl(
+                flow_events_path(path),
+                [
+                    {
+                        "event_id": "evt-system",
+                        "kind": "run_started",
+                        "lane": "system",
+                        "family": "run",
+                        "flow_id": "flow_split",
+                        "phase": "plan",
+                        "attempt_no": 1,
+                        "created_at": "2026-04-03 10:00:00",
+                        "message": "flow started",
+                    },
+                    {
+                        "event_id": "evt-supervisor",
+                        "kind": "supervisor_output",
+                        "lane": "supervisor",
+                        "family": "output",
+                        "flow_id": "flow_split",
+                        "phase": "plan",
+                        "attempt_no": 1,
+                        "created_at": "2026-04-03 10:00:01",
+                        "message": "supervisor summary",
+                    },
+                    {
+                        "event_id": "evt-workflow",
+                        "kind": "artifact_registered",
+                        "lane": "workflow",
+                        "family": "artifact",
+                        "flow_id": "flow_split",
+                        "phase": "imp",
+                        "attempt_no": 1,
+                        "created_at": "2026-04-03 10:00:02",
+                        "message": "artifact:1:imp",
+                    },
+                ],
+            )
+
+            payload = controller.single_flow_payload(config=config, flow_id="flow_split")
+            supervisor_events = list(dict(payload.get("supervisor_view") or {}).get("events") or [])
+            workflow_events = list(dict(payload.get("workflow_view") or {}).get("events") or [])
+
+            self.assertEqual([row["event_id"] for row in supervisor_events], ["evt-supervisor"])
+            self.assertEqual([row["event_id"] for row in workflow_events], ["evt-workflow"])
+            self.assertEqual(payload["navigator_summary"], payload["summary"])
 
     def test_workspace_payload_enriches_flow_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

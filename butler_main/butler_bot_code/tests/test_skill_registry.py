@@ -24,7 +24,7 @@ class SkillRegistryTests(unittest.TestCase):
     def test_load_skill_catalog_parses_extended_frontmatter(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            skill_dir = root / "butler_main" / "sources" / "skills" / "pool" / "operations" / "sample-skill"
+            skill_dir = root / "butler_main" / "platform" / "skills" / "pool" / "operations" / "sample-skill"
             skill_dir.mkdir(parents=True, exist_ok=True)
             (skill_dir / "SKILL.md").write_text(
                 """---
@@ -61,7 +61,7 @@ requires_skill_read: false
     def test_render_skill_catalog_for_prompt_renders_family_shortlist(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            skill_dir = root / "butler_main" / "sources" / "skills" / "pool" / "research" / "reader-skill"
+            skill_dir = root / "butler_main" / "platform" / "skills" / "pool" / "research" / "reader-skill"
             skill_dir.mkdir(parents=True, exist_ok=True)
             (skill_dir / "SKILL.md").write_text(
                 """---
@@ -89,7 +89,7 @@ automation_safe: true
     def test_load_skill_catalog_skips_temp_and_non_utf8_skill_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            good_dir = root / "butler_main" / "sources" / "skills" / "pool" / "operations" / "good-skill"
+            good_dir = root / "butler_main" / "platform" / "skills" / "pool" / "operations" / "good-skill"
             good_dir.mkdir(parents=True, exist_ok=True)
             (good_dir / "SKILL.md").write_text(
                 """---
@@ -100,11 +100,11 @@ description: Valid utf8 skill.
                 encoding="utf-8",
             )
 
-            bad_dir = root / "butler_main" / "sources" / "skills" / "pool" / "operations" / "bad-skill"
+            bad_dir = root / "butler_main" / "platform" / "skills" / "pool" / "operations" / "bad-skill"
             bad_dir.mkdir(parents=True, exist_ok=True)
             (bad_dir / "SKILL.md").write_bytes(b"---\nname: bad-skill\ndescription: \xb3\xff\n---\n")
 
-            tmp_dir = root / "butler_main" / "sources" / "skills" / "_tmp_probe" / "temp-skill"
+            tmp_dir = root / "butler_main" / "platform" / "skills" / "_tmp_probe" / "temp-skill"
             tmp_dir.mkdir(parents=True, exist_ok=True)
             (tmp_dir / "SKILL.md").write_text(
                 """---
@@ -122,9 +122,9 @@ description: Should be ignored.
     def test_load_skill_catalog_honors_sources_collection_registry(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            source_registry = root / "butler_main" / "sources" / "skills" / "collections" / "registry.json"
-            skill_a = root / "butler_main" / "sources" / "skills" / "pool" / "operations" / "alpha-skill"
-            skill_b = root / "butler_main" / "sources" / "skills" / "pool" / "operations" / "beta-skill"
+            source_registry = root / "butler_main" / "platform" / "skills" / "collections" / "registry.json"
+            skill_a = root / "butler_main" / "platform" / "skills" / "pool" / "operations" / "alpha-skill"
+            skill_b = root / "butler_main" / "platform" / "skills" / "pool" / "operations" / "beta-skill"
             source_registry.parent.mkdir(parents=True, exist_ok=True)
             skill_a.mkdir(parents=True, exist_ok=True)
             skill_b.mkdir(parents=True, exist_ok=True)
@@ -136,7 +136,7 @@ description: Should be ignored.
   "collections": {
     "chat_default": {
                         "skills": [
-        "./butler_main/sources/skills/pool/operations/beta-skill"
+        "./butler_main/platform/skills/pool/operations/beta-skill"
       ]
     }
   }
@@ -151,9 +151,9 @@ description: Should be ignored.
     def test_collection_registry_views_surface_metadata_and_skip_inactive_entries(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            source_registry = root / "butler_main" / "sources" / "skills" / "collections" / "registry.json"
-            active_skill = root / "butler_main" / "sources" / "skills" / "pool" / "operations" / "active-skill"
-            private_skill = root / "butler_main" / "sources" / "skills" / "pool" / "operations" / "private-skill"
+            source_registry = root / "butler_main" / "platform" / "skills" / "collections" / "registry.json"
+            active_skill = root / "butler_main" / "platform" / "skills" / "pool" / "operations" / "active-skill"
+            private_skill = root / "butler_main" / "platform" / "skills" / "pool" / "operations" / "private-skill"
             source_registry.parent.mkdir(parents=True, exist_ok=True)
             active_skill.mkdir(parents=True, exist_ok=True)
             private_skill.mkdir(parents=True, exist_ok=True)
@@ -174,8 +174,8 @@ description: Should be ignored.
       "owner": "butler",
       "default_injection_mode": "shortlist",
       "skills": [
-        "./butler_main/sources/skills/pool/operations/active-skill",
-        "./butler_main/sources/skills/pool/operations/private-skill"
+        "./butler_main/platform/skills/pool/operations/active-skill",
+        "./butler_main/platform/skills/pool/operations/private-skill"
       ]
     }
   }
@@ -196,8 +196,8 @@ description: Should be ignored.
     def test_load_skill_catalog_skips_inactive_skills_by_default(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            active_dir = root / "butler_main" / "sources" / "skills" / "pool" / "general" / "active-skill"
-            draft_dir = root / "butler_main" / "sources" / "skills" / "pool" / "incubating" / "draft-skill"
+            active_dir = root / "butler_main" / "platform" / "skills" / "pool" / "general" / "active-skill"
+            draft_dir = root / "butler_main" / "platform" / "skills" / "pool" / "incubating" / "draft-skill"
             active_dir.mkdir(parents=True, exist_ok=True)
             draft_dir.mkdir(parents=True, exist_ok=True)
             (active_dir / "SKILL.md").write_text(

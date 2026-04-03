@@ -21,8 +21,7 @@ class SkillUpstreamRegistryTests(unittest.TestCase):
             registry_path = (
                 root
                 / "butler_main"
-                / "sources"
-                / "skills"
+                / "platform" / "skills"
                 / "agent"
                 / "skill_manager_agent"
                 / "references"
@@ -36,7 +35,7 @@ class SkillUpstreamRegistryTests(unittest.TestCase):
     "demo-candidate": {
       "status": "active",
       "active_skill_name": "demo-skill",
-      "active_skill_path": "./butler_main/sources/skills/pool/general/demo-skill",
+      "active_skill_path": "./butler_main/platform/skills/pool/general/demo-skill",
       "auto_promotable": true
     }
   }

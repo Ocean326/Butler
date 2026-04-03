@@ -19,6 +19,8 @@ if str(MODULE_DIR) not in sys.path:
 
 from agents_os.contracts import Invocation
 from butler_main.chat import ChatRouter
+from butler_main.chat.frontdoor_cli_router import FrontDoorCliRouter
+from butler_main.chat.session_selection import ChatSessionSelection
 
 
 class ChatRouterFrontdoorTests(unittest.TestCase):
@@ -207,6 +209,69 @@ class ChatRouterFrontdoorTests(unittest.TestCase):
         self.assertEqual(runtime_request.compile_plan.project_phase, "plan")
         self.assertEqual(runtime_request.compile_plan.role_id, "project_planner")
         self.assertEqual(runtime_request.compile_plan.auto_route_reason, "sticky_mode_continuation")
+
+    def test_frontdoor_cli_router_defaults_simple_chat_to_cursor_fast_lane(self) -> None:
+        router = ChatRouter()
+        frontdoor_router = FrontDoorCliRouter(chat_router=router)
+        invocation = Invocation(
+            entrypoint="chat",
+            channel="feishu",
+            session_id="session-router-fast",
+            actor_id="user-router-fast",
+            user_text="帮我简单总结一下今天要做什么",
+        )
+
+        result = frontdoor_router.compile(
+            invocation=invocation,
+            workspace=str(REPO_ROOT),
+            mode_state={},
+            explicit_main_mode="chat",
+            explicit_project_phase="",
+            explicit_override_source="",
+            session_selection=ChatSessionSelection(chat_session_id="chat_session_1"),
+            intake_decision={"mode": "sync_quick_task", "frontdoor_action": "normal_chat"},
+            legacy_route_decision=router.route(invocation),
+            explicit_frontdoor_mode="",
+        )
+
+        self.assertEqual(result.compile_plan.runtime_lane, "cursor_fast")
+        self.assertEqual(result.compile_plan.runtime_cli, "cursor")
+        self.assertEqual(result.compile_plan.runtime_model, "composer-2-fast")
+        self.assertEqual(result.compile_plan.runtime_extra_args, ("--mode", "ask"))
+
+    def test_frontdoor_cli_router_promotes_background_entry_to_codex_lane(self) -> None:
+        router = ChatRouter()
+        frontdoor_router = FrontDoorCliRouter(chat_router=router)
+        invocation = Invocation(
+            entrypoint="chat",
+            channel="feishu",
+            session_id="session-router-deep",
+            actor_id="user-router-deep",
+            user_text="给你一个后台任务：ssh 179服务器，长期推进这个研究任务",
+        )
+
+        result = frontdoor_router.compile(
+            invocation=invocation,
+            workspace=str(REPO_ROOT),
+            mode_state={},
+            explicit_main_mode="chat",
+            explicit_project_phase="",
+            explicit_override_source="",
+            session_selection=ChatSessionSelection(chat_session_id="chat_session_2"),
+            intake_decision={
+                "mode": "async_program",
+                "frontdoor_action": "discuss_backend_entry",
+                "explicit_backend_request": True,
+                "external_execution_risk": True,
+            },
+            legacy_route_decision=router.route(invocation),
+            explicit_frontdoor_mode="",
+        )
+
+        self.assertEqual(result.compile_plan.frontdoor_action, "background_entry")
+        self.assertEqual(result.compile_plan.runtime_lane, "codex_deep")
+        self.assertEqual(result.compile_plan.runtime_cli, "codex")
+        self.assertEqual(result.compile_plan.runtime_model, "gpt-5.4")
 
 
 if __name__ == "__main__":

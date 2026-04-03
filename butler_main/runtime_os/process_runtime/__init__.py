@@ -1,87 +1,82 @@
 """Formal second-layer surface for workflow, governance, and session substrate."""
 
+from __future__ import annotations
+
 from importlib import import_module
 from typing import Any
 
-from .bindings import RoleBinding
-from .contracts import (
-    CollaborationPrimitiveContract,
-    FROZEN_TYPED_PRIMITIVE_IDS,
-    FROZEN_TYPED_PRIMITIVES,
-    primitive_contract_by_id,
-)
-from .engine import (
-    AcceptanceReceipt,
-    ConversationPromptBuild,
-    ConversationTurnEngine,
-    ConversationTurnInput,
-    ConversationTurnOutput,
-    ConversationTurnState,
-    EDGE_KINDS,
-    ExecutionReceipt,
-    FileSessionCheckpointStore,
-    FileWorkflowCheckpointStore,
-    PROCESS_ROLES,
-    ProcessExecutionOutcome,
-    ProcessWritebackProjection,
-    RuntimeVerdict,
-    RuntimeSessionCheckpoint,
-    STEP_KINDS,
-    StepResult,
-    SubworkflowCapability,
-    WorkflowReceipt,
-    merge_session_snapshots,
-    normalize_edge_kind,
-    normalize_failure_class,
-    normalize_process_role,
-    normalize_step_kind,
-)
-from .factory import WorkflowFactory
-from .governance import (
-    APPROVAL_STATUSES,
-    APPROVAL_TYPES,
-    ApprovalTicket,
-    DecisionReceipt,
-    ExperienceRecord,
-    HandoffReceipt,
-    RECOVERY_ACTIONS,
-    RecoveryDirective,
-    StepReceipt,
-    VERIFICATION_DECISIONS,
-    VerificationReceipt,
-    check_bash_chain_permissions,
-    extract_bash_commands,
-    matches_bash_permission,
-    normalize_approval_status,
-    normalize_approval_type,
-)
-from .session import (
-    ArtifactRecord,
-    ArtifactRegistry,
-    ArtifactVisibility,
-    BlackboardEntry,
-    CollaborationSubstrate,
-    FileWorkflowEventLog,
-    FileWorkflowSessionStore,
-    JoinContract,
-    MailboxMessage,
-    RoleHandoff,
-    SharedState,
-    StepOwnership,
-    WorkflowBlackboard,
-    WorkflowSession,
-    WorkflowSessionBundle,
-    WorkflowSessionEvent,
-)
-from .templates import WorkflowTemplate
-from .workflow import (
-    WorkflowCheckpoint,
-    WorkflowCursor,
-    WorkflowEdgeSpec,
-    WorkflowRunProjection,
-    WorkflowSpec,
-    WorkflowStepSpec,
-)
+
+_EXPORTS: dict[str, tuple[str, str]] = {
+    "RoleBinding": (".bindings", "RoleBinding"),
+    "CollaborationPrimitiveContract": (".contracts", "CollaborationPrimitiveContract"),
+    "FROZEN_TYPED_PRIMITIVE_IDS": (".contracts", "FROZEN_TYPED_PRIMITIVE_IDS"),
+    "FROZEN_TYPED_PRIMITIVES": (".contracts", "FROZEN_TYPED_PRIMITIVES"),
+    "primitive_contract_by_id": (".contracts", "primitive_contract_by_id"),
+    "AcceptanceReceipt": (".engine", "AcceptanceReceipt"),
+    "ConversationPromptBuild": (".engine", "ConversationPromptBuild"),
+    "ConversationTurnEngine": (".engine", "ConversationTurnEngine"),
+    "ConversationTurnInput": (".engine", "ConversationTurnInput"),
+    "ConversationTurnOutput": (".engine", "ConversationTurnOutput"),
+    "ConversationTurnState": (".engine", "ConversationTurnState"),
+    "EDGE_KINDS": (".engine", "EDGE_KINDS"),
+    "ExecutionReceipt": (".engine", "ExecutionReceipt"),
+    "FileSessionCheckpointStore": (".engine", "FileSessionCheckpointStore"),
+    "FileWorkflowCheckpointStore": (".engine", "FileWorkflowCheckpointStore"),
+    "PROCESS_ROLES": (".engine", "PROCESS_ROLES"),
+    "ProcessExecutionOutcome": (".engine", "ProcessExecutionOutcome"),
+    "ProcessWritebackProjection": (".engine", "ProcessWritebackProjection"),
+    "RuntimeVerdict": (".engine", "RuntimeVerdict"),
+    "RuntimeSessionCheckpoint": (".engine", "RuntimeSessionCheckpoint"),
+    "STEP_KINDS": (".engine", "STEP_KINDS"),
+    "StepResult": (".engine", "StepResult"),
+    "SubworkflowCapability": (".engine", "SubworkflowCapability"),
+    "WorkflowReceipt": (".engine", "WorkflowReceipt"),
+    "merge_session_snapshots": (".engine", "merge_session_snapshots"),
+    "normalize_edge_kind": (".engine", "normalize_edge_kind"),
+    "normalize_failure_class": (".engine", "normalize_failure_class"),
+    "normalize_process_role": (".engine", "normalize_process_role"),
+    "normalize_step_kind": (".engine", "normalize_step_kind"),
+    "WorkflowFactory": (".factory", "WorkflowFactory"),
+    "APPROVAL_STATUSES": (".governance", "APPROVAL_STATUSES"),
+    "APPROVAL_TYPES": (".governance", "APPROVAL_TYPES"),
+    "ApprovalTicket": (".governance", "ApprovalTicket"),
+    "DecisionReceipt": (".governance", "DecisionReceipt"),
+    "ExperienceRecord": (".governance", "ExperienceRecord"),
+    "HandoffReceipt": (".governance", "HandoffReceipt"),
+    "RECOVERY_ACTIONS": (".governance", "RECOVERY_ACTIONS"),
+    "RecoveryDirective": (".governance", "RecoveryDirective"),
+    "StepReceipt": (".governance", "StepReceipt"),
+    "VERIFICATION_DECISIONS": (".governance", "VERIFICATION_DECISIONS"),
+    "VerificationReceipt": (".governance", "VerificationReceipt"),
+    "check_bash_chain_permissions": (".governance", "check_bash_chain_permissions"),
+    "extract_bash_commands": (".governance", "extract_bash_commands"),
+    "matches_bash_permission": (".governance", "matches_bash_permission"),
+    "normalize_approval_status": (".governance", "normalize_approval_status"),
+    "normalize_approval_type": (".governance", "normalize_approval_type"),
+    "ArtifactRecord": (".session", "ArtifactRecord"),
+    "ArtifactRegistry": (".session", "ArtifactRegistry"),
+    "ArtifactVisibility": (".session", "ArtifactVisibility"),
+    "BlackboardEntry": (".session", "BlackboardEntry"),
+    "CollaborationSubstrate": (".session", "CollaborationSubstrate"),
+    "FileWorkflowEventLog": (".session", "FileWorkflowEventLog"),
+    "FileWorkflowSessionStore": (".session", "FileWorkflowSessionStore"),
+    "JoinContract": (".session", "JoinContract"),
+    "MailboxMessage": (".session", "MailboxMessage"),
+    "RoleHandoff": (".session", "RoleHandoff"),
+    "SharedState": (".session", "SharedState"),
+    "StepOwnership": (".session", "StepOwnership"),
+    "WorkflowBlackboard": (".session", "WorkflowBlackboard"),
+    "WorkflowSession": (".session", "WorkflowSession"),
+    "WorkflowSessionBundle": (".session", "WorkflowSessionBundle"),
+    "WorkflowSessionEvent": (".session", "WorkflowSessionEvent"),
+    "WorkflowTemplate": (".templates", "WorkflowTemplate"),
+    "WorkflowCheckpoint": (".workflow", "WorkflowCheckpoint"),
+    "WorkflowCursor": (".workflow", "WorkflowCursor"),
+    "WorkflowEdgeSpec": (".workflow", "WorkflowEdgeSpec"),
+    "WorkflowRunProjection": (".workflow", "WorkflowRunProjection"),
+    "WorkflowSpec": (".workflow", "WorkflowSpec"),
+    "WorkflowStepSpec": (".workflow", "WorkflowStepSpec"),
+}
 
 __all__ = [
     "APPROVAL_STATUSES",
@@ -158,6 +153,13 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
+    target = _EXPORTS.get(name)
+    if target is not None:
+        module_name, attribute_name = target
+        module = import_module(module_name, __name__)
+        value = getattr(module, attribute_name)
+        globals()[name] = value
+        return value
     if name != "ExecutionRuntime":
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     value = import_module(".engine", __name__).ExecutionRuntime

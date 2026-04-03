@@ -1,0 +1,29 @@
+{
+  "candidate": {
+    "id": "trafilatura-web-extract",
+    "name": "Trafilatura",
+    "category": "general_information",
+    "priority": "P0",
+    "maturity": "high",
+    "upstream_type": "open_source_library",
+    "repo_url": "https://github.com/adbar/trafilatura",
+    "docs_url": "https://trafilatura.readthedocs.io/en/latest/",
+    "butler_skill_shape": "web article extraction, cleanup, metadata capture, source note generation",
+    "why_recommended": [
+      "Good fit for turning arbitrary pages into clean text for downstream summarization and archival.",
+      "Works well as a shared primitive under web-note, forum snapshot, and research ingestion skills."
+    ],
+    "risks": [
+      "Dynamic sites and login walls still need browser automation or a secondary fetch path.",
+      "Needs source attribution rules in Butler output."
+    ],
+    "suggested_collection_ids": [
+      "chat_content_share",
+      "codex_default"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/platform/skills/pool/incubating/general/trafilatura-web-extract",
+  "review_state": "imported_for_review"
+}

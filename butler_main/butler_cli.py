@@ -42,19 +42,19 @@ FLOW_MIGRATION_HINT = (
 
 
 def _chat_main(argv: list[str]) -> int:
-    from butler_main.chat.cli.bootstrap import main as chat_main
+    from butler_main.products.chat.cli.bootstrap import main as chat_main
 
     return chat_main(argv)
 
 
 def _manager_main(argv: list[str]) -> int:
-    from butler_main.butler_bot_code import manager
+    from butler_main.platform.host_runtime import manager
 
     return manager.main(argv)
 
 
 def _core_main(argv: list[str]) -> int:
-    from butler_main.chat import core
+    from butler_main.products.chat import core
 
     return core.main(argv)
 

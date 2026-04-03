@@ -417,6 +417,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                                 "title": "stdout",
                                 "message": "stdout line 1",
                                 "raw_text": "stdout line 1",
+                                "payload": {"kind": "stdout", "role_id": "implementer", "active_role_id": "implementer"},
                                 "created_at": "2026-04-01 10:00:04",
                             },
                             ensure_ascii=False,
@@ -430,6 +431,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                                 "title": "stdout",
                                 "message": "stdout line 2",
                                 "raw_text": "stdout line 2",
+                                "payload": {"kind": "stdout", "role_id": "implementer", "active_role_id": "implementer"},
                                 "created_at": "2026-04-01 10:00:05",
                             },
                             ensure_ascii=False,
@@ -442,6 +444,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                                 "family": "artifact",
                                 "title": "report.md",
                                 "message": "report.md",
+                                "payload": {"artifact_ref": "artifact:7:plan", "producer_role_id": "implementer", "phase": "plan", "attempt_no": 1},
                                 "created_at": "2026-04-01 10:00:06",
                             },
                             ensure_ascii=False,
@@ -455,6 +458,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                                 "title": "stdout",
                                 "message": "stdout line 3",
                                 "raw_text": "stdout line 3",
+                                "payload": {"kind": "stdout", "role_id": "reviewer", "active_role_id": "reviewer"},
                                 "created_at": "2026-04-01 10:00:07",
                             },
                             ensure_ascii=False,
@@ -489,11 +493,11 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause(0.1)
                 workflow_lines = [line.rstrip() for line in _transcript_text(app).splitlines()]
                 self.assertEqual(workflow_lines.count("[workflow/raw_execution]"), 2)
-                self.assertIn(" stdout line 1", workflow_lines)
-                self.assertIn(" stdout line 2", workflow_lines)
+                self.assertIn(" implementer · stdout line 1", workflow_lines)
+                self.assertIn(" implementer · stdout line 2", workflow_lines)
                 self.assertIn("[workflow/artifact]", workflow_lines)
-                self.assertIn(" report.md", workflow_lines)
-                self.assertIn(" stdout line 3", workflow_lines)
+                self.assertIn(" artifact:7:plan · role=implementer · phase=plan · attempt=1", workflow_lines)
+                self.assertIn(" reviewer · stdout line 3", workflow_lines)
 
     async def test_meta_transcript_messages_use_grouped_system_titles(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -759,7 +763,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                     await pilot.pause(0.3)
                     manage_chat.assert_called_once()
                     manage_flow.assert_not_called()
-                    self.assertEqual(manage_chat.call_args.kwargs["manage_target"], "")
+                    self.assertEqual(manage_chat.call_args.kwargs["manage_target"], app._manage_cursor_asset_key)
                     self.assertIn("manager-thread-1", app._manage_chat_session_id)
                     self.assertIn("先确认细节", _manage_transcript_text(app))
 
@@ -802,7 +806,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                     manage_flow.assert_not_called()
                     self.assertIn("academic_paper_review_v1", _manage_transcript_text(app))
 
-    async def test_manage_chat_auto_applies_pending_flow_creation(self) -> None:
+    async def test_manage_dangling_dollar_is_sanitized_before_chat(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = _config_path(root)
@@ -818,14 +822,51 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 with mock.patch.object(
                     app._controller,
                     "manage_chat",
-                    return_value={
-                        "response": "我先按你的需求创建一个 pending flow。",
-                        "manager_session_id": "manager-thread-2",
-                        "action": "manage_flow",
-                        "action_ready": True,
-                        "action_manage_target": "new",
-                        "action_instruction": "按用户需求创建 pending flow，并补齐目标与守护条件",
-                    },
+                    return_value={"response": "继续讨论模板。", "manager_session_id": "manager-thread-sanitize"},
+                ) as manage_chat:
+                    command_input = app._command_input()
+                    command_input.value = "$\n之前的模板需要重新讨论一下"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    self.assertEqual(manage_chat.call_args.kwargs["instruction"], "之前的模板需要重新讨论一下")
+
+    async def test_manage_chat_applies_pending_flow_creation_only_after_confirmation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test() as pilot:
+                await pilot.pause(0.2)
+                app._open_manage_center()
+                await pilot.pause(0.1)
+                with mock.patch.object(
+                    app._controller,
+                    "manage_chat",
+                    side_effect=[
+                        {
+                            "response": "我先整理 pending flow 草稿，确认后再创建。",
+                            "manager_session_id": "manager-thread-2",
+                            "draft_summary": "new · managed_flow\n目标: 按用户需求创建 pending flow",
+                            "pending_action_preview": "如果你认可这版 pending flow 草稿，我就创建它。",
+                            "action": "manage_flow",
+                            "action_ready": False,
+                        },
+                        {
+                            "response": "收到，按刚才确认的草稿创建。",
+                            "manager_session_id": "manager-thread-2",
+                            "action": "manage_flow",
+                            "action_ready": True,
+                            "action_manage_target": "new",
+                            "action_instruction": "按用户需求创建 pending flow，并补齐目标与守护条件",
+                            "action_goal": "按用户需求创建 pending flow",
+                            "action_guard_condition": "flow 可继续执行",
+                            "action_draft": {"goal": "按用户需求创建 pending flow", "guard_condition": "flow 可继续执行"},
+                        },
+                    ],
                 ) as manage_chat, mock.patch.object(
                     app._controller,
                     "manage_flow",
@@ -840,13 +881,121 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                     command_input.value = "按我的需求创建一个新的 pending flow"
                     app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
                     await pilot.pause(0.3)
-                    manage_chat.assert_called_once()
+                    manage_flow.assert_not_called()
+                    command_input.value = "确认"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    self.assertEqual(manage_chat.call_count, 2)
                     manage_flow.assert_called_once()
                     self.assertEqual(manage_flow.call_args.kwargs["manage_target"], "new")
                     self.assertEqual(manage_flow.call_args.kwargs["instruction"], "按用户需求创建 pending flow，并补齐目标与守护条件")
+                    self.assertEqual(manage_flow.call_args.kwargs["draft_payload"]["goal"], "按用户需求创建 pending flow")
                     self.assertIn("pending flow created", _manage_transcript_text(app))
 
-    async def test_manage_chat_auto_applies_template_creation(self) -> None:
+    async def test_manage_chat_applies_template_creation_only_after_confirmation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test() as pilot:
+                await pilot.pause(0.2)
+                app._open_manage_center()
+                await pilot.pause(0.1)
+                with mock.patch.object(
+                    app._controller,
+                    "manage_chat",
+                    side_effect=[
+                        {
+                            "response": "这个需求更适合先沉淀成模板，我先整理模板草稿。",
+                            "manager_session_id": "manager-thread-3",
+                            "draft_summary": "template:new · managed_flow\n目标: 创建一个可复用模板，用于学术论文评审",
+                            "pending_action_preview": "如果你认可这版模板草稿，我就创建 template。",
+                            "action": "manage_flow",
+                            "action_ready": False,
+                        },
+                        {
+                            "response": "收到，我现在创建 template。",
+                            "manager_session_id": "manager-thread-3",
+                            "action": "manage_flow",
+                            "action_ready": True,
+                            "action_manage_target": "template:new",
+                            "action_instruction": "创建一个可复用模板，用于学术论文评审",
+                            "action_draft": {"goal": "创建一个可复用模板，用于学术论文评审"},
+                        },
+                    ],
+                ) as manage_chat, mock.patch.object(
+                    app._controller,
+                    "manage_flow",
+                    return_value={
+                        "asset_key": "template:20260402_学术论文评审",
+                        "asset_kind": "template",
+                        "asset_id": "20260402_学术论文评审",
+                        "manage_handoff": {"summary": "template created"},
+                    },
+                ) as manage_flow:
+                    command_input = app._command_input()
+                    command_input.value = "创建一个可复用模板，用于学术论文评审"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    manage_flow.assert_not_called()
+                    command_input.value = "确认"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    self.assertEqual(manage_chat.call_count, 2)
+                    manage_flow.assert_called_once()
+                    self.assertEqual(manage_flow.call_args.kwargs["manage_target"], "template:new")
+                    self.assertEqual(manage_flow.call_args.kwargs["draft_payload"]["goal"], "创建一个可复用模板，用于学术论文评审")
+                    self.assertIn("template created", _manage_transcript_text(app))
+
+    async def test_manage_chat_followup_reuses_current_asset_focus(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test() as pilot:
+                await pilot.pause(0.2)
+                app._open_manage_center()
+                await pilot.pause(0.1)
+                first_payload = {
+                    "response": "我建议先把论文评审模板定下来。",
+                    "manage_target": "template:academic_paper_review_v1",
+                    "manager_stage": "template_confirm",
+                    "active_skill": "template_select_or_create",
+                    "confirmation_scope": "template",
+                    "confirmation_prompt": "如果你认可这个模板方案，我就先按它整理模板。",
+                    "manager_session_id": "manager-thread-review",
+                }
+                second_payload = {
+                    "response": "收到，我继续围绕这个模板整理下一步。",
+                    "manager_session_id": "manager-thread-review",
+                }
+                with mock.patch.object(
+                    app._controller,
+                    "manage_chat",
+                    side_effect=[first_payload, second_payload],
+                ) as manage_chat, mock.patch.object(app._controller, "manage_flow") as manage_flow:
+                    command_input = app._command_input()
+                    command_input.value = "先帮我定论文评审模板"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    command_input.value = "确认，按这个模板继续"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    self.assertEqual(manage_chat.call_count, 2)
+                    manage_flow.assert_not_called()
+                    self.assertEqual(manage_chat.call_args_list[1].kwargs["manage_target"], "")
+                    self.assertEqual(app._manage_cursor_asset_key, "template:academic_paper_review_v1")
+                    self.assertIn("confirm=template", _manage_transcript_text(app))
+
+    async def test_manage_chat_parse_failure_surfaces_raw_reply(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = _config_path(root)
@@ -863,31 +1012,138 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                     app._controller,
                     "manage_chat",
                     return_value={
-                        "response": "这个需求更适合先沉淀成模板，我来创建一个 template。",
-                        "manager_session_id": "manager-thread-3",
-                        "action": "manage_flow",
-                        "action_ready": True,
-                        "action_manage_target": "template:new",
-                        "action_instruction": "创建一个可复用模板，用于学术论文评审",
+                        "response": "先把模板和 supervisor 方向讨论清楚，再决定是否创建。",
+                        "parse_status": "failed",
+                        "raw_reply": "先把模板和 supervisor 方向讨论清楚，再决定是否创建。",
+                        "error_text": "manager chat returned non-JSON output",
+                        "manager_session_id": "manager-thread-parse",
                     },
-                ) as manage_chat, mock.patch.object(
-                    app._controller,
-                    "manage_flow",
-                    return_value={
-                        "asset_key": "template:20260402_学术论文评审",
-                        "asset_kind": "template",
-                        "asset_id": "20260402_学术论文评审",
-                        "manage_handoff": {"summary": "template created"},
-                    },
-                ) as manage_flow:
+                ):
                     command_input = app._command_input()
-                    command_input.value = "创建一个可复用模板，用于学术论文评审"
+                    command_input.value = "重新讨论一下模板"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    transcript = _manage_transcript_text(app)
+                    self.assertIn("manager chat returned non-JSON output", transcript)
+                    self.assertIn("先把模板和 supervisor 方向讨论清楚", transcript)
+
+    async def test_manage_chat_recovery_note_shows_when_resume_restarts_fresh_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test() as pilot:
+                await pilot.pause(0.2)
+                app._open_manage_center()
+                app._manage_chat_session_id = "manager-thread-old"
+                await pilot.pause(0.1)
+                with mock.patch.object(
+                    app._controller,
+                    "manage_chat",
+                    return_value={
+                        "response": "我先按这个模板重新梳理讨论，再决定 flow。",
+                        "parse_status": "ok",
+                        "manager_session_id": "manager-thread-fresh",
+                        "session_recovery": {
+                            "applied": True,
+                            "kind": "resume_to_fresh_exec",
+                            "previous_manager_session_id": "manager-thread-old",
+                            "recovered_manager_session_id": "manager-thread-fresh",
+                            "initial_raw_reply": "Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        },
+                    },
+                ):
+                    command_input = app._command_input()
+                    command_input.value = "继续讨论一下模板"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    transcript = _manage_transcript_text(app)
+                    self.assertIn("manager session reset", transcript)
+                    self.assertIn("started fresh session", transcript)
+                    self.assertIn("我先按这个模板重新梳理讨论", transcript)
+                    self.assertNotIn("timeout waiting for child process to exit", transcript)
+
+    async def test_manage_chat_failed_recovery_keeps_old_draft_muted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test() as pilot:
+                await pilot.pause(0.2)
+                app._open_manage_center()
+                await pilot.pause(0.1)
+                with mock.patch.object(
+                    app._controller,
+                    "manage_chat",
+                    return_value={
+                        "response": "Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        "parse_status": "failed",
+                        "raw_reply": "Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        "error_text": "manager chat returned non-JSON output",
+                        "draft_summary": "",
+                        "manager_stage": "discuss",
+                        "manager_session_id": "manager-thread-old",
+                        "session_recovery": {
+                            "applied": True,
+                            "kind": "resume_to_fresh_exec",
+                            "previous_manager_session_id": "manager-thread-old",
+                            "recovered_manager_session_id": "",
+                            "initial_raw_reply": "Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        },
+                    },
+                ):
+                    command_input = app._command_input()
+                    command_input.value = "继续讨论一下模板"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    transcript = _manage_transcript_text(app)
+                    self.assertIn("last saved draft unchanged", transcript)
+                    self.assertIn("manager chat returned non-JSON output", transcript)
+                    self.assertNotIn("stage=discuss", transcript)
+
+    async def test_manage_chat_shows_manager_stage_and_confirmation_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test() as pilot:
+                await pilot.pause(0.2)
+                app._open_manage_center()
+                await pilot.pause(0.1)
+                with mock.patch.object(
+                    app._controller,
+                    "manage_chat",
+                    return_value={
+                        "response": "我建议先把模板确认下来，再去创建 flow。",
+                        "manager_session_id": "manager-thread-explain",
+                        "manager_stage": "flow_confirm",
+                        "active_skill": "flow_spec_finalize",
+                        "confirmation_scope": "flow",
+                        "confirmation_prompt": "如果你认可这次 run 的 flow 定义，我就创建 pending flow。",
+                    },
+                ) as manage_chat, mock.patch.object(app._controller, "manage_flow") as manage_flow:
+                    command_input = app._command_input()
+                    command_input.value = "基于这个模板创建 flow"
                     app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
                     await pilot.pause(0.3)
                     manage_chat.assert_called_once()
-                    manage_flow.assert_called_once()
-                    self.assertEqual(manage_flow.call_args.kwargs["manage_target"], "template:new")
-                    self.assertIn("template created", _manage_transcript_text(app))
+                    manage_flow.assert_not_called()
+                    transcript = _manage_transcript_text(app)
+                    self.assertIn("stage=flow_confirm", transcript)
+                    self.assertIn("skill=flow_spec_finalize", transcript)
+                    self.assertIn("如果你认可这次 run 的 flow 定义", transcript)
 
     async def test_manage_picker_shows_seven_items_and_enter_selects_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1117,7 +1373,11 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                         "title": "supervisor raw output",
                         "message": "{\"decision\":\"execute\"}",
                         "raw_text": "{\"decision\":\"execute\"}",
-                        "payload": {"segment": "{\"decision\":\"execute\"}", "source": "supervisor_runtime"},
+                        "payload": {
+                            "segment": "{\"decision\":\"execute\"}",
+                            "source": "supervisor_runtime",
+                            "active_role_id": "planner",
+                        },
                     }
                 ],
             )
@@ -1135,6 +1395,296 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 transcript = _transcript_text(app)
                 self.assertIn("{\"decision\":\"execute\"}", transcript)
                 self.assertIn("[supervisor/output]", transcript)
+                self.assertIn("active_role=planner", transcript)
+
+    async def test_flow_transcript_prefers_surface_view_events_over_top_level_timeline_filtering(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            state = new_flow_state(
+                workflow_id="flow_surface_first",
+                workflow_kind="project_loop",
+                workspace_root=str(root),
+                goal="alpha",
+                guard_condition="done",
+                max_attempts=4,
+                max_phase_attempts=2,
+            )
+            write_json_atomic(flow_dir(root, "flow_surface_first") / "workflow_state.json", state)
+
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            payload = {
+                "flow_id": "flow_surface_first",
+                "timeline": [
+                    {
+                        "event_id": "evt-system",
+                        "kind": "run_started",
+                        "lane": "system",
+                        "family": "run",
+                        "message": "flow started",
+                        "created_at": "2026-04-03 10:00:00",
+                    },
+                    {
+                        "event_id": "evt-ignored",
+                        "kind": "supervisor_output",
+                        "lane": "supervisor",
+                        "family": "output",
+                        "message": "timeline-only supervisor event",
+                        "created_at": "2026-04-03 10:00:01",
+                    },
+                ],
+                "navigator_summary": {
+                    "workflow_kind": "project_loop",
+                    "effective_status": "running",
+                    "effective_phase": "plan",
+                    "goal": "alpha",
+                    "guard_condition": "done",
+                    "approval_state": "operator_required",
+                    "active_role_id": "planner",
+                },
+                "summary": {
+                    "workflow_kind": "project_loop",
+                    "effective_status": "running",
+                    "effective_phase": "plan",
+                    "goal": "alpha",
+                    "guard_condition": "done",
+                    "approval_state": "operator_required",
+                    "active_role_id": "planner",
+                },
+                "supervisor_view": {
+                    "header": {
+                        "flow_id": "flow_surface_first",
+                        "workflow_kind": "project_loop",
+                        "status": "running",
+                        "phase": "plan",
+                        "goal": "alpha",
+                        "guard_condition": "done",
+                        "active_role_id": "planner",
+                        "approval_state": "operator_required",
+                    },
+                    "pointers": {},
+                    "events": [
+                        {
+                            "event_id": "evt-supervisor",
+                            "kind": "supervisor_output",
+                            "lane": "supervisor",
+                            "family": "output",
+                            "message": "surface supervisor event",
+                            "created_at": "2026-04-03 10:00:02",
+                        }
+                    ],
+                },
+                "workflow_view": {
+                    "events": [
+                        {
+                            "event_id": "evt-workflow",
+                            "kind": "artifact_registered",
+                            "lane": "workflow",
+                            "family": "artifact",
+                            "message": "surface workflow event",
+                            "created_at": "2026-04-03 10:00:03",
+                            "payload": {"artifact_ref": "artifact:9:workflow"},
+                        }
+                    ]
+                },
+                "inspector": {},
+                "step_history": [],
+                "artifacts": [],
+                "turns": [],
+                "actions": [],
+                "handoffs": [],
+            }
+
+            async with app.run_test(size=(120, 28)) as pilot:
+                await pilot.pause(0.2)
+                with mock.patch.object(app._controller, "single_flow_payload", return_value=payload):
+                    app._focus_flow("flow_surface_first")
+                    app._back_to_flow()
+                    await pilot.pause(0.1)
+
+                    transcript = _transcript_text(app)
+                    self.assertIn("surface supervisor event", transcript)
+                    self.assertNotIn("timeline-only supervisor event", transcript)
+                    self.assertIn("status=running", transcript)
+                    self.assertIn("phase=plan", transcript)
+                    self.assertIn("active_role=planner", transcript)
+
+                    app.on_key(textual_events.Key("shift+tab", None))
+                    await pilot.pause(0.1)
+                    workflow_transcript = _transcript_text(app)
+                    self.assertIn("artifact:9:workflow", workflow_transcript)
+                    self.assertNotIn("timeline-only supervisor event", workflow_transcript)
+
+    async def test_supervisor_input_output_render_actual_body_not_titles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            state = new_flow_state(
+                workflow_id="flow_supervisor_titles",
+                workflow_kind="project_loop",
+                workspace_root=str(root),
+                goal="alpha",
+                guard_condition="done",
+                max_attempts=4,
+                max_phase_attempts=2,
+            )
+            flow_path = flow_dir(root, "flow_supervisor_titles")
+            write_json_atomic(flow_path / "workflow_state.json", state)
+            _write_jsonl(
+                flow_events_path(flow_path),
+                [
+                    {
+                        "event_id": "evt_sup_input",
+                        "kind": "supervisor_input",
+                        "lane": "supervisor",
+                        "family": "input",
+                        "flow_id": "flow_supervisor_titles",
+                        "phase": "plan",
+                        "attempt_no": 1,
+                        "created_at": "2026-04-02 10:00:00",
+                        "title": "supervisor heuristic input",
+                        "message": "Please focus on the unresolved blockers.",
+                        "raw_text": "Please focus on the unresolved blockers.",
+                        "payload": {"active_role_id": "implementer"},
+                    },
+                    {
+                        "event_id": "evt_sup_output",
+                        "kind": "supervisor_output",
+                        "lane": "supervisor",
+                        "family": "output",
+                        "flow_id": "flow_supervisor_titles",
+                        "phase": "plan",
+                        "attempt_no": 1,
+                        "created_at": "2026-04-02 10:00:01",
+                        "title": "supervisor heuristic output",
+                        "message": "decision=execute | next_action=run_executor",
+                        "raw_text": "",
+                        "payload": {"active_role_id": "implementer"},
+                    },
+                ],
+            )
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test(size=(120, 28)) as pilot:
+                await pilot.pause(0.2)
+                app._focus_flow("flow_supervisor_titles")
+                app._back_to_flow()
+                await pilot.pause(0.1)
+
+                transcript = _transcript_text(app)
+                self.assertIn("Please focus on the unresolved blockers.", transcript)
+                self.assertIn("decision=execute | next_action=run_executor", transcript)
+                self.assertNotIn("supervisor heuristic input", transcript)
+                self.assertNotIn("supervisor heuristic output", transcript)
+
+    async def test_supervisor_event_with_non_mapping_payload_does_not_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            state = new_flow_state(
+                workflow_id="flow_supervisor_bad_payload",
+                workflow_kind="project_loop",
+                workspace_root=str(root),
+                goal="alpha",
+                guard_condition="done",
+                max_attempts=4,
+                max_phase_attempts=2,
+            )
+            flow_path = flow_dir(root, "flow_supervisor_bad_payload")
+            write_json_atomic(flow_path / "workflow_state.json", state)
+            _write_jsonl(
+                flow_events_path(flow_path),
+                [
+                    {
+                        "event_id": "evt_sup_bad_payload",
+                        "kind": "supervisor_decided",
+                        "lane": "supervisor",
+                        "family": "decision",
+                        "flow_id": "flow_supervisor_bad_payload",
+                        "phase": "synthesize",
+                        "attempt_no": 32,
+                        "created_at": "2026-04-02 10:00:00",
+                        "title": "",
+                        "message": "follow pending instruction from previous judge/recovery via role=implementer",
+                        "raw_text": "",
+                        "payload": "corrupted-payload",
+                    }
+                ],
+            )
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test(size=(120, 28)) as pilot:
+                await pilot.pause(0.2)
+                app._focus_flow("flow_supervisor_bad_payload")
+                app._back_to_flow()
+                await pilot.pause(0.1)
+
+                transcript = _transcript_text(app)
+                self.assertIn("follow pending instruction from previous judge/recovery via role=implementer", transcript)
+
+    async def test_supervisor_event_with_string_decision_field_does_not_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            state = new_flow_state(
+                workflow_id="flow_supervisor_string_decision",
+                workflow_kind="project_loop",
+                workspace_root=str(root),
+                goal="alpha",
+                guard_condition="done",
+                max_attempts=4,
+                max_phase_attempts=2,
+            )
+            flow_path = flow_dir(root, "flow_supervisor_string_decision")
+            write_json_atomic(flow_path / "workflow_state.json", state)
+            _write_jsonl(
+                flow_events_path(flow_path),
+                [
+                    {
+                        "event_id": "evt_sup_string_decision",
+                        "kind": "supervisor_decided",
+                        "lane": "supervisor",
+                        "family": "decision",
+                        "flow_id": "flow_supervisor_string_decision",
+                        "phase": "synthesize",
+                        "attempt_no": 32,
+                        "created_at": "2026-04-02 10:00:00",
+                        "title": "",
+                        "message": "follow pending instruction from previous judge/recovery via role=implementer",
+                        "raw_text": "",
+                        "payload": {
+                            "decision": "execute",
+                            "active_role_id": "implementer",
+                            "next_action": "run_executor",
+                        },
+                    }
+                ],
+            )
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test(size=(120, 28)) as pilot:
+                await pilot.pause(0.2)
+                app._focus_flow("flow_supervisor_string_decision")
+                app._back_to_flow()
+                await pilot.pause(0.1)
+
+                transcript = _transcript_text(app)
+                self.assertIn("follow pending instruction from previous", transcript)
+                self.assertIn("judge/recovery via role=implementer", transcript)
+                self.assertIn("active_role=implementer", transcript)
 
     async def test_history_plain_text_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

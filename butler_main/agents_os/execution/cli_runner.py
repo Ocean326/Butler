@@ -69,6 +69,9 @@ _CODEX_RECONNECT_PROGRESS_RE = re.compile(r"reconnecting\.\.\.\s*(\d+)\s*/\s*(\d
 _DEFAULT_CURSOR_CONTINUE_PREFIX = (
     "[上下文：上一阶段 Codex 执行已被用户终止，请直接接续完成下列用户需求。]\n\n"
 )
+_EXECUTION_CONTEXT_REPO_BOUND = "repo_bound"
+_EXECUTION_CONTEXT_ISOLATED = "isolated"
+_DEFAULT_CODEX_EXEC_ROOT_BASE = os.path.join(os.path.expanduser("~"), ".butler", "codex_exec_roots")
 
 
 def _cursor_continue_after_codex_cancel_settings(cfg: dict | None) -> dict:
@@ -460,6 +463,7 @@ def resolve_runtime_request(cfg: dict | None, runtime_request: dict | None = Non
     defaults = dict(settings.get("defaults") or {})
     request = dict(defaults)
     incoming = dict(runtime_request or {})
+    router_selected_runtime = bool(incoming.get("_router_selected_runtime"))
     if "_profile_explicit" in incoming:
         explicit_profile = bool(incoming.get("_profile_explicit"))
     else:
@@ -471,7 +475,8 @@ def resolve_runtime_request(cfg: dict | None, runtime_request: dict | None = Non
     request["model"] = normalize_model_name(model_override or request.get("model") or "auto", request.get("cli"))
     skip_codex_first, count_switchover_probe = codex_cursor_switchover.resolve_codex_first_switchover(cfg)
     if (
-        not cli_explicit
+        not router_selected_runtime
+        and not cli_explicit
         and str(request.get("cli") or "").strip().lower() == "cursor"
         and cli_provider_available("codex", cfg)
         and bool(dict(_provider_config(cfg, "codex") or {}).get("enabled", True))
@@ -512,6 +517,15 @@ def resolve_runtime_request(cfg: dict | None, runtime_request: dict | None = Non
         request["config_overrides"].extend(_normalize_str_list(provider_override.get("config_overrides")))
         request["extra_args"].extend(_normalize_str_list(provider_override.get("extra_args")))
     request["_profile_explicit"] = explicit_profile
+    if router_selected_runtime:
+        request["_router_selected_runtime"] = True
+    execution_context = str(request.get("execution_context") or "").strip().lower()
+    if execution_context not in {_EXECUTION_CONTEXT_REPO_BOUND, _EXECUTION_CONTEXT_ISOLATED}:
+        execution_context = _EXECUTION_CONTEXT_REPO_BOUND
+    request["execution_context"] = execution_context
+    explicit_execution_root = str(request.get("execution_workspace_root") or "").strip()
+    if explicit_execution_root:
+        request["execution_workspace_root"] = os.path.abspath(explicit_execution_root)
     return request
 
 
@@ -583,6 +597,56 @@ def _default_codex_home() -> str:
 def _resolve_codex_session_store_path(provider: dict | None, runtime_request: dict | None) -> str:
     explicit = str(dict(runtime_request or {}).get("codex_home") or dict(provider or {}).get("codex_home") or "").strip()
     return explicit or _default_codex_home()
+
+
+def _codex_execution_root_settings(cfg: dict | None) -> dict[str, Any]:
+    runtime = dict((cfg or {}).get("cli_runtime") or {})
+    raw = runtime.get("codex_execution_roots")
+    return dict(raw or {}) if isinstance(raw, dict) else {}
+
+
+def _resolve_isolated_execution_root_base(cfg: dict | None) -> str:
+    settings = _codex_execution_root_settings(cfg)
+    configured = str(settings.get("base_dir") or settings.get("root") or "").strip()
+    return os.path.abspath(os.path.expanduser(configured or _DEFAULT_CODEX_EXEC_ROOT_BASE))
+
+
+def _sanitize_execution_scope(value: str) -> str:
+    text = re.sub(r"[^A-Za-z0-9._-]+", "_", str(value or "").strip())
+    text = re.sub(r"_+", "_", text).strip("._-")
+    return text[:96] or "default"
+
+
+def _resolve_execution_scope_id(runtime_request: dict | None) -> str:
+    request = dict(runtime_request or {})
+    for key in (
+        "execution_scope_id",
+        "workflow_id",
+        "session_scope_id",
+        "agent_id",
+        "invocation_id",
+        "thread_id",
+        "codex_session_id",
+    ):
+        token = str(request.get(key) or "").strip()
+        if token:
+            return _sanitize_execution_scope(token)
+    return "default"
+
+
+def _resolve_execution_workspace_root(workspace: str, runtime_request: dict | None, cfg: dict | None) -> str:
+    request = dict(runtime_request or {})
+    execution_context = str(request.get("execution_context") or "").strip().lower()
+    if execution_context != _EXECUTION_CONTEXT_ISOLATED:
+        return workspace
+    explicit_root = str(request.get("execution_workspace_root") or "").strip()
+    if explicit_root:
+        target = os.path.abspath(os.path.expanduser(explicit_root))
+    else:
+        base_dir = _resolve_isolated_execution_root_base(cfg)
+        target = os.path.join(base_dir, _resolve_execution_scope_id(request))
+    os.makedirs(target, exist_ok=True)
+    return target
 
 
 def _vendor_capabilities_payload(provider: str) -> dict[str, Any]:
@@ -713,6 +777,9 @@ def _execution_result_to_receipt(
     from butler_main.runtime_os.process_runtime import ExecutionReceipt
 
     request = dict(runtime_request or {})
+    requested_workspace = str(request.get("requested_workspace") or workspace).strip() or workspace
+    execution_workspace_root = str(request.get("execution_workspace_root") or requested_workspace).strip() or requested_workspace
+    execution_context = str(request.get("execution_context") or _EXECUTION_CONTEXT_REPO_BOUND).strip().lower()
     provider = str(result.get("provider") or request.get("cli") or DEFAULT_CLI_PROVIDER).strip() or DEFAULT_CLI_PROVIDER
     output_text = str(result.get("output") or "").strip()
     failure_class = str(result.get("failure_class") or "").strip()
@@ -736,7 +803,10 @@ def _execution_result_to_receipt(
         },
     )
     metadata = {
-        "workspace": workspace,
+        "workspace": requested_workspace,
+        "requested_workspace": requested_workspace,
+        "execution_workspace_root": execution_workspace_root,
+        "execution_context": execution_context,
         "provider": provider,
         "provider_returncode": result.get("returncode"),
         "returncode": result.get("returncode"),
@@ -841,6 +911,9 @@ def run_prompt_receipt(
     workspace = _normalize_workspace_path(workspace)
     incoming_request = prepare_vendor_session_runtime_request(cfg, runtime_request)
     resolved = resolve_runtime_request(cfg, incoming_request)
+    execution_workspace = _resolve_execution_workspace_root(workspace, resolved, cfg)
+    resolved["requested_workspace"] = workspace
+    resolved["execution_workspace_root"] = execution_workspace
     explicit_profile = bool(resolved.get("_profile_explicit"))
     resolved = provider_failover.prepare_runtime_request(cfg, resolved, explicit_profile=explicit_profile)
     if resolved.pop("_codex_switchover_count_probe", None):
@@ -854,7 +927,7 @@ def run_prompt_receipt(
         _run_provider_detailed(
             preferred_cli,
             prompt,
-            workspace,
+            execution_workspace,
             effective_timeout,
             cfg,
             resolved,
@@ -914,7 +987,7 @@ def run_prompt_receipt(
         _run_provider_detailed(
             fallback_cli,
             fallback_prompt,
-            workspace,
+            execution_workspace,
             timeout,
             cfg,
             fallback_request,
@@ -1278,6 +1351,15 @@ def _run_codex_detailed(
     stream_emitted = {"value": False}
     stream_halt = threading.Event()
 
+    def _mark_resume_failed(reason: str) -> None:
+        if codex_mode != "resume":
+            return
+        lowered = str(reason or "").strip().lower()
+        if "thread/resume failed" not in lowered and "no rollout found" not in lowered and "resume session not found" not in lowered:
+            return
+        external_session["resume_failed"] = True
+        external_session["vendor_session_state"] = "resume_failed"
+
     def _emit_stdout_line(raw_line: str) -> None:
         stdout_chunks.append(raw_line)
         if stream_halt.is_set():
@@ -1427,6 +1509,7 @@ def _run_codex_detailed(
         output = _extract_codex_output("".join(stdout_chunks), "".join(stderr_chunks))
         clean = strip_ansi(output).strip()
         stderr_clean = strip_ansi("".join(stderr_chunks)).strip()
+        _mark_resume_failed("\n".join(part for part in (clean, stderr_clean) if part))
         _unregister_active_process(run_token)
         return _coerce_execution_result(
             "codex",
@@ -1483,6 +1566,7 @@ def _run_codex_detailed(
     failure_class = ""
     if not base_ok:
         failure_blob = "\n".join(part for part in (clean, stderr_clean, stall_abort_reason) if part).strip()
+        _mark_resume_failed(failure_blob)
         failure_class = provider_failover.classify_failure(failure_blob)
     return _coerce_execution_result(
         "codex",

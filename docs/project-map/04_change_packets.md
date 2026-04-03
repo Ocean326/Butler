@@ -1,7 +1,7 @@
 # 改前读包
 
-更新时间：2026-04-02  
-状态：现役  
+更新时间：2026-04-04
+状态：现役
 用途：把常见改动压成固定最小读包，避免 agent 自由扩散式读库
 
 ## 通用基础包
@@ -10,7 +10,7 @@
 
 1. 仓库根 `README.md`
 2. [docs/README.md](../README.md)
-3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`
+3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0404/00_当日总纲.md`）
 
 ## `frontdoor`
 
@@ -26,30 +26,34 @@
   - [0402 Chat Router 选会话能力升级回写](../daily-upgrade/0402/01_chat_router选会话能力升级回写.md)
   - [0326 Harness 全系统稳定态运行梳理](../daily-upgrade/0326/03_Harness全系统稳定态运行梳理.md)
 - 默认代码目录：
-  - `butler_main/chat/`
-  - `butler_main/orchestrator/interfaces/`
+  - `butler_main/products/chat/`
+  - `butler_main/chat/`（compat shell）
+  - `butler_main/products/campaign_orchestrator/orchestrator/interfaces/`
   - `butler_main/agents_os/execution/cli_runner.py`
+  - `butler_main/products/chat/frontdoor_cli_router.py`
 - 默认测试：
   - `test_chat_campaign_negotiation.py`
   - `test_chat_long_task_frontdoor_regression.py`
   - `test_request_intake_service.py`
   - `test_talk_mainline_service.py`
   - `test_chat_router_frontdoor.py`
+  - `test_chat_engine_model_controls.py`
   - `test_talk_runtime_service.py`
   - `test_chat_recent_memory_runtime.py`
   - `test_conversation_turn_engine.py`
   - `test_chat_runtime_request_override_runtime.py`
 - 临时熔断附加检查：
-  - 先看 `butler_main/chat/feature_switches.py`
+  - 先看 `butler_main/products/chat/feature_switches.py`
   - 再看 `butler_main/butler_bot_code/configs/butler_bot.json -> features.chat_frontdoor_tasks_enabled`
   - 回归优先补 `test_chat_router_frontdoor.py`、`test_talk_mainline_service.py`、`test_agent_soul_prompt.py`
   - 模式收口附加检查：
-  - 先看 `butler_main/chat/frontdoor_modes.py` 的 slash 契约
-  - 再看 `butler_main/chat/router_plan.py` 与 `butler_main/chat/routing.py` 的 `RouterCompilePlan`，确认当前 `main_mode / role_id / injection_tier / capability_policy` 是否仍是前台唯一编译真源
-  - 若涉及“续接当前主线还是重开新题”，先看 `butler_main/chat/session_selection.py`、`butler_main/chat/mainline.py` 与 `butler_main/chat/memory_runtime/recent_turn_store.py`，确认 `chat_session_id` 是否已在当前 `session_scope_id` 内正确 bootstrap、写回、过滤 recent
-  - 再看 `butler_main/chat/session_modes.py` 的 sticky state、recent 配额与 `project_artifact`
-  - 再看 `butler_main/chat/mainline.py` 和 `butler_main/chat/prompting.py` 是否仍把 `/pure` 当成功能路由，而不是厚度 overlay
+  - 先看 `butler_main/products/chat/frontdoor_modes.py` 的 slash 契约
+  - 再看 `butler_main/products/chat/frontdoor_cli_router.py`、`butler_main/products/chat/router_plan.py` 与 `butler_main/products/chat/routing.py` 的 unified compile，确认当前 `route / frontdoor_action / main_mode / role_id / injection_tier / capability_policy / runtime_lane` 是否仍由单次前门编译产出
+  - 若涉及“续接当前主线还是重开新题”，先看 `butler_main/products/chat/session_selection.py`、`butler_main/products/chat/mainline.py` 与 `butler_main/products/chat/memory_runtime/recent_turn_store.py`，确认 `chat_session_id` 是否已在当前 `session_scope_id` 内正确 bootstrap、写回、过滤 recent
+  - 再看 `butler_main/products/chat/session_modes.py` 的 sticky state、recent 配额与 `project_artifact`
+  - 再看 `butler_main/products/chat/mainline.py` 和 `butler_main/products/chat/prompting.py` 是否仍把 `/pure` 当成功能路由，而不是厚度 overlay
   - 改默认厚 prompt 块顺序、门控或 session selection 指示块时，对照 [0330 Chat 默认厚 Prompt 分层治理真源](../daily-upgrade/0330/04_Chat默认厚Prompt分层治理真源.md) 与 [0402 Chat Router 选会话能力升级回写](../daily-upgrade/0402/01_chat_router选会话能力升级回写.md) 同步更新文档
+  - 若涉及 chat/frontdoor 默认 CLI，先看 `frontdoor_cli_router.py` 的 lane map 与 `butler_main/products/chat/data/hot/frontdoor_cli_router/governance_state.json`，不要直接改全局 `cli_runtime.active`
   - 若涉及 `codex/claude cli` session 连续性，先核对 `session_scope_id` 是否仍是 Butler 主键，再看 `cli_runner` 的 `external_session/recovery_state/vendor_capabilities`，最后检查 `chat/light_memory.py` 是否把 vendor thread 仅作为可丢的外部 binding 持久化
 
 ## `campaign-control-plane`
@@ -64,8 +68,10 @@
   - [0327 Skill Exposure Plane 与 Codex 消费边界](../daily-upgrade/0327/02_SkillExposurePlane与Codex消费边界.md)
   - [0326 稳定 Harness 之后的下一阶段主线](../daily-upgrade/0326/04_稳定Harness之后的下一阶段主线_Anthropic长运行Harness吸收版.md)
 - 默认代码目录：
-  - `butler_main/orchestrator/`
-  - `butler_main/domains/campaign/`
+  - `butler_main/products/campaign_orchestrator/orchestrator/`
+  - `butler_main/products/campaign_orchestrator/campaign/`
+  - `butler_main/orchestrator/`（compat shell）
+  - `butler_main/domains/campaign/`（compat shell）
 - 默认测试：
   - `test_orchestrator_campaign_service.py`
   - `test_orchestrator_runner.py`
@@ -88,6 +94,9 @@
   - [0329 Codex 主备默认自动切换](../daily-upgrade/0329/01_Codex主备默认自动切换.md)
   - [0331 前台 Workflow Shell 收口](../daily-upgrade/0331/02_前台WorkflowShell收口.md)
 - 默认代码目录：
+  - `butler_main/platform/runtime/`（canonical alias）
+  - `butler_main/compat/agents_os/`（canonical alias）
+  - `butler_main/compat/multi_agents_os/`（canonical alias）
   - `butler_main/runtime_os/process_runtime/`
   - `butler_main/runtime_os/durability_substrate/`
   - `butler_main/runtime_os/multi_agent_protocols/`
@@ -107,10 +116,16 @@
   - [分层地图](./01_layer_map.md)
   - [功能地图](./02_feature_map.md)
   - [真源矩阵](./03_truth_matrix.md)
+  - [0403 当日总纲](../daily-upgrade/0403/00_当日总纲.md)
+  - [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](../daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
+  - [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](../daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
   - [0401 当日总纲](../daily-upgrade/0401/00_当日总纲.md)
   - [0402 当日总纲](../daily-upgrade/0402/00_当日总纲.md)
+  - [0402 Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）](../daily-upgrade/0402/20260402_Butler-flow%20Desktop%20V2.1%20PRD_main%E5%88%86%E6%94%AF%E5%AF%B9%E9%BD%90_flow%20CLI%E5%85%A5%E5%8F%A3%E4%B8%8E%E5%8F%8C%E8%BD%A8%E5%AE%9E%E6%96%BD_%E6%9B%B4%E6%96%B0%E7%89%88.md)
+  - [0402 Butler-flow-Desktop 开发计划（butler-flow 执行版，含 Desktop 技术选型与 Proma 复用边界）](../daily-upgrade/0402/20260402_Butler-flow-Desktop%E5%BC%80%E5%8F%91%E8%AE%A1%E5%88%92_butlerflow%E6%89%A7%E8%A1%8C%E7%89%88.md)
   - [0402 Butler Flow Manage Center 资产中心升级与会话式交互落地](../daily-upgrade/0402/02_butler-flow_manage-center资产中心升级与会话式交互落地.md)
   - [0402 Butler Flow 长流治理与 supervisor 可观测性升级](../daily-upgrade/0402/11_butler-flow_长流治理与supervisor可观测性升级.md)
+  - [0402 Butler Flow Doctor 恢复角色与实例级静态资产修复](../daily-upgrade/0402/12_butler-flow_doctor恢复角色与实例级静态资产修复.md)
   - [0401 前台 Butler Flow 入口收口与 New 向导 V1](../daily-upgrade/0401/01_前台ButlerFlow入口收口与New向导V1.md)
   - [0401 Claude Code 对 Butler Flow 工作台化升级与 TUI 信息架构计划](../daily-upgrade/0401/02_ClaudeCode对ButlerFlow工作台化升级与TUI信息架构计划.md)
   - [系统分层与事件契约](../runtime/System_Layering_and_Event_Contracts.md)
@@ -122,9 +137,11 @@
   - [0329 Codex 主备默认自动切换](../daily-upgrade/0329/01_Codex主备默认自动切换.md)
   - [0329 Chat 显式模式与 Project 循环收口](../daily-upgrade/0329/02_Chat显式模式与Project循环收口.md)
 - 默认代码目录：
-  - `butler_main/butler_flow/`
-  - `butler_main/butler_flow/role_packs/`
+  - `butler_main/products/butler_flow/`
+  - `butler_main/products/butler_flow/role_packs/`
+  - `butler_main/butler_flow/`（compat shell）
   - `butler_main/__main__.py`
+  - `butler_main/platform/runtime/`（canonical alias）
   - `butler_main/runtime_os/agent_runtime/`
   - `tools/butler-flow`
   - `tools/install-butler-flow`
@@ -144,10 +161,14 @@
   - 当前 `/manage` 已收口为 shared asset center，只显示 `builtin + template`；`/flows` 只保留兼容别名，free 设计链路只应在 setup 内部通过 `/manage template:new ...` 进入
   - 当前 `/manage` 主视图必须是 transcript-first shell，而不是栏式资产卡片；底部输入框是主入口，支持 `$template:<id>` / `$builtin:<id>` mention 与自然语言管理意图
   - 当前纯文本路由固定为：`manage -> manager chat`、`flow -> supervisor queue`、`history -> reject`
-  - 若改 `/manage` 输入协议，先看 `butler_main/butler_flow/tui/manage_interaction.py` 与 `tui/app.py` 的 bare target/`$target` 解析、mention picker 7 项窗口、manager queue/session 续接；不要再把 manager chat 误接回 `manage_flow()` 的 builtin edit 分支
+  - 若改 `/manage` 输入协议，先看 `butler_main/butler_flow/tui/manage_interaction.py` 与 `tui/app.py` 的 bare target/`$target` 解析、mention picker 7 项窗口、manager queue/session 续接；当前口径是：首轮纯文本默认绑定当前 asset focus，同一 manager session 后续轮次默认依赖 sticky target；提交前会清理悬空 `$` / 无效 mention 前缀；会话同时把 `manage_session / draft / pending_action` 落盘，支撑 `template_confirm -> flow_confirm` 的连续讨论
+  - 若改 manager chat prompt/runtime，优先看 `butler_main/butler_flow/manage_agent.py` 与 `butler_main/butler_flow/manager_prompt_assets/`；现役口径是 `manager role + skills + bundle/manager.md + references/`，但职责和提交门控的真源在代码侧：`manager skill registry` 决定当前 skill 的 scope / draft ownership / action capability，prompt payload 只注入轻量 `asset/session/pending_action` 摘要；首次 draft 不自动提交，只有纯确认才能消费已有 `pending_action`
+  - 若排查 manager “不说话 / 只显示 Manager chat completed.”，先看 `manage_agent.py` 的 parse-failure 透传链路；当前非 JSON reply 会原样返回 UI，并把 `parse_status / raw_reply / error_text` 写入 manage turn，且 parse failed 时不主动清空既有 `pending_action`
+  - 若排查 manager `resume` 卡在 `Reconnecting... / timeout waiting for child process to exit / no rollout found`，先看 `manage_agent.py` 的 manager-specific Codex self-heal；当前口径是同 provider 内自动从 `resume` 改跑一次 fresh Codex exec，成功后切到新 `manager_session_id`，但不切 Cursor，也不对首轮 fresh exec 做二次重试
   - 若涉及 builtin 修改，必须核对当前是否仍要求显式 `clone` 或 `edit`，不要回退到隐式原地修改
-  - 若涉及静态资产，补看 shared JSON 是否带有 `asset_state / lineage / instance_defaults / review_checklist / role_guidance / bundle_manifest`
-  - 若涉及 runtime 注入，补看 instance `flow_definition.json` 是否已写入 `source_asset_key / source_asset_kind / source_asset_version`，以及 bundle 中 `supervisor.md + derived/supervisor_knowledge.json` 是否仍由 compiler/runtime 混合注入
+  - 若涉及静态资产，补看 shared JSON 是否带有 `asset_state / lineage / instance_defaults / review_checklist / role_guidance / supervisor_profile / run_brief / source_bindings / bundle_manifest`
+  - 若涉及 runtime 注入，补看 instance `flow_definition.json` 是否已写入 `source_asset_key / source_asset_kind / source_asset_version`，以及 bundle 中 `sources.json + supervisor.md + derived/supervisor_knowledge.json` 是否仍由 compiler/runtime 混合注入
+  - 若涉及 manager 真正提交路径，先看 `manage_chat()` 是否仍把确认后的结构化 `draft_payload` 传给 `manage_flow()`；不要回退到直接信任模型自由文本 `action_instruction`
   - 若涉及 `approval_state / judge / operator receipt / runtime events`，先核对它们是进入 transcript、rail 还是 detail，不要继续散落在 `/status`、`actions.jsonl` 和 raw timeline 之间
   - 若涉及 flow 管理，补看 repo-local `butler_main/butler_bot_code/assets/flows/{builtin,templates,instances}` 是否仍是唯一存储树；其中 `/manage` 只管 `builtin + template`，`instances` 只是 runtime/兼容布局
   - `test_codex_provider_failover.py`
@@ -161,6 +182,13 @@
   - 若改 `/manage`，优先检查 `build_manage_payload()`、`manage_flow()`、`tui/app.py` 的 transcript-first shell 与 `$asset` suggester，而不是回退到 `flows-list + flows-detail` 的卡片心智
   - `free` 设计链路固定是“setup -> /manage template:new -> template:<id> -> launch instance”，不要再把它写回 `/flows` 设计页
   - 若涉及角色运行时，先确认 `execution_mode` 与 `session_strategy`；当前口径是 `simple=shared`、`medium=role_bound`、`complex=per_activation(预留合同)`；再确认 `role_guidance` 是否仍只是 manager/supervisor 的轻量参考，而不是硬 team contract
+  - 若涉及 supervisor 治理、长流失控、repo contract、operator control action 或 manager->supervisor handoff，先看 `control_profile`；当前口径是 `packet_size / evidence_level / gate_cadence / repo_binding_policy` 属于实例级治理合同，supervisor 调整后必须回写实例态，而不是只挂在 `latest_supervisor_decision`
+  - 再确认 `execution_context` 与 `repo_binding_policy` 没有混用；当前 `repo_bound` 只表示执行位置，不再自动等于显式 repo contract
+  - 若涉及 asset/runtime 注入分叉，先核对 packet 是否以实例态 `flow_state.control_profile` 压过资产 definition 中的旧控制画像
+  - 若涉及 Codex 执行根、仓库根 `AGENTS.md` 被误读、或 flow 是否该在 repo 内执行，先看 `execution_context`；当前口径是 `coding_flow=repo_bound`，非 `coding_flow` 默认 `isolated`
+  - 再核对 receipt / `flow_exec_receipt` / `flow_definition.json` 是否已带 `execution_context + execution_workspace_root`
+  - 若涉及长流恢复或 `/resume` 异常，补看 `doctor_policy`、实例 `bundle/doctor.md`、`bundle/skills/doctor/SKILL.md`，以及 `runtime.py` 是否会在重复 `resume/no-rollout`、session 绑定异常、重复 service fault 时自动拉起 `doctor`
+  - 若涉及 flow 静态资产修复，先确认当前实例是否已经物化 `flow_definition.json + bundle/*`；不要把这类实例级修复重新退回模板或全局角色目录
   - 再看 `role_packs/<pack>/<role>.md` 与 `sources.json`；当前 role pack 只是前台 L1 prompt 资产，不是 L3 协议真源
   - 若排查 role handoff，优先看 `role_sessions.json`、`handoffs.jsonl`、`artifacts.json` 的 role visibility 字段，不要直接假设共享 thread 历史
   - 若改 supervisor/retry 语义，先核对当前是否已经有显式 `fix` turn、`issue_kind / followup_kind` 和 auto-fix 上限；当前只有 `issue_kind=agent_cli_fault + followup_kind=fix` 才能进入 `fix`，不要再把 supervisor 改成直接执行 repo 修复
@@ -176,6 +204,7 @@
   - 当前还新增 `exec`：最后一行固定 `flow_exec_receipt`，退出码按 flow 终态收口
   - TTY 下优先核对是否正确进入 Textual launcher / attached run screen；若未进入，再检查 `requirements-cli.txt`、终端宽度与 `--plain`
   - 若排查 TUI，优先看 `butler_main/butler_flow/tui/`、`events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
+  - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
   - 最后补跑 `tools/butler-flow ... --help`、`butler-flow --help` 与 `python -m butler_main --help`
   - 若目标是系统级 CLI，再补跑 `./tools/install-butler-flow` 并确认 `command -v butler-flow`
@@ -192,6 +221,9 @@
   - [Workflow IR 正式口径](../runtime/WORKFLOW_IR.md)
   - [0327 Butler 系统分层与事件契约收口](../daily-upgrade/0327/03_Butler系统分层与事件契约收口.md)
 - 默认代码目录：
+  - `butler_main/platform/runtime/`（canonical alias）
+  - `butler_main/compat/multi_agents_os/`（canonical alias）
+  - `butler_main/products/campaign_orchestrator/orchestrator/`（canonical alias）
   - `butler_main/runtime_os/`
   - `butler_main/multi_agents_os/`
   - `butler_main/orchestrator/`
@@ -312,6 +344,8 @@
   - [真源矩阵](./03_truth_matrix.md)
   - [0402 Vibecoding Agent 默认收尾动作与 `vibe-close` 收口](../daily-upgrade/0402/09_vibecoding_agent默认收尾动作与vibe_close收口.md)
   - [0331 根目录归档整理收口](../daily-upgrade/0331/05_根目录归档整理收口.md)
+  - [0403 仓库级重构实施稿：三产品 / Platform / Repo Governance](../daily-upgrade/0403/04_仓库级重构实施稿_三产品_platform_repo治理.md)
+  - [仓库级重构远景规划（产品 / Platform / Repo Governance 版）](../远景草稿/仓库级重构.md)
   - [文档生命周期](./05_doc_lifecycle.md)
   - [concepts/README.md](../concepts/README.md)
 - 默认检查：
@@ -321,9 +355,13 @@
   - `runtime_os/`、`tools/` 是否被错误写成可直接清理对象
   - `AGENTS.md` 是否仍把 `./tools/vibe-close` 作为 vibecoding 默认收尾动作
   - `vibe-close analyze/apply` 的 JSON 字段与当前文档协议是否一致
+  - 远景稿与实施稿是否明确区分“当前现役事实”和“后续波次候选”
+  - 仓库重构叙事是否已明确拆成三产品、共享 Platform 与 repo governance plane
   - 根 `README.md` 是否仍给 GitHub / ChatGPT 网页端读者清晰指向 `docs/` 与 `project-map/`
   - 功能条目是否能一跳命中代码目录和测试入口
   - 近期新增能力是否已回写到 `project-map/`
+  - 跨机器开发说明是否仍能一跳命中 `.env.example`、`.codex/config.template.toml` 与 bootstrap 文档
+  - runtime artifact / private overlay 的 git 边界是否仍清晰，避免把 `instances/`、`manage_sessions/`、`hot recent_memory/` 或 `.codex/config.toml` 再次纳入版本库
 
 ## `system-audit-upgrade`
 

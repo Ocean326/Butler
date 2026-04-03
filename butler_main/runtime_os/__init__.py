@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from importlib import import_module
 from typing import Any
 
@@ -17,12 +18,24 @@ _RESOLVED_EXPORTS: dict[str, str] = {}
 __all__ = list(_SUBMODULES)
 
 
+_ALIASES = ("runtime_os", "butler_main.runtime_os")
+for _alias in _ALIASES:
+    sys.modules.setdefault(_alias, sys.modules[__name__])
+
+
 def _load_submodule(name: str):
     module = globals().get(name)
     if module is not None:
         return module
     module = import_module(f"{__name__}.{name}")
     globals()[name] = module
+    sibling_names = {
+        alias + f".{name}"
+        for alias in _ALIASES
+        if alias != __name__
+    }
+    for sibling_name in sibling_names:
+        sys.modules.setdefault(sibling_name, module)
     return module
 
 

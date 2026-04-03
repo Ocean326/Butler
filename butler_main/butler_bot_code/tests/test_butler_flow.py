@@ -28,8 +28,9 @@ except ModuleNotFoundError:  # pragma: no cover - fallback module layout
 from butler_main.butler_flow import cli as flow_cli  # noqa: E402
 
 from butler_main.butler_flow.compiler import build_flow_board, build_role_board, build_turn_task_packet, compile_packet  # noqa: E402
+from butler_main.butler_flow.manage_agent import build_manage_chat_prompt, normalize_manage_chat_draft_payload, normalize_manage_chat_result, select_manage_chat_skill  # noqa: E402
 from butler_main.runtime_os.process_runtime import ExecutionReceipt  # noqa: E402
-from butler_main.butler_flow.state import FileRuntimeStateStore, ensure_flow_sidecars  # noqa: E402
+from butler_main.butler_flow.state import FileRuntimeStateStore, ensure_flow_sidecars, manage_session_dir  # noqa: E402
 from butler_main.butler_flow.role_runtime import current_role_prompt  # noqa: E402
 from butler_main.butler_flow import runtime as flow_runtime  # noqa: E402
 
@@ -118,6 +119,576 @@ class ButlerFlowTests(unittest.TestCase):
 
     def _read_json(self, path: Path) -> dict | list:
         return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_manage_chat_prompt_includes_role_skill_and_asset_notes(self) -> None:
+        prompt = build_manage_chat_prompt(
+            workspace_root="/tmp/demo",
+            manage_target="template:academic_paper_review_v1",
+            asset_kind="template",
+            instruction="基于这个模板继续整理",
+            selected_skill="template_update",
+            manager_role_text="ROLE_PROMPT",
+            skill_prompt_text="SKILL_PROMPT",
+            asset_manager_notes="ASSET_MANAGER_NOTES",
+        )
+        self.assertIn("ROLE_PROMPT", prompt)
+        self.assertIn("SKILL_PROMPT", prompt)
+        self.assertIn("ASSET_MANAGER_NOTES", prompt)
+        self.assertIn('"manager_stage"', prompt)
+        self.assertIn('"confirmation_scope"', prompt)
+
+    def test_manage_chat_skill_defaults_new_flow_request_to_template_first(self) -> None:
+        skill = select_manage_chat_skill(
+            manage_target="",
+            asset_kind="workspace",
+            instruction="按需求创建一个新的 pending flow，用于论文写作",
+        )
+        self.assertEqual(skill, "template_select_or_create")
+
+    def test_manage_chat_result_preserves_confirmation_fields(self) -> None:
+        payload = normalize_manage_chat_result(
+            {
+                "response": "我建议先确认模板，再创建 flow。",
+                "manager_stage": "template_confirm",
+                "active_skill": "template_select_or_create",
+                "confirmation_scope": "template",
+                "confirmation_prompt": "如果你认可这个模板方案，我就先创建/更新模板。",
+                "action": "manage_flow",
+                "action_ready": True,
+                "action_manage_target": "template:new",
+                "action_instruction": "创建一个研究写作模板，并同步补齐 supervisor 方向说明",
+            },
+            manage_target="template:academic_paper_review_v1",
+        )
+        self.assertEqual(payload["action"], "manage_flow")
+        self.assertTrue(payload["action_ready"])
+        self.assertEqual(payload["manager_stage"], "template_confirm")
+        self.assertEqual(payload["active_skill"], "template_select_or_create")
+        self.assertEqual(payload["confirmation_scope"], "template")
+        self.assertIn("模板方案", payload["confirmation_prompt"])
+
+    def test_manage_chat_draft_normalizes_control_profile(self) -> None:
+        draft = normalize_manage_chat_draft_payload(
+            {
+                "workflow_kind": "managed_flow",
+                "control_profile": {
+                    "task_archetype": "repo_delivery",
+                    "packet_size": "large",
+                    "evidence_level": "strict",
+                    "gate_cadence": "phase",
+                    "repo_binding_policy": "explicit_contract",
+                    "repo_contract_paths": ["docs/project-map/00_current_baseline.md"],
+                },
+            }
+        )
+        self.assertEqual(draft["control_profile"]["task_archetype"], "repo_delivery")
+        self.assertEqual(draft["control_profile"]["packet_size"], "large")
+        self.assertEqual(draft["control_profile"]["repo_binding_policy"], "explicit")
+        self.assertEqual(draft["control_profile"]["repo_contract_paths"], ["docs/project-map/00_current_baseline.md"])
+
+    def test_manage_chat_draft_maps_inherit_workspace_to_disabled(self) -> None:
+        draft = normalize_manage_chat_draft_payload(
+            {
+                "workflow_kind": "managed_flow",
+                "control_profile": {
+                    "task_archetype": "repo_delivery",
+                    "repo_binding_policy": "inherit_workspace",
+                },
+            }
+        )
+        self.assertEqual(draft["control_profile"]["repo_binding_policy"], "disabled")
+
+    def test_manage_chat_draft_corrects_asset_kind_from_manage_target(self) -> None:
+        draft = normalize_manage_chat_draft_payload(
+            {
+                "manage_target": "template:academic_paper_review_v1",
+                "asset_kind": "instance",
+                "workflow_kind": "managed_flow",
+            }
+        )
+        self.assertEqual(draft["asset_kind"], "template")
+
+    def test_manage_chat_result_surfaces_raw_reply_when_parse_fails(self) -> None:
+        payload = normalize_manage_chat_result(
+            {},
+            manage_target="template:academic_paper_review_v1",
+            parse_status="failed",
+            raw_reply="我建议先讨论模板，再决定是否创建 flow。",
+            error_text="manager chat returned non-JSON output",
+        )
+        self.assertEqual(payload["parse_status"], "failed")
+        self.assertEqual(payload["response"], "我建议先讨论模板，再决定是否创建 flow。")
+        self.assertEqual(payload["raw_reply"], "我建议先讨论模板，再决定是否创建 flow。")
+        self.assertEqual(payload["error_text"], "manager chat returned non-JSON output")
+
+    def test_manage_chat_resume_failure_restarts_with_fresh_codex_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).parent.mkdir(parents=True, exist_ok=True)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).write_text(
+                json.dumps(
+                    {
+                        "flow_id": "desktop_delivery_v1",
+                        "label": "Desktop Delivery",
+                        "workflow_kind": "managed_flow",
+                        "phase_plan": [{"phase_id": "plan", "title": "Plan", "objective": "plan", "done_when": "done", "retry_phase_id": "plan", "fallback_phase_id": "plan", "next_phase_id": ""}],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="Reconnecting... 2/5 (timeout waiting for child process to exit)\n\n[butler] Codex 子进程退出超时（timeout waiting for child process to exit），已由 Butler 中止",
+                        metadata={
+                            "external_session": {
+                                "provider": "codex",
+                                "thread_id": "",
+                                "resume_capable": True,
+                                "vendor_session_state": "resume_requested",
+                            },
+                            "recovery_state": {"resume_requested": True},
+                            "failure_class": "failed",
+                        },
+                        agent_id="butler_flow.manager_chat",
+                    ),
+                    _receipt(
+                        text=json.dumps(
+                            {
+                                "response": "我先按这个模板重新梳理讨论，再决定 flow。",
+                                "summary": "fresh exec recovered",
+                                "manage_target": "template:desktop_delivery_v1",
+                                "manager_stage": "discuss",
+                            },
+                            ensure_ascii=False,
+                        ),
+                        metadata={
+                            "external_session": {
+                                "provider": "codex",
+                                "thread_id": "manager-thread-fresh",
+                                "resume_capable": True,
+                                "vendor_session_state": "started",
+                            }
+                        },
+                        agent_id="butler_flow.manager_chat",
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch("butler_main.butler_flow.manage_agent.cli_provider_available", return_value=True):
+                app.manage_chat(
+                    argparse.Namespace(
+                        command="manage-chat",
+                        config=config,
+                        json=True,
+                        manage="template:desktop_delivery_v1",
+                        instruction="继续讨论 template 和 flow",
+                        manager_session_id="manager-thread-old",
+                    )
+                )
+            payload = json.loads(app._stdout.getvalue())
+            self.assertEqual(len(runner.calls), 2)
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_mode"], "resume")
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_session_id"], "manager-thread-old")
+            self.assertEqual(runner.calls[1]["runtime_request"]["codex_mode"], "exec")
+            self.assertEqual(runner.calls[1]["runtime_request"]["codex_session_id"], "")
+            self.assertEqual(payload["parse_status"], "ok")
+            self.assertEqual(payload["manager_session_id"], "manager-thread-fresh")
+            self.assertTrue(payload["session_recovery"]["applied"])
+            self.assertEqual(payload["session_recovery"]["kind"], "resume_to_fresh_exec")
+            self.assertEqual(payload["session_recovery"]["previous_manager_session_id"], "manager-thread-old")
+            self.assertEqual(payload["session_recovery"]["recovered_manager_session_id"], "manager-thread-fresh")
+            self.assertIn("timeout waiting for child process to exit", payload["session_recovery"]["initial_raw_reply"])
+            session_root = manage_session_dir(root, "manager-thread-fresh")
+            self.assertTrue((session_root / "session.json").exists())
+
+    def test_manage_chat_first_exec_failure_does_not_retry_with_fresh_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).parent.mkdir(parents=True, exist_ok=True)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).write_text(
+                json.dumps(
+                    {
+                        "flow_id": "desktop_delivery_v1",
+                        "label": "Desktop Delivery",
+                        "workflow_kind": "managed_flow",
+                        "phase_plan": [{"phase_id": "plan", "title": "Plan", "objective": "plan", "done_when": "done", "retry_phase_id": "plan", "fallback_phase_id": "plan", "next_phase_id": ""}],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        metadata={
+                            "external_session": {
+                                "provider": "codex",
+                                "thread_id": "",
+                                "resume_capable": False,
+                                "vendor_session_state": "fresh_exec",
+                            }
+                        },
+                        agent_id="butler_flow.manager_chat",
+                    )
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch("butler_main.butler_flow.manage_agent.cli_provider_available", return_value=True):
+                app.manage_chat(
+                    argparse.Namespace(
+                        command="manage-chat",
+                        config=config,
+                        json=True,
+                        manage="template:desktop_delivery_v1",
+                        instruction="继续讨论",
+                        manager_session_id="",
+                    )
+                )
+            payload = json.loads(app._stdout.getvalue())
+            self.assertEqual(len(runner.calls), 1)
+            self.assertEqual(payload["parse_status"], "failed")
+            self.assertFalse(payload["session_recovery"]["applied"])
+
+    def test_manage_chat_requires_existing_pending_action_for_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text=json.dumps(
+                            {
+                                "response": "我先整理出模板草稿，等你确认后再创建。",
+                                "summary": "template draft ready",
+                                "manage_target": "template:new",
+                                "manager_stage": "template_confirm",
+                                "active_skill": "template_select_or_create",
+                                "confirmation_scope": "template",
+                                "confirmation_prompt": "如果你认可这版模板草稿，我就创建它。",
+                                "action": "manage_flow",
+                                "action_ready": True,
+                                "action_manage_target": "template:new",
+                                "action_instruction": "create template from approved draft",
+                                "draft": {
+                                    "manage_target": "template:new",
+                                    "asset_kind": "template",
+                                    "label": "Paper Writer",
+                                    "workflow_kind": "managed_flow",
+                                    "goal": "write a KDD paper section",
+                                    "guard_condition": "section is reviewable",
+                                    "phase_plan": [{"phase_id": "plan", "title": "Plan", "objective": "plan", "done_when": "done", "retry_phase_id": "plan", "fallback_phase_id": "plan", "next_phase_id": ""}],
+                                    "supervisor_profile": {"archetype": "research_editor"},
+                                    "run_brief": "Deliver a reusable writing flow",
+                                },
+                            },
+                            ensure_ascii=False,
+                        ),
+                        metadata={"external_session": {"provider": "codex", "thread_id": "manager-thread-1", "resume_capable": True}},
+                        agent_id="butler_flow.manager_chat",
+                    ),
+                    _receipt(
+                        text=json.dumps(
+                            {
+                                "response": "收到，按刚才确认的模板执行。",
+                                "summary": "confirmed",
+                                "manager_stage": "done",
+                                "active_skill": "flow_create_or_update",
+                            },
+                            ensure_ascii=False,
+                        ),
+                        metadata={"external_session": {"provider": "codex", "thread_id": "manager-thread-1", "resume_capable": True}},
+                        agent_id="butler_flow.manager_chat",
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch("butler_main.butler_flow.manage_agent.cli_provider_available", return_value=True):
+                app.manage_chat(
+                    argparse.Namespace(
+                        command="manage-chat",
+                        config=config,
+                        json=True,
+                        manage="",
+                        instruction="帮我设计一个论文写作模板",
+                        manager_session_id="",
+                    )
+                )
+                first_payload = json.loads(app._stdout.getvalue())
+                second_app = self._app(runner)
+                second_app.manage_chat(
+                    argparse.Namespace(
+                        command="manage-chat",
+                        config=config,
+                        json=True,
+                        manage="",
+                        instruction="确认",
+                        manager_session_id="manager-thread-1",
+                    )
+                )
+                second_payload = json.loads(second_app._stdout.getvalue())
+
+            self.assertFalse(first_payload["action_ready"])
+            self.assertIn("template:new", first_payload["draft_summary"])
+            self.assertIn("模板草稿", first_payload["pending_action_preview"])
+            self.assertTrue(second_payload["action_ready"])
+            self.assertEqual(second_payload["action_manage_target"], "template:new")
+            self.assertEqual(second_payload["action_draft"]["label"], "Paper Writer")
+            self.assertEqual(runner.calls[0]["runtime_request"]["execution_context"], "isolated")
+            session_root = manage_session_dir(root, "manager-thread-1")
+            self.assertTrue((session_root / "session.json").exists())
+            self.assertTrue((session_root / "draft.json").exists())
+            self.assertTrue((session_root / "pending_action.json").exists())
+
+    def test_manage_chat_parse_failure_preserves_pending_action_and_persists_raw_reply(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = self._app(
+                _ReceiptRunner(
+                    [
+                        _receipt(
+                            text="Reconnecting... 2/5 (timeout waiting for child process to exit)\n\n[butler] Codex 子进程退出超时（timeout waiting for child process to exit），已由 Butler 中止",
+                            metadata={
+                                "external_session": {
+                                    "provider": "codex",
+                                    "thread_id": "",
+                                    "resume_capable": True,
+                                    "vendor_session_state": "resume_requested",
+                                },
+                                "recovery_state": {"resume_requested": True},
+                                "failure_class": "failed",
+                            },
+                            agent_id="butler_flow.manager_chat",
+                        ),
+                        _receipt(
+                            text="Reconnecting... 2/5 (timeout waiting for child process to exit)\n\n[butler] Codex 子进程退出超时（timeout waiting for child process to exit），已由 Butler 中止",
+                            metadata={"external_session": {"provider": "codex", "thread_id": "", "resume_capable": True, "vendor_session_state": "fresh_exec"}},
+                            agent_id="butler_flow.manager_chat",
+                        )
+                    ]
+                )
+            )
+            session_root = manage_session_dir(root, "manager-thread-parse")
+            session_root.mkdir(parents=True, exist_ok=True)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).parent.mkdir(parents=True, exist_ok=True)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).write_text(
+                json.dumps(
+                    {
+                        "flow_id": "desktop_delivery_v1",
+                        "label": "Desktop Delivery",
+                        "workflow_kind": "managed_flow",
+                        "phase_plan": [
+                            {
+                                "phase_id": "plan",
+                                "title": "Plan",
+                                "objective": "plan",
+                                "done_when": "done",
+                                "retry_phase_id": "plan",
+                                "fallback_phase_id": "plan",
+                                "next_phase_id": "",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (session_root / "session.json").write_text(
+                json.dumps(
+                    {
+                        "manager_session_id": "manager-thread-parse",
+                        "active_manage_target": "template:desktop_delivery_v1",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (session_root / "draft.json").write_text(
+                json.dumps(
+                    {
+                        "manage_target": "template:desktop_delivery_v1",
+                        "asset_kind": "template",
+                        "label": "Desktop Delivery",
+                        "workflow_kind": "managed_flow",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (session_root / "pending_action.json").write_text(
+                json.dumps(
+                    {
+                        "manage_target": "template:desktop_delivery_v1",
+                        "instruction": "update template from approved draft",
+                        "draft": {
+                            "manage_target": "template:desktop_delivery_v1",
+                            "asset_kind": "template",
+                            "label": "Desktop Delivery",
+                            "workflow_kind": "managed_flow",
+                        },
+                        "preview": "如果你认可这版模板草稿，我就更新 template。",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with mock.patch("butler_main.butler_flow.manage_agent.cli_provider_available", return_value=True):
+                app.manage_chat(
+                    argparse.Namespace(
+                        command="manage-chat",
+                        config=config,
+                        json=True,
+                        manage="",
+                        instruction="继续讨论一下 supervisor 应该怎么写",
+                        manager_session_id="manager-thread-parse",
+                    )
+                )
+
+            payload = json.loads(app._stdout.getvalue())
+            turns = self._read_jsonl(session_root / "turns.jsonl")
+            pending = self._read_json(session_root / "pending_action.json")
+            self.assertEqual(payload["parse_status"], "failed")
+            self.assertTrue(payload["session_recovery"]["applied"])
+            self.assertIn("timeout waiting for child process to exit", payload["response"])
+            self.assertIn("timeout waiting for child process to exit", payload["raw_reply"])
+            self.assertEqual(pending["preview"], "如果你认可这版模板草稿，我就更新 template。")
+            self.assertEqual(turns[-1]["parse_status"], "failed")
+            self.assertTrue(turns[-1]["session_recovery"]["applied"])
+            self.assertIn("timeout waiting for child process to exit", turns[-1]["session_recovery"]["initial_raw_reply"])
+
+    def test_project_loop_defaults_to_medium_role_bound_control_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = self._app(_ReceiptRunner([]))
+            args = self._new_args(
+                config=config,
+                kind=PROJECT_LOOP_KIND,
+                launch_mode="flow",
+                execution_level="",
+                catalog_flow_id="project_loop",
+                goal="ship a desktop feature",
+                guard_condition="verified",
+            )
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                prepared = app.prepare_new_flow(args)
+            state = prepared.flow_state
+            self.assertEqual(state.get("execution_mode"), "medium")
+            self.assertEqual(state.get("session_strategy"), "role_bound")
+            self.assertEqual(state.get("control_profile", {}).get("packet_size"), "medium")
+            self.assertEqual(state.get("control_profile", {}).get("gate_cadence"), "phase")
+            self.assertEqual(state.get("control_profile", {}).get("repo_binding_policy"), "disabled")
+
+    def test_operator_actions_can_tune_control_profile_and_repo_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_id = "flow_control_profile"
+            flow_dir = root / "butler_main" / "butler_bot_code" / "assets" / "flows" / "instances" / flow_id
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id=flow_id,
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="ship feature",
+                guard_condition="verified",
+                max_attempts=0,
+                max_phase_attempts=6,
+            )
+            flow_state["status"] = "running"
+            ensure_flow_sidecars(flow_dir, flow_state)
+            runtime = self._app(_ReceiptRunner([]))._runtime
+            receipt = runtime.apply_operator_action(
+                cfg={"workspace_root": str(root)},
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="shrink_packet",
+                payload={},
+            )
+            self.assertEqual(receipt["action_type"], "shrink_packet")
+            self.assertEqual(flow_state["control_profile"]["packet_size"], "small")
+            self.assertTrue(flow_state["control_profile"]["force_gate_next_turn"])
+            runtime.apply_operator_action(
+                cfg={"workspace_root": str(root)},
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="bind_repo_contract",
+                payload={"repo_contract_path": "AGENTS.md"},
+            )
+            self.assertEqual(flow_state["control_profile"]["repo_binding_policy"], "explicit")
+            self.assertIn("AGENTS.md", flow_state["control_profile"]["repo_contract_paths"])
+            runtime.apply_operator_action(
+                cfg={"workspace_root": str(root)},
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="force_doctor",
+                payload={},
+            )
+            self.assertTrue(flow_state["control_profile"]["force_doctor_next_turn"])
 
     def _new_args(
         self,
@@ -626,11 +1197,42 @@ class ButlerFlowTests(unittest.TestCase):
                         "promotion_candidates": ["creator"],
                         "manager_notes": "Use extra specialists only when a real bottleneck appears.",
                     },
+                    "doctor_policy": {
+                        "enabled": True,
+                        "activation_rules": ["repeated_service_fault", "same_resume_failure"],
+                        "repair_scope": "runtime_assets_first",
+                        "framework_bug_action": "pause",
+                        "max_rounds_per_episode": 1,
+                    },
+                    "control_profile": {
+                        "task_archetype": "repo_delivery",
+                        "packet_size": "medium",
+                        "evidence_level": "standard",
+                        "gate_cadence": "phase",
+                        "repo_binding_policy": "explicit",
+                        "repo_contract_paths": ["docs/project-map/00_current_baseline.md"],
+                    },
+                    "supervisor_profile": {
+                        "archetype": "research_editor",
+                        "review_focus": ["evidence quality"],
+                    },
+                    "run_brief": "Keep the supervisor focused on evidence-backed delivery.",
+                    "source_bindings": [{"kind": "doc", "label": "Spec", "ref": "docs/spec.md", "notes": "Primary scope"}],
                     "bundle_manifest": {
                         "bundle_root": "bundle",
                         "supervisor_ref": "bundle/supervisor.md",
+                        "sources_ref": "bundle/sources.json",
+                        "sources_path": "sources.json",
                         "derived": {"supervisor_compiled": "bundle/derived/supervisor_knowledge.json"},
                     },
+                },
+            )
+            _WRITE_JSON_ATOMIC(
+                bundle_root / "sources.json",
+                {
+                    "asset_kind": "instance",
+                    "asset_id": "flow_packet_demo",
+                    "items": [{"kind": "doc", "label": "Spec", "ref": "docs/spec.md", "notes": "Primary scope"}],
                 },
             )
             app = self._app(_ReceiptRunner([]))
@@ -650,12 +1252,191 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(compiled["flow_board"]["source_asset_version"], "2026.04.02")
             self.assertIn("check static fields", compiled["flow_board"]["review_checklist"])
             self.assertEqual(compiled["flow_board"]["role_guidance"]["promotion_candidates"], ["creator"])
+            self.assertTrue(compiled["flow_board"]["doctor_policy"]["enabled"])
+            self.assertEqual(compiled["flow_board"]["control_profile"]["repo_binding_policy"], "disabled")
+            self.assertEqual(compiled["asset_context"]["control_profile"]["repo_binding_policy"], "disabled")
+            self.assertEqual(compiled["asset_context"]["supervisor_profile"]["archetype"], "research_editor")
+            self.assertEqual(compiled["asset_context"]["source_bindings"][0]["label"], "Spec")
             self.assertIn("Know the flow author's intent", compiled["supervisor_knowledge"]["knowledge_text"])
             self.assertIn("Compiled checklist", compiled["supervisor_knowledge"]["knowledge_text"])
+            self.assertIn("repo_contract_paths", compiled["supervisor_knowledge"]["knowledge_text"])
             self.assertIn("template:manage_center_v2", compiled["rendered_prompt"])
             self.assertIn("Compiled checklist", compiled["rendered_prompt"])
             self.assertIn("advisory only", compiled["rendered_prompt"])
+            self.assertIn("doctor", compiled["rendered_prompt"])
             self.assertIn("creator", compiled["rendered_prompt"])
+            self.assertIn("research_editor", compiled["rendered_prompt"])
+            self.assertIn("repo_binding_policy", compiled["rendered_prompt"])
+
+    def test_operator_action_force_doctor_sets_control_profile_flag(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None or _BUILD_FLOW_ROOT is None:
+            raise AssertionError("butler_flow must expose build/new/write helpers for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_id = "flow_force_doctor_demo"
+            flow_dir = _BUILD_FLOW_ROOT(root) / flow_id
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id=flow_id,
+                workflow_kind=MANAGED_FLOW_KIND,
+                workspace_root=str(root),
+                goal="repair current flow",
+                guard_condition="doctor can take over",
+                max_attempts=0,
+                max_phase_attempts=10,
+            )
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+            runtime = flow_runtime.FlowRuntime(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                display=flow_shell.FlowDisplay(StringIO(), StringIO()),
+            )
+            receipt = runtime.apply_operator_action(
+                cfg={},
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="force_doctor",
+                payload={},
+            )
+            self.assertEqual(receipt["action_type"], "force_doctor")
+            self.assertTrue(flow_state["control_profile"]["force_doctor_next_turn"])
+
+    def test_operator_action_bind_repo_contract_persists_explicit_binding(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None or _BUILD_FLOW_ROOT is None:
+            raise AssertionError("butler_flow must expose build/new/write helpers for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_id = "flow_bind_contract_demo"
+            flow_dir = _BUILD_FLOW_ROOT(root) / flow_id
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id=flow_id,
+                workflow_kind=MANAGED_FLOW_KIND,
+                workspace_root=str(root),
+                goal="ship repo change",
+                guard_condition="contract stays explicit",
+                max_attempts=0,
+                max_phase_attempts=10,
+            )
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+            runtime = flow_runtime.FlowRuntime(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                display=flow_shell.FlowDisplay(StringIO(), StringIO()),
+            )
+            receipt = runtime.apply_operator_action(
+                cfg={},
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="bind_repo_contract",
+                payload={"repo_contract_path": "docs/project-map/00_current_baseline.md"},
+            )
+            self.assertEqual(receipt["action_type"], "bind_repo_contract")
+            self.assertEqual(flow_state["control_profile"]["repo_binding_policy"], "explicit")
+            self.assertEqual(
+                flow_state["control_profile"]["repo_contract_paths"],
+                ["docs/project-map/00_current_baseline.md"],
+            )
+
+    def test_supervisor_control_adjustments_persist_to_flow_state(self) -> None:
+        if _NEW_FLOW_STATE is None:
+            raise AssertionError("butler_flow must expose _new_flow_state for tests")
+        runtime = flow_runtime.FlowRuntime(
+            run_prompt_receipt_fn=lambda *args, **kwargs: None,
+            display=flow_shell.FlowDisplay(StringIO(), StringIO()),
+        )
+        flow_state = _NEW_FLOW_STATE(
+            workflow_id="flow_supervisor_controls",
+            workflow_kind=PROJECT_LOOP_KIND,
+            workspace_root="/tmp/demo",
+            goal="ship safely",
+            guard_condition="done",
+            max_attempts=0,
+            max_phase_attempts=6,
+        )
+        flow_state["control_profile"]["repo_binding_policy"] = "explicit"
+        flow_state["control_profile"]["repo_contract_paths"] = ["AGENTS.md"]
+        decision = runtime._normalize_supervisor_decision(
+            {
+                "decision": "execute",
+                "turn_kind": "execute",
+                "reason": "shrink the next packet and temporarily disable repo contract pressure",
+                "active_role_id": "implementer",
+                "packet_size": "small",
+                "evidence_level": "strict",
+                "gate_cadence": "strict",
+                "repo_binding_policy": "disabled",
+            },
+            flow_state=flow_state,
+            phase="imp",
+            attempt_no=2,
+        )
+        runtime._apply_supervisor_control_profile(flow_state, decision)
+        control_profile = dict(flow_state.get("control_profile") or {})
+        self.assertEqual(control_profile["packet_size"], "small")
+        self.assertEqual(control_profile["evidence_level"], "strict")
+        self.assertEqual(control_profile["gate_cadence"], "strict")
+        self.assertEqual(control_profile["repo_binding_policy"], "disabled")
+        self.assertEqual(control_profile["repo_contract_paths"], ["AGENTS.md"])
+
+    def test_asset_runtime_context_prefers_instance_control_profile_and_strips_stale_control_section(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None or _BUILD_FLOW_ROOT is None:
+            raise AssertionError("butler_flow must expose build/new/write helpers for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_id = "flow_asset_context_profile"
+            flow_dir = _BUILD_FLOW_ROOT(root) / flow_id
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id=flow_id,
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="ship safely",
+                guard_condition="done",
+                max_attempts=0,
+                max_phase_attempts=6,
+            )
+            flow_state["control_profile"]["packet_size"] = "small"
+            flow_state["control_profile"]["repo_binding_policy"] = "disabled"
+            ensure_flow_sidecars(flow_dir, flow_state)
+            bundle_root = flow_dir / "bundle"
+            (bundle_root / "derived").mkdir(parents=True, exist_ok=True)
+            _WRITE_JSON_ATOMIC(
+                flow_dir / "flow_definition.json",
+                {
+                    "flow_id": flow_id,
+                    "workflow_kind": PROJECT_LOOP_KIND,
+                    "bundle_manifest": {
+                        "bundle_root": "bundle",
+                        "supervisor_ref": "bundle/supervisor.md",
+                        "derived": {"supervisor_compiled": "bundle/derived/supervisor_knowledge.json"},
+                    },
+                    "control_profile": {
+                        "task_archetype": "repo_delivery",
+                        "packet_size": "large",
+                        "evidence_level": "standard",
+                        "gate_cadence": "phase",
+                        "repo_binding_policy": "explicit",
+                        "repo_contract_paths": ["docs/project-map/00_current_baseline.md"],
+                    },
+                },
+            )
+            _WRITE_JSON_ATOMIC(
+                bundle_root / "derived" / "supervisor_knowledge.json",
+                {
+                    "composition_mode": "handwritten+compiled",
+                    "knowledge_text": (
+                        "[supervisor profile]\n- archetype: delivery_manager\n\n"
+                        "[control profile]\n- packet_size: large\n- repo_contract_paths: docs/project-map/00_current_baseline.md"
+                    ),
+                    "updated_at": "2026-04-03 10:00:00",
+                },
+            )
+            runtime = flow_runtime.FlowRuntime(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                display=flow_shell.FlowDisplay(StringIO(), StringIO()),
+            )
+            asset_context, supervisor_knowledge = runtime._asset_runtime_context(flow_dir, flow_state)
+            self.assertEqual(asset_context["control_profile"]["packet_size"], "small")
+            self.assertEqual(asset_context["control_profile"]["repo_binding_policy"], "disabled")
+            self.assertIn("[supervisor profile]", supervisor_knowledge["knowledge_text"])
+            self.assertIn('"packet_size": "small"', supervisor_knowledge["knowledge_text"])
+            self.assertNotIn("docs/project-map/00_current_baseline.md", supervisor_knowledge["knowledge_text"])
 
     def test_llm_supervisor_invalid_json_falls_back_to_heuristic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -987,8 +1768,9 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual([row["phase"] for row in state["phase_history"]], ["plan", "imp", "review"])
             self.assertEqual(state["attempt_count"], 3)
             codex_calls = [call for call in runner.calls if call["runtime_request"].get("cli") == "codex"]
-            self.assertEqual(codex_calls[1]["runtime_request"]["codex_mode"], "resume")
-            self.assertEqual(codex_calls[1]["runtime_request"]["codex_session_id"], "thread-plan")
+            self.assertEqual(codex_calls[0]["runtime_request"]["codex_mode"], "exec")
+            self.assertEqual(codex_calls[1]["runtime_request"]["codex_mode"], "exec")
+            self.assertEqual(codex_calls[1]["runtime_request"]["codex_session_id"], "")
 
     def test_execution_mode_defaults_to_simple_and_shared_role_session(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1021,6 +1803,7 @@ class ButlerFlowTests(unittest.TestCase):
             state = self._flow_state(flow_dir)
             self.assertEqual(state.get("execution_mode"), "simple")
             self.assertEqual(state.get("session_strategy"), "shared")
+            self.assertEqual(state.get("execution_context"), "repo_bound")
             role_sessions = state.get("role_sessions")
             self.assertIsInstance(role_sessions, dict)
             self.assertGreaterEqual(len(role_sessions), 1)
@@ -1031,6 +1814,40 @@ class ButlerFlowTests(unittest.TestCase):
                 elif isinstance(value, dict):
                     session_ids.append(str(value.get("session_id") or value.get("codex_session_id") or ""))
             self.assertIn(state.get("codex_session_id"), session_ids)
+
+    def test_project_loop_defaults_to_medium_role_bound_and_control_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state = _NEW_FLOW_STATE(
+                workflow_id="flow_project_default",
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="ship safely",
+                guard_condition="done",
+                max_attempts=0,
+                max_phase_attempts=6,
+            )
+            self.assertEqual(state.get("execution_mode"), "medium")
+            self.assertEqual(state.get("session_strategy"), "role_bound")
+            self.assertEqual(state.get("control_profile", {}).get("packet_size"), "medium")
+            self.assertEqual(state.get("control_profile", {}).get("repo_binding_policy"), "disabled")
+
+    def test_project_flow_defaults_to_medium_role_bound_and_control_profile(self) -> None:
+        state = _NEW_FLOW_STATE(
+            workflow_id="flow_project_defaults",
+            workflow_kind=PROJECT_LOOP_KIND,
+            workspace_root="/tmp/demo",
+            goal="ship delivery",
+            guard_condition="review passes",
+            max_attempts=0,
+            max_phase_attempts=10,
+        )
+        self.assertEqual(state.get("execution_mode"), "medium")
+        self.assertEqual(state.get("session_strategy"), "role_bound")
+        self.assertEqual(state.get("execution_context"), "repo_bound")
+        control_profile = dict(state.get("control_profile") or {})
+        self.assertEqual(control_profile.get("task_archetype"), "repo_delivery")
+        self.assertEqual(control_profile.get("repo_binding_policy"), "disabled")
 
     def test_medium_creates_role_sidecars_and_handoffs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1516,6 +2333,87 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(flow_state["approval_state"], "not_required")
             self.assertIn("start a real resume turn", receipt["result_summary"])
 
+    def test_operator_control_actions_update_control_profile_via_app_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = self._app(_ReceiptRunner([]))
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id="flow_control_ops",
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="stabilize long flow",
+                guard_condition="done",
+                max_attempts=0,
+                max_phase_attempts=10,
+            )
+            flow_dir = _BUILD_FLOW_ROOT(root) / "flow_control_ops"
+            ensure_flow_sidecars(flow_dir, flow_state)
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+
+            app._runtime.apply_operator_action(
+                cfg=json.loads(Path(config).read_text(encoding="utf-8")),
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="shrink_packet",
+            )
+            app._runtime.apply_operator_action(
+                cfg=json.loads(Path(config).read_text(encoding="utf-8")),
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="bind_repo_contract",
+                payload={"repo_contract_path": "AGENTS.md"},
+            )
+            app._runtime.apply_operator_action(
+                cfg=json.loads(Path(config).read_text(encoding="utf-8")),
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="force_doctor",
+            )
+
+            control_profile = dict(flow_state.get("control_profile") or {})
+            self.assertEqual(control_profile.get("packet_size"), "small")
+            self.assertTrue(bool(control_profile.get("force_gate_next_turn")))
+            self.assertEqual(control_profile.get("repo_binding_policy"), "explicit")
+            self.assertIn("AGENTS.md", list(control_profile.get("repo_contract_paths") or []))
+            self.assertTrue(bool(control_profile.get("force_doctor_next_turn")))
+
+    def test_supervisor_and_doctor_runtime_requests_are_isolated(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            app = self._app(_ReceiptRunner([]))
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id="flow_runtime_isolation",
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="repair repo flow safely",
+                guard_condition="done",
+                max_attempts=0,
+                max_phase_attempts=10,
+            )
+            flow_dir = _BUILD_FLOW_ROOT(root) / "flow_runtime_isolation"
+            ensure_flow_sidecars(flow_dir, flow_state)
+            cfg = {"workspace_root": str(root)}
+
+            supervisor_request = app._runtime._build_supervisor_runtime_request(
+                cfg,
+                flow_id="flow_runtime_isolation",
+                flow_state=flow_state,
+                flow_dir_path=flow_dir,
+            )
+            self.assertEqual(supervisor_request["execution_context"], "isolated")
+            self.assertIn("supervisor_runtime", supervisor_request["execution_workspace_root"])
+
+            flow_state["active_role_id"] = "doctor"
+            doctor_request = app._runtime.build_codex_runtime_request(
+                cfg,
+                flow_id="flow_runtime_isolation",
+                flow_state=flow_state,
+                flow_dir_path=flow_dir,
+            )
+            self.assertEqual(doctor_request["execution_context"], "isolated")
+            self.assertIn("doctor_runtime", doctor_request["execution_workspace_root"])
+
     def test_flow_timeouts_default_to_effectively_disabled(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1661,6 +2559,8 @@ class ButlerFlowTests(unittest.TestCase):
                 resume_source="workflow_id",
             )
             flow_state["status"] = "running"
+            flow_state["role_pack_id"] = "research_flow"
+            flow_state["execution_context"] = "isolated"
             _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
             runner = _ReceiptRunner(
                 [
@@ -1687,6 +2587,7 @@ class ButlerFlowTests(unittest.TestCase):
             codex_call = next(call for call in runner.calls if call["runtime_request"].get("cli") == "codex")
             self.assertEqual(codex_call["runtime_request"]["codex_mode"], "resume")
             self.assertEqual(codex_call["runtime_request"]["codex_session_id"], "thread-local")
+            self.assertEqual(codex_call["runtime_request"]["execution_context"], "isolated")
 
     def test_resume_codex_session_id_creates_new_flow(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1717,6 +2618,7 @@ class ButlerFlowTests(unittest.TestCase):
             flow_dir = self._flow_dirs(root)[0]
             state = self._flow_state(flow_dir)
             self.assertEqual(state["resume_source"], "codex_session_id")
+            self.assertEqual(state["execution_context"], "repo_bound")
             codex_call = next(call for call in runner.calls if call["runtime_request"].get("cli") == "codex")
             self.assertEqual(codex_call["runtime_request"]["codex_mode"], "resume")
             self.assertEqual(codex_call["runtime_request"]["codex_session_id"], "thread-external")
@@ -1848,6 +2750,184 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(state["queued_operator_updates"][0]["status"], "queued")
             actions = self._read_jsonl(flow_dir / "actions.jsonl")
             self.assertEqual(actions[-1]["action_type"], "append_instruction")
+
+    def test_operator_control_actions_update_control_profile_with_config_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = self._app(_ReceiptRunner([]))
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id="flow_control_actions",
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="ship bounded progress",
+                guard_condition="done",
+                max_attempts=0,
+                max_phase_attempts=10,
+            )
+            flow_dir = _BUILD_FLOW_ROOT(root) / "flow_control_actions"
+            ensure_flow_sidecars(flow_dir, flow_state)
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+
+            shrink_receipt = app._runtime.apply_operator_action(
+                cfg=json.loads(Path(config).read_text(encoding="utf-8")),
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="shrink_packet",
+            )
+            bind_receipt = app._runtime.apply_operator_action(
+                cfg=json.loads(Path(config).read_text(encoding="utf-8")),
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="bind_repo_contract",
+                payload={"repo_contract_path": "AGENTS.md"},
+            )
+            doctor_receipt = app._runtime.apply_operator_action(
+                cfg=json.loads(Path(config).read_text(encoding="utf-8")),
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="force_doctor",
+            )
+
+            control_profile = dict(flow_state.get("control_profile") or {})
+            self.assertEqual(shrink_receipt["action_type"], "shrink_packet")
+            self.assertEqual(bind_receipt["action_type"], "bind_repo_contract")
+            self.assertEqual(doctor_receipt["action_type"], "force_doctor")
+            self.assertEqual(control_profile["packet_size"], "small")
+            self.assertTrue(control_profile["force_gate_next_turn"])
+            self.assertTrue(control_profile["force_doctor_next_turn"])
+            self.assertEqual(control_profile["repo_binding_policy"], "explicit")
+            self.assertEqual(control_profile["repo_contract_paths"], ["AGENTS.md"])
+
+    def test_manager_and_supervisor_use_isolated_codex_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id="flow_isolated_roles",
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="ship bounded progress",
+                guard_condition="done",
+                max_attempts=0,
+                max_phase_attempts=10,
+            )
+            app = self._app(_ReceiptRunner([]))
+            flow_dir = _BUILD_FLOW_ROOT(root) / "flow_isolated_roles"
+            ensure_flow_sidecars(flow_dir, flow_state)
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+
+            supervisor_request = app._runtime._build_supervisor_runtime_request(
+                json.loads(Path(config).read_text(encoding="utf-8")),
+                flow_id="flow_isolated_roles",
+                flow_state=flow_state,
+                flow_dir_path=flow_dir,
+            )
+            flow_state["active_role_id"] = "doctor"
+            doctor_request = app._runtime.build_codex_runtime_request(
+                json.loads(Path(config).read_text(encoding="utf-8")),
+                flow_id="flow_isolated_roles",
+                flow_state=flow_state,
+                flow_dir_path=flow_dir,
+            )
+
+            self.assertEqual(supervisor_request["execution_context"], "isolated")
+            self.assertIn("supervisor_runtime", supervisor_request["execution_workspace_root"])
+            self.assertEqual(doctor_request["execution_context"], "isolated")
+            self.assertIn("doctor_runtime", doctor_request["execution_workspace_root"])
+
+    def test_operator_control_actions_update_control_profile_with_unbind(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None:
+            raise AssertionError("butler_flow must expose _new_flow_state/_write_json_atomic for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_id = "flow_control_actions"
+            flow_dir = _BUILD_FLOW_ROOT(root) / flow_id
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id=flow_id,
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="ship a bounded change safely",
+                guard_condition="done",
+                max_attempts=0,
+                max_phase_attempts=6,
+            )
+            ensure_flow_sidecars(flow_dir, flow_state)
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+            app = self._app(_ReceiptRunner([]))
+
+            shrink_receipt = app._runtime.apply_operator_action(
+                cfg={},
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="shrink_packet",
+            )
+            self.assertEqual(shrink_receipt["action_type"], "shrink_packet")
+            self.assertEqual(flow_state["control_profile"]["packet_size"], "small")
+            self.assertTrue(flow_state["control_profile"]["force_gate_next_turn"])
+
+            bind_receipt = app._runtime.apply_operator_action(
+                cfg={},
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="bind_repo_contract",
+                payload={"repo_contract_path": "AGENTS.md"},
+            )
+            self.assertEqual(bind_receipt["action_type"], "bind_repo_contract")
+            self.assertEqual(flow_state["control_profile"]["repo_binding_policy"], "explicit")
+            self.assertIn("AGENTS.md", flow_state["control_profile"]["repo_contract_paths"])
+
+            unbind_receipt = app._runtime.apply_operator_action(
+                cfg={},
+                flow_dir_path=flow_dir,
+                flow_state=flow_state,
+                action_type="unbind_repo_contract",
+            )
+            self.assertEqual(unbind_receipt["action_type"], "unbind_repo_contract")
+            self.assertEqual(flow_state["control_profile"]["repo_binding_policy"], "disabled")
+            self.assertEqual(flow_state["control_profile"]["repo_contract_paths"], [])
+
+    def test_build_codex_prompt_appends_explicit_repo_contract(self) -> None:
+        if _NEW_FLOW_STATE is None:
+            raise AssertionError("butler_flow must expose _new_flow_state for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "AGENTS.md").write_text("Repo contract: keep changes narrow.\n", encoding="utf-8")
+            flow_id = "flow_repo_contract_prompt"
+            flow_dir = _BUILD_FLOW_ROOT(root) / flow_id
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id=flow_id,
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="ship safely",
+                guard_condition="done",
+                max_attempts=0,
+                max_phase_attempts=6,
+            )
+            flow_state["control_profile"]["repo_binding_policy"] = "explicit"
+            flow_state["control_profile"]["repo_contract_paths"] = ["AGENTS.md"]
+            ensure_flow_sidecars(flow_dir, flow_state)
+            app = self._app(_ReceiptRunner([]))
+            prompt = app._runtime.build_codex_prompt({}, flow_dir, flow_state, attempt_no=1, phase_attempt_no=1)
+            self.assertIn("Explicit repo contracts:", prompt)
+            self.assertIn("[repo contract: AGENTS.md]", prompt)
+            self.assertIn("Repo contract: keep changes narrow.", prompt)
+
+    def test_action_parser_accepts_control_actions(self) -> None:
+        parser = flow_cli.build_arg_parser()
+        args = parser.parse_args(
+            [
+                "action",
+                "--flow-id",
+                "flow_demo",
+                "--type",
+                "bind_repo_contract",
+                "--repo-contract-path",
+                "AGENTS.md",
+            ]
+        )
+        self.assertEqual(args.type, "bind_repo_contract")
+        self.assertEqual(args.repo_contract_path, "AGENTS.md")
 
     def test_compile_packet_delta_profile_compacts_flow_payload(self) -> None:
         flow_state = _NEW_FLOW_STATE(
@@ -2164,6 +3244,7 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(state.get("catalog_flow_id"), "project_loop")
             self.assertEqual(state.get("workflow_kind"), PROJECT_LOOP_KIND)
             self.assertEqual(state.get("execution_mode"), "medium")
+            self.assertEqual(state.get("execution_context"), "repo_bound")
 
     def test_prepare_new_flow_rejects_high_execution_level(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2291,19 +3372,236 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(state.get("phase_plan")[0]["phase_id"], "scan")
             self.assertEqual(state.get("source_asset_key"), "template:template_demo")
             self.assertEqual(state.get("source_asset_kind"), "template")
-            self.assertEqual(state.get("bundle_manifest", {}).get("supervisor_ref"), str((root / "butler_main" / "butler_bot_code" / "assets" / "flows" / "bundles" / "templates" / "template_demo" / "supervisor.md").resolve()))
+            self.assertEqual(state.get("bundle_manifest", {}).get("supervisor_ref"), str((self._flow_dirs(root)[0] / "bundle" / "supervisor.md").resolve()))
+            self.assertEqual(state.get("bundle_manifest", {}).get("doctor_ref"), str((self._flow_dirs(root)[0] / "bundle" / "doctor.md").resolve()))
             self.assertEqual(state.get("phase_plan")[1]["phase_id"], "synthesize")
             self.assertEqual(state.get("execution_mode"), "medium")
             self.assertEqual(state.get("role_pack_id"), "research_flow")
+            self.assertEqual(state.get("execution_context"), "isolated")
             self.assertEqual(state.get("role_guidance", {}).get("suggested_roles"), ["planner", "researcher", "reviewer"])
+
+    def test_exec_receipt_includes_execution_context_and_workspace_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            app = self._app(_ReceiptRunner([]))
+            receipt = app._build_exec_receipt(
+                flow_path=root / "flow_receipt",
+                flow_state={
+                    "workflow_id": "flow_receipt",
+                    "workflow_kind": SINGLE_GOAL_KIND,
+                    "status": "completed",
+                    "execution_context": "isolated",
+                    "last_codex_receipt": {
+                        "metadata": {
+                            "execution_workspace_root": str(root / ".isolated" / "flow_receipt"),
+                        }
+                    },
+                },
+                return_code=0,
+            )
+        self.assertEqual(receipt["execution_context"], "isolated")
+        self.assertEqual(receipt["execution_workspace_root"], str(root / ".isolated" / "flow_receipt"))
 
     def test_current_role_prompt_covers_lightweight_specialists(self) -> None:
         creator_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="creator", flow_state={"role_sessions": {}})
+        doctor_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="doctor", flow_state={"role_sessions": {}})
         product_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="product-manager", flow_state={"role_sessions": {}})
         user_prompt = current_role_prompt(role_pack_id="coding_flow", role_id="user-simulator", flow_state={"role_sessions": {}})
         self.assertIn("Role: creator", creator_prompt)
+        self.assertIn("Role: doctor", doctor_prompt)
         self.assertIn("Role: product-manager", product_prompt)
         self.assertIn("Role: user-simulator", user_prompt)
+
+    def test_run_new_materializes_instance_bundle_with_doctor_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="implemented",
+                        metadata={"external_session": {"provider": "codex", "thread_id": "thread-bundle", "resume_capable": True}},
+                        agent_id="butler_flow.codex_executor",
+                    ),
+                    _receipt(
+                        text=json.dumps(
+                            {
+                                "decision": "COMPLETE",
+                                "reason": "done",
+                                "next_codex_prompt": "",
+                                "completion_summary": "done",
+                            },
+                            ensure_ascii=False,
+                        ),
+                        agent_id="butler_flow.cursor_judge",
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            args = self._new_args(config=config, kind=SINGLE_GOAL_KIND, execution_level="medium")
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                rc = app.run_new(args)
+            self.assertEqual(rc, 0)
+            flow_dir = self._flow_dirs(root)[0]
+            definition = self._read_json(flow_dir / "flow_definition.json")
+            self.assertTrue((flow_dir / "bundle" / "doctor.md").exists())
+            self.assertTrue((flow_dir / "bundle" / "skills" / "doctor" / "SKILL.md").exists())
+            self.assertEqual(definition["bundle_manifest"]["doctor_ref"], str((flow_dir / "bundle" / "doctor.md").resolve()))
+            self.assertEqual(definition["bundle_manifest"]["doctor_skill_ref"], str((flow_dir / "bundle" / "skills" / "doctor" / "SKILL.md").resolve()))
+
+    def test_heuristic_supervisor_spawns_doctor_for_resume_no_rollout_failure(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None or _BUILD_FLOW_ROOT is None:
+            raise AssertionError("butler_flow must expose build/new/write helpers for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_dir = _BUILD_FLOW_ROOT(root) / "flow_doctor_resume"
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id="flow_doctor_resume",
+                workflow_kind=SINGLE_GOAL_KIND,
+                workspace_root=str(root),
+                goal="repair the flow and continue",
+                guard_condition="blocked task resumes safely",
+                max_attempts=2,
+                max_phase_attempts=0,
+            )
+            flow_state["execution_mode"] = "medium"
+            flow_state["session_strategy"] = "role_bound"
+            flow_state["active_role_id"] = "implementer"
+            flow_state["pending_codex_prompt"] = "continue the blocked task"
+            flow_state["doctor_policy"] = {
+                "enabled": True,
+                "activation_rules": ["same_resume_failure", "session_binding_invalid"],
+                "repair_scope": "runtime_assets_first",
+                "framework_bug_action": "pause",
+                "max_rounds_per_episode": 1,
+            }
+            flow_state["role_sessions"] = {
+                "implementer": {
+                    "role_id": "implementer",
+                    "session_id": "thread-stale",
+                    "status": "ready",
+                    "updated_at": "2026-04-02 19:29:08",
+                }
+            }
+            flow_state["last_codex_receipt"] = {
+                "status": "failed",
+                "summary": "Error: thread/resume: thread/resume failed: no rollout found for thread id thread-stale",
+                "output_text": "Error: thread/resume: thread/resume failed: no rollout found for thread id thread-stale",
+                "metadata": {
+                    "runtime_request": {"codex_mode": "resume"},
+                    "external_session": {
+                        "provider": "codex",
+                        "thread_id": "",
+                        "requested_session_id": "thread-stale",
+                        "resume_capable": False,
+                    },
+                },
+            }
+            ensure_flow_sidecars(flow_dir, flow_state)
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="doctor repaired the stale runtime binding and prepared the flow to continue",
+                        metadata={"external_session": {"provider": "codex", "thread_id": "thread-doctor", "resume_capable": True}},
+                        agent_id="butler_flow.codex_executor",
+                    ),
+                    _receipt(
+                        text=json.dumps(
+                            {
+                                "decision": "COMPLETE",
+                                "reason": "recovery verified",
+                                "next_codex_prompt": "",
+                                "completion_summary": "recovery done",
+                            },
+                            ensure_ascii=False,
+                        ),
+                        agent_id="butler_flow.cursor_judge",
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                rc = app._runtime.run_flow_loop({"workspace_root": str(root)}, flow_dir, flow_state, stream_enabled=False)
+            self.assertEqual(rc, 0)
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_mode"], "exec")
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_session_id"], "")
+            state = self._flow_state(flow_dir)
+            self.assertEqual(state["role_sessions"]["implementer"]["status"], "resume_failed")
+            self.assertEqual(state["role_sessions"]["doctor"]["session_id"], "thread-doctor")
+            turns = self._read_jsonl(flow_dir / "turns.jsonl")
+            self.assertTrue(any(row.get("role_id") == "doctor" and row.get("turn_kind") == "recover" for row in turns))
+
+    def test_doctor_framework_bug_output_pauses_flow_for_operator(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None or _BUILD_FLOW_ROOT is None:
+            raise AssertionError("butler_flow must expose build/new/write helpers for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            flow_dir = _BUILD_FLOW_ROOT(root) / "flow_doctor_pause"
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id="flow_doctor_pause",
+                workflow_kind=SINGLE_GOAL_KIND,
+                workspace_root=str(root),
+                goal="repair the flow and continue",
+                guard_condition="blocked task resumes safely",
+                max_attempts=2,
+                max_phase_attempts=0,
+            )
+            flow_state["execution_mode"] = "medium"
+            flow_state["session_strategy"] = "role_bound"
+            flow_state["active_role_id"] = "implementer"
+            flow_state["pending_codex_prompt"] = "continue the blocked task"
+            flow_state["doctor_policy"] = {
+                "enabled": True,
+                "activation_rules": ["same_resume_failure"],
+                "repair_scope": "runtime_assets_first",
+                "framework_bug_action": "pause",
+                "max_rounds_per_episode": 1,
+            }
+            flow_state["role_sessions"] = {
+                "implementer": {
+                    "role_id": "implementer",
+                    "session_id": "thread-stale",
+                    "status": "ready",
+                    "updated_at": "2026-04-02 19:29:08",
+                }
+            }
+            flow_state["last_codex_receipt"] = {
+                "status": "failed",
+                "summary": "Error: thread/resume: thread/resume failed: no rollout found for thread id thread-stale",
+                "output_text": "Error: thread/resume: thread/resume failed: no rollout found for thread id thread-stale",
+                "metadata": {
+                    "runtime_request": {"codex_mode": "resume"},
+                    "external_session": {
+                        "provider": "codex",
+                        "thread_id": "",
+                        "requested_session_id": "thread-stale",
+                        "resume_capable": False,
+                    },
+                },
+            }
+            ensure_flow_sidecars(flow_dir, flow_state)
+            _WRITE_JSON_ATOMIC(flow_dir / "workflow_state.json", flow_state)
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="DOCTOR_FRAMEWORK_BUG:\nProblem: runtime keeps requesting stale rollout.\nEvidence: repeated resume/no-rollout failures.\nFix plan: patch the supervisor/runtime session quarantine path.",
+                        metadata={"external_session": {"provider": "codex", "thread_id": "thread-doctor", "resume_capable": True}},
+                        agent_id="butler_flow.codex_executor",
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                rc = app._runtime.run_flow_loop({"workspace_root": str(root)}, flow_dir, flow_state, stream_enabled=False)
+            self.assertEqual(rc, 0)
+            self.assertEqual(len(runner.calls), 1)
+            state = self._flow_state(flow_dir)
+            self.assertEqual(state["status"], "paused")
+            self.assertEqual(state["approval_state"], "operator_required")
+            self.assertEqual(state["latest_supervisor_decision"]["decision"], "ask_operator")
+            self.assertIn("Problem:", state["pending_codex_prompt"])
+            self.assertIn("Fix plan:", state["pending_codex_prompt"])
 
     def test_parser_defaults_new_kind_to_single_goal_and_allows_resume_priority_args(self) -> None:
         parser = flow_shell.build_arg_parser()
@@ -2553,6 +3851,63 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertTrue((template_bundle / "sources.json").exists())
             self.assertTrue((template_bundle / "derived" / "supervisor_knowledge.json").exists())
             self.assertIn("bundle_manifest", template_rows[0]["definition"])
+
+    def test_manage_flow_can_commit_from_structured_draft_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = self._app(_ReceiptRunner([]))
+            rc = app.manage_flow(
+                argparse.Namespace(
+                    command="manage",
+                    config=config,
+                    limit=5,
+                    json=True,
+                    manage="template:new",
+                    goal="",
+                    guard_condition="",
+                    instruction="commit draft",
+                    stage="commit",
+                    builtin_mode="",
+                    draft_payload={
+                        "manage_target": "template:new",
+                        "asset_kind": "template",
+                        "label": "Desktop Product Delivery",
+                        "description": "reusable desktop product flow",
+                        "workflow_kind": MANAGED_FLOW_KIND,
+                        "goal": "ship a desktop app increment safely",
+                        "guard_condition": "handoff is release-ready",
+                        "phase_plan": [
+                            {"phase_id": "plan", "title": "Plan", "objective": "plan", "done_when": "done", "retry_phase_id": "plan", "fallback_phase_id": "plan", "next_phase_id": "build"},
+                            {"phase_id": "build", "title": "Build", "objective": "build", "done_when": "done", "retry_phase_id": "build", "fallback_phase_id": "plan", "next_phase_id": ""},
+                        ],
+                        "review_checklist": ["check delivery scope", "check release notes"],
+                        "supervisor_profile": {
+                            "archetype": "delivery_manager",
+                            "primary_posture": "steady_delivery",
+                            "quality_bar": "reviewable_increment",
+                            "risk_bias": "balanced",
+                            "review_focus": ["release readiness", "user-visible regression"],
+                            "done_policy": {"must_block_on": ["broken build"], "can_defer_with_note": ["minor polish"]},
+                            "manager_notes": "Prefer stable weekly delivery.",
+                        },
+                        "run_brief": "Use this template when the work needs clear delivery cadence.",
+                        "source_bindings": [{"kind": "doc", "label": "PRD", "ref": "docs/daily-upgrade/0402/prd.md", "notes": "Desktop product direction"}],
+                    },
+                )
+            )
+            self.assertEqual(rc, 0)
+            payload = json.loads(app._stdout.getvalue())
+            asset_id = payload["asset_id"]
+            definition = self._read_json(root / "butler_main" / "butler_bot_code" / "assets" / "flows" / "templates" / f"{asset_id}.json")
+            bundle_root = root / "butler_main" / "butler_bot_code" / "assets" / "flows" / "bundles" / "templates" / asset_id
+            sources = self._read_json(bundle_root / "sources.json")
+            compiled = self._read_json(bundle_root / "derived" / "supervisor_knowledge.json")
+            self.assertEqual(definition["supervisor_profile"]["archetype"], "delivery_manager")
+            self.assertEqual(definition["run_brief"], "Use this template when the work needs clear delivery cadence.")
+            self.assertEqual(sources["items"][0]["label"], "PRD")
+            self.assertIn("delivery_manager", compiled["knowledge_text"])
+            self.assertIn("release readiness", compiled["knowledge_text"])
 
     def test_manage_flow_builtin_requires_explicit_mode_and_can_clone_to_template(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

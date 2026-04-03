@@ -114,10 +114,10 @@ instance materialization 新增以下来源字段：
 
 - `manage` 页
   - 纯文本默认进入 manager chat
-  - 无显式 target 时，由 manager chat 先沟通、澄清，再决定是否执行 `new` / `template:new` / 现有资产更新
+  - 无显式 target 时，由 manager chat 先沟通、澄清，并默认先走 `template-first`：先选/建/改 template，再决定 flow 实例化
   - 若带 `$template:<id>` / `$builtin:<id>`，表示把目标资产绑定到当前 chat 轮次
   - 若用户直接写 `template:<id> ...` / `builtin:<id> ...`，显式 target 仍优先于当前焦点资产
-  - manager chat 在信息充分时可直接回传结构化 action，并自动衔接 `manage_flow()`
+  - manager chat 需要显式经历 `template_confirm` 与 `flow_confirm` 两个确认点；只有确认到当前管理动作时，才回传结构化 action 并衔接 `manage_flow()`
 - `flow` 页
   - 纯文本默认进入 supervisor
   - 当前 flow 为 `running/paused` 时，文本走 `append_instruction`，排到同一 flow session 的后续 turn
@@ -128,8 +128,10 @@ instance materialization 新增以下来源字段：
 
 - manager chat
   - 当前是 `manage` 页纯文本默认入口
-  - 负责先讨论、补齐约束、细化静态字段与资产边界
-  - 在 ready 时自动下发 `manage_flow()`，用于新建 `pending` flow、创建 template 或更新现有 shared asset
+  - 采用 `manager role + manager skills + asset bundle/manager.md` 的注入结构，不再依赖本地文本硬门控
+  - 负责先讨论、补齐约束、细化静态字段与资产边界；新需求默认 `template-first`
+  - 创建顺序固定优先为：讨论 → 选/建/改 template → 补齐 `goal / guard_condition / supervisor.md` 方向 → 确认 template → 确认 flow → 创建/更新 flow
+  - 当前显式输出 `manager_stage / active_skill / confirmation_scope / confirmation_prompt`
 - 显式命令
   - `/manage ...` 仍保留
   - 适合需要明确指定 `template:new / builtin:<id> / template:<id>` 的场景
@@ -190,6 +192,43 @@ instance materialization 新增以下来源字段：
 - 实测回归：
   - `./.venv/bin/python -m pytest butler_main/butler_bot_code/tests/test_butler_flow.py butler_main/butler_bot_code/tests/test_butler_flow_tui_app.py butler_main/butler_bot_code/tests/test_butler_flow_tui_controller.py -q`
   - 本次变更后重新执行并回写最新结果
+
+## 6.1 0403 续落地补充
+
+0403 对本专题继续补了三件关键事：
+
+1. manager chat 从“模型直接回 `action_ready=true` 就执行”改为“持久化 `manage_session + draft + pending_action`”。
+2. 首次给出 template / flow draft 时，默认只展示 draft 与待确认动作，不再自动创建。
+3. 真正提交改为 `draft_payload -> manage_flow()`：
+   - 提交结果以规范化后的实际写盘结果为准
+   - `manage_handoff.summary` 与 `manage_audit` 改为从 canonical saved definition 生成
+4. manager chat 的当前稳态修补口径补齐为：
+   - 首轮纯文本会默认绑定当前 manage focus asset；同一 manager session 的后续轮次改为依赖 session sticky target，除非用户显式重新指定 target
+   - TUI 提交前会清理悬空 `$`/无效 mention 前缀，避免把残留 picker token 直接送进 manager
+   - 若 manager 返回的不是合法 JSON，系统会把原始 reply 透传给 operator，并把 `parse_status / raw_reply / error_text` 记入 manage turn，而不是回退成 `Manager chat completed.`
+   - parse failed 时不清空既有 `pending_action`，避免讨论阶段把待确认草稿意外冲掉
+   - 若已有 manager session 的 Codex `resume` 命中 `thread/resume failed`、`no rollout found`、`timeout waiting for child process to exit`、`Reconnecting...` 等典型故障，manager chat 会在同 provider 内自动新开一次 fresh Codex session 重试当前轮；首轮 fresh exec 失败不自动重试，也不切到 Cursor
+
+同时补充 shared asset / instance static asset 字段：
+
+- `supervisor_profile`
+  - 精选 supervisor 风格，不做独立资产
+- `run_brief`
+  - 本次 run 或该 template 的 supervisor 运行摘要
+- `source_bindings`
+  - manager 讨论阶段选定的关键来源，提交后写入 bundle `sources.json`
+
+runtime/compiler 当前注入口径：
+
+- `asset_context` 透传 `supervisor_profile / run_brief / source_bindings`
+- bundle `derived/supervisor_knowledge.json` 由静态字段编译生成，不再只保留空壳文件
+
+0403 同步补了 manager -> supervisor 的治理交接口径：
+
+- manager 在 template / flow 设计时应同步给出 `control_profile`
+- `control_profile` 是实例级治理合同，不再只是 manager 讨论阶段的备注
+- `repo_bound` 只表示执行位置；repo contract 是否生效，单独看 `control_profile.repo_binding_policy + repo_contract_paths`
+- supervisor 后续对 `packet_size / evidence_level / gate_cadence / repo_binding_policy` 的调整会回写实例态，而不是只显示在 decision 里
 
 ## 7. 补充：长流治理与 supervisor 可观测性
 

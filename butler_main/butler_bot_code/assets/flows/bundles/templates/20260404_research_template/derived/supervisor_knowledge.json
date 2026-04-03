@@ -1,0 +1,20 @@
+{
+  "composition_mode": "handwritten+compiled",
+  "knowledge_text": "[control profile]\n- task_archetype: repo_delivery\n- packet_size: medium\n- evidence_level: standard\n- gate_cadence: phase\n- repo_binding_policy: disabled",
+  "control_profile": {
+    "task_archetype": "repo_delivery",
+    "packet_size": "medium",
+    "evidence_level": "standard",
+    "gate_cadence": "phase",
+    "repo_binding_policy": "disabled",
+    "repo_contract_paths": [],
+    "manager_notes": "",
+    "force_gate_next_turn": false,
+    "force_doctor_next_turn": false
+  },
+  "supervisor_profile": {},
+  "run_brief": "",
+  "source_items": [],
+  "review_checklist": [],
+  "updated_at": "2026-04-04 00:34:48"
+}
