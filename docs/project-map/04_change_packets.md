@@ -333,6 +333,8 @@
   - [真源矩阵](./03_truth_matrix.md)
   - [0402 Vibecoding Agent 默认收尾动作与 `vibe-close` 收口](../daily-upgrade/0402/09_vibecoding_agent默认收尾动作与vibe_close收口.md)
   - [0331 根目录归档整理收口](../daily-upgrade/0331/05_根目录归档整理收口.md)
+  - [0403 仓库级重构实施稿：三产品 / Platform / Repo Governance](../daily-upgrade/0403/04_仓库级重构实施稿_三产品_platform_repo治理.md)
+  - [仓库级重构远景规划（产品 / Platform / Repo Governance 版）](../远景草稿/仓库级重构.md)
   - [文档生命周期](./05_doc_lifecycle.md)
   - [concepts/README.md](../concepts/README.md)
 - 默认检查：
@@ -342,6 +344,8 @@
   - `runtime_os/`、`tools/` 是否被错误写成可直接清理对象
   - `AGENTS.md` 是否仍把 `./tools/vibe-close` 作为 vibecoding 默认收尾动作
   - `vibe-close analyze/apply` 的 JSON 字段与当前文档协议是否一致
+  - 远景稿与实施稿是否明确区分“当前现役事实”和“后续波次候选”
+  - 仓库重构叙事是否已明确拆成三产品、共享 Platform 与 repo governance plane
   - 根 `README.md` 是否仍给 GitHub / ChatGPT 网页端读者清晰指向 `docs/` 与 `project-map/`
   - 功能条目是否能一跳命中代码目录和测试入口
   - 近期新增能力是否已回写到 `project-map/`

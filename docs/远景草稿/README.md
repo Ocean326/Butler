@@ -22,3 +22,4 @@
 ## 当前入口
 
 1. [Butler-flow 1.0 到 2.0：从经理式 Flow 到 Agent Team 的阶段演进与远景框架（2026-04-02）](./Butler-flow_1.0到2.0_从经理式Flow到AgentTeam的阶段演进与远景框架_20260402.md)
+2. [Butler 仓库级重构远景规划（产品 / Platform / Repo Governance 版）](./仓库级重构.md)
