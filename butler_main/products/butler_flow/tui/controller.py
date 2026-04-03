@@ -35,6 +35,7 @@ from butler_main.butler_flow.state import (
     now_text,
     read_json,
     resolve_flow_dir,
+    resolve_flow_workspace_root,
 )
 
 
@@ -698,9 +699,7 @@ class FlowTuiController:
 
     def inspect_payload(self, *, config: str | None, flow_id: str) -> dict[str, Any]:
         payload = self.status_payload(config=config, flow_id=flow_id)
-        flow_path = Path(payload["flow_dir"])
-        if not flow_path.exists():
-            flow_path = resolve_flow_dir(payload["flow_state"].get("workspace_root") or "", flow_id)
+        flow_path = self._resolve_flow_path(status_payload=payload, flow_id=flow_id)
         return {
             "status": payload,
             "turns": _read_jsonl(flow_turns_path(flow_path)),
@@ -794,12 +793,18 @@ class FlowTuiController:
         return build_flow_summary(status_payload=status_payload, handoffs=handoffs).to_dict()
 
     def _resolve_flow_path(self, *, status_payload: dict[str, Any], flow_id: str) -> Path:
+        workspace_root = resolve_flow_workspace_root(
+            status_payload.get("workspace_root") or dict(status_payload.get("flow_state") or {}).get("workspace_root") or ""
+        )
+        workspace_flow_path = resolve_flow_dir(workspace_root, flow_id)
+        if workspace_flow_path.exists():
+            return workspace_flow_path
         flow_dir_value = str(status_payload.get("flow_dir") or "").strip()
         if flow_dir_value:
             flow_path = Path(flow_dir_value)
-            if flow_path.exists():
+            if flow_path.exists() and flow_path == workspace_flow_path:
                 return flow_path
-        return resolve_flow_dir(status_payload.get("workspace_root") or "", flow_id)
+        return workspace_flow_path
 
     def _inspector_payload(self, *, flow_id: str, inspected: dict[str, Any]) -> dict[str, Any]:
         status = dict(inspected.get("status") or {})
@@ -1002,10 +1007,8 @@ class FlowTuiController:
             preflight_payload=dict(snapshot.get("preflight") or {}),
             flows_payload=dict(snapshot.get("flows") or {}),
             resolve_status_payload=lambda flow_id: self.status_payload(config=config, flow_id=flow_id),
-            read_handoffs=lambda _flow_id, status_payload: (
-                list(_read_jsonl(handoffs_path(Path(str(status_payload.get("flow_dir") or "").strip()))))
-                if str(status_payload.get("flow_dir") or "").strip()
-                else []
+            read_handoffs=lambda _flow_id, status_payload: list(
+                _read_jsonl(handoffs_path(self._resolve_flow_path(status_payload=status_payload, flow_id=_flow_id)))
             ),
             limit=limit,
         ).to_dict()

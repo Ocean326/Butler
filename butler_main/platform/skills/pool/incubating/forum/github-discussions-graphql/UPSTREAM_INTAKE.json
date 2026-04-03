@@ -1,0 +1,28 @@
+{
+  "candidate": {
+    "id": "github-discussions-graphql",
+    "name": "GitHub Discussions GraphQL API",
+    "category": "forum_information",
+    "priority": "P1",
+    "maturity": "high",
+    "upstream_type": "official_api",
+    "repo_url": "https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions",
+    "docs_url": "https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions",
+    "butler_skill_shape": "GitHub Discussions retrieval, maintainer FAQ extraction, release-feedback watch",
+    "why_recommended": [
+      "Strong fit for open-source product support and maintainer communication channels.",
+      "Complements issues and changelog monitoring already common in coding workflows."
+    ],
+    "risks": [
+      "Requires GitHub token and GraphQL query discipline.",
+      "Per-repo permissions limit broad public crawling."
+    ],
+    "suggested_collection_ids": [
+      "codex_default"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/platform/skills/pool/incubating/forum/github-discussions-graphql",
+  "review_state": "imported_for_review"
+}

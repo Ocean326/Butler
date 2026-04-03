@@ -117,7 +117,7 @@
 - 用户价值：让 skill 真源、collection 暴露和 provider 注入方式长期分离
 - 主层级：`Domain & Control Plane（领域与控制平面）`
 - 次层级：`L1 Agent Execution Runtime（Agent 执行运行时）`
-- 关键代码目录：`butler_main/platform/skills/`（canonical alias）、`butler_main/sources/skills/`、`butler_main/compat/agents_os/`（canonical alias）、`butler_main/agents_os/skills/`、`butler_main/products/chat/`（canonical alias）、`butler_main/chat/`、`butler_main/products/campaign_orchestrator/campaign/`（canonical alias）、`butler_main/domains/campaign/`
+- 关键代码目录：`butler_main/platform/skills/`（canonical alias）、`butler_main/platform/skills/`、`butler_main/compat/agents_os/`（canonical alias）、`butler_main/agents_os/skills/`、`butler_main/products/chat/`（canonical alias）、`butler_main/chat/`、`butler_main/products/campaign_orchestrator/campaign/`（canonical alias）、`butler_main/domains/campaign/`
 - 当前真源文档：
   - [0327 Skill Exposure Plane 与 Codex 消费边界](../daily-upgrade/0327/02_SkillExposurePlane与Codex消费边界.md)
   - [当前系统基线](./00_current_baseline.md)

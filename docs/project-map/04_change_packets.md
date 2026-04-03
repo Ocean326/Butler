@@ -1,7 +1,7 @@
 # 改前读包
 
-更新时间：2026-04-03  
-状态：现役  
+更新时间：2026-04-04
+状态：现役
 用途：把常见改动压成固定最小读包，避免 agent 自由扩散式读库
 
 ## 通用基础包
@@ -10,7 +10,7 @@
 
 1. 仓库根 `README.md`
 2. [docs/README.md](../README.md)
-3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`
+3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0404/00_当日总纲.md`）
 
 ## `frontdoor`
 
@@ -26,11 +26,11 @@
   - [0402 Chat Router 选会话能力升级回写](../daily-upgrade/0402/01_chat_router选会话能力升级回写.md)
   - [0326 Harness 全系统稳定态运行梳理](../daily-upgrade/0326/03_Harness全系统稳定态运行梳理.md)
 - 默认代码目录：
-  - `butler_main/products/chat/`（canonical alias）
-  - `butler_main/chat/`（physical compat）
-  - `butler_main/orchestrator/interfaces/`
+  - `butler_main/products/chat/`
+  - `butler_main/chat/`（compat shell）
+  - `butler_main/products/campaign_orchestrator/orchestrator/interfaces/`
   - `butler_main/agents_os/execution/cli_runner.py`
-  - `butler_main/chat/frontdoor_cli_router.py`
+  - `butler_main/products/chat/frontdoor_cli_router.py`
 - 默认测试：
   - `test_chat_campaign_negotiation.py`
   - `test_chat_long_task_frontdoor_regression.py`
@@ -43,17 +43,17 @@
   - `test_conversation_turn_engine.py`
   - `test_chat_runtime_request_override_runtime.py`
 - 临时熔断附加检查：
-  - 先看 `butler_main/chat/feature_switches.py`
+  - 先看 `butler_main/products/chat/feature_switches.py`
   - 再看 `butler_main/butler_bot_code/configs/butler_bot.json -> features.chat_frontdoor_tasks_enabled`
   - 回归优先补 `test_chat_router_frontdoor.py`、`test_talk_mainline_service.py`、`test_agent_soul_prompt.py`
   - 模式收口附加检查：
-  - 先看 `butler_main/chat/frontdoor_modes.py` 的 slash 契约
-  - 再看 `butler_main/chat/frontdoor_cli_router.py`、`butler_main/chat/router_plan.py` 与 `butler_main/chat/routing.py` 的 unified compile，确认当前 `route / frontdoor_action / main_mode / role_id / injection_tier / capability_policy / runtime_lane` 是否仍由单次前门编译产出
-  - 若涉及“续接当前主线还是重开新题”，先看 `butler_main/chat/session_selection.py`、`butler_main/chat/mainline.py` 与 `butler_main/chat/memory_runtime/recent_turn_store.py`，确认 `chat_session_id` 是否已在当前 `session_scope_id` 内正确 bootstrap、写回、过滤 recent
-  - 再看 `butler_main/chat/session_modes.py` 的 sticky state、recent 配额与 `project_artifact`
-  - 再看 `butler_main/chat/mainline.py` 和 `butler_main/chat/prompting.py` 是否仍把 `/pure` 当成功能路由，而不是厚度 overlay
+  - 先看 `butler_main/products/chat/frontdoor_modes.py` 的 slash 契约
+  - 再看 `butler_main/products/chat/frontdoor_cli_router.py`、`butler_main/products/chat/router_plan.py` 与 `butler_main/products/chat/routing.py` 的 unified compile，确认当前 `route / frontdoor_action / main_mode / role_id / injection_tier / capability_policy / runtime_lane` 是否仍由单次前门编译产出
+  - 若涉及“续接当前主线还是重开新题”，先看 `butler_main/products/chat/session_selection.py`、`butler_main/products/chat/mainline.py` 与 `butler_main/products/chat/memory_runtime/recent_turn_store.py`，确认 `chat_session_id` 是否已在当前 `session_scope_id` 内正确 bootstrap、写回、过滤 recent
+  - 再看 `butler_main/products/chat/session_modes.py` 的 sticky state、recent 配额与 `project_artifact`
+  - 再看 `butler_main/products/chat/mainline.py` 和 `butler_main/products/chat/prompting.py` 是否仍把 `/pure` 当成功能路由，而不是厚度 overlay
   - 改默认厚 prompt 块顺序、门控或 session selection 指示块时，对照 [0330 Chat 默认厚 Prompt 分层治理真源](../daily-upgrade/0330/04_Chat默认厚Prompt分层治理真源.md) 与 [0402 Chat Router 选会话能力升级回写](../daily-upgrade/0402/01_chat_router选会话能力升级回写.md) 同步更新文档
-  - 若涉及 chat/frontdoor 默认 CLI，先看 `frontdoor_cli_router.py` 的 lane map 与 `butler_main/chat/data/hot/frontdoor_cli_router/governance_state.json`，不要直接改全局 `cli_runtime.active`
+  - 若涉及 chat/frontdoor 默认 CLI，先看 `frontdoor_cli_router.py` 的 lane map 与 `butler_main/products/chat/data/hot/frontdoor_cli_router/governance_state.json`，不要直接改全局 `cli_runtime.active`
   - 若涉及 `codex/claude cli` session 连续性，先核对 `session_scope_id` 是否仍是 Butler 主键，再看 `cli_runner` 的 `external_session/recovery_state/vendor_capabilities`，最后检查 `chat/light_memory.py` 是否把 vendor thread 仅作为可丢的外部 binding 持久化
 
 ## `campaign-control-plane`
@@ -68,10 +68,10 @@
   - [0327 Skill Exposure Plane 与 Codex 消费边界](../daily-upgrade/0327/02_SkillExposurePlane与Codex消费边界.md)
   - [0326 稳定 Harness 之后的下一阶段主线](../daily-upgrade/0326/04_稳定Harness之后的下一阶段主线_Anthropic长运行Harness吸收版.md)
 - 默认代码目录：
-  - `butler_main/products/campaign_orchestrator/orchestrator/`（canonical alias）
-  - `butler_main/products/campaign_orchestrator/campaign/`（canonical alias）
-  - `butler_main/orchestrator/`
-  - `butler_main/domains/campaign/`
+  - `butler_main/products/campaign_orchestrator/orchestrator/`
+  - `butler_main/products/campaign_orchestrator/campaign/`
+  - `butler_main/orchestrator/`（compat shell）
+  - `butler_main/domains/campaign/`（compat shell）
 - 默认测试：
   - `test_orchestrator_campaign_service.py`
   - `test_orchestrator_runner.py`

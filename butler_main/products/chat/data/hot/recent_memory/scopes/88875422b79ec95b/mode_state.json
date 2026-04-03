@@ -1,0 +1,22 @@
+{
+  "main_mode": "project",
+  "project_phase": "plan",
+  "project_next_phase": "plan",
+  "active_role": "project_planner",
+  "injection_tier": "standard",
+  "auto_route_reason": "sticky_mode_continuation",
+  "last_explicit_override": "sticky_mode",
+  "mode_artifacts": {
+    "project": {
+      "goal": "请总结今天的升级计划",
+      "current_phase": "plan",
+      "next_phase": "plan",
+      "latest_conclusion": "route=chat; agent=butler.chat",
+      "latest_user_prompt": "请总结今天的升级计划",
+      "open_question": "",
+      "next_action": "",
+      "updated_at": "2026-04-04 00:57:03"
+    }
+  },
+  "updated_at": "2026-04-04 00:57:03"
+}

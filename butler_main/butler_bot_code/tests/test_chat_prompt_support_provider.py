@@ -78,8 +78,8 @@ class ChatPromptSupportProviderTests(unittest.TestCase):
                         "collections": {
                             "chat_default": {
                                 "skills": [
-                                    "./butler_main/sources/skills/pool/ops/beta",
-                                    "./butler_main/sources/skills/pool/ops/alpha",
+                                    "./butler_main/platform/skills/pool/ops/beta",
+                                    "./butler_main/platform/skills/pool/ops/alpha",
                                 ]
                             }
                         },

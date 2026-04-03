@@ -4,16 +4,30 @@ import json
 from pathlib import Path
 from typing import Any
 
+from butler_main.repo_layout import LEGACY_SKILLS_REL, PLATFORM_SKILLS_REL, resolve_repo_path
+
 from .pathing import resolve_butler_root
 
 
 UPSTREAM_SKILL_CONVERSION_REGISTRY_REL = (
     Path("butler_main") / "sources" / "skills" / "agent" / "skill_manager_agent" / "references" / "upstream_skill_conversion_registry.json"
 )
+UPSTREAM_SKILL_CONVERSION_REGISTRY_CANONICAL_REL = (
+    PLATFORM_SKILLS_REL / "agent" / "skill_manager_agent" / "references" / "upstream_skill_conversion_registry.json"
+)
+UPSTREAM_SKILL_CONVERSION_REGISTRY_COMPAT_REL = (
+    LEGACY_SKILLS_REL / "agent" / "skill_manager_agent" / "references" / "upstream_skill_conversion_registry.json"
+)
 
 
 def upstream_skill_conversion_registry_file(workspace: str | Path | None) -> Path:
-    return resolve_butler_root(workspace) / UPSTREAM_SKILL_CONVERSION_REGISTRY_REL
+    repo_root = resolve_butler_root(workspace)
+    return resolve_repo_path(
+        repo_root,
+        canonical_rel=UPSTREAM_SKILL_CONVERSION_REGISTRY_CANONICAL_REL,
+        compat_rel=UPSTREAM_SKILL_CONVERSION_REGISTRY_COMPAT_REL,
+        require_existing=True,
+    )
 
 
 def load_upstream_skill_conversion_registry(workspace: str | Path | None) -> dict[str, Any]:
@@ -38,6 +52,8 @@ def resolve_upstream_skill_conversion_entry(workspace: str | Path | None, candid
 
 __all__ = [
     "UPSTREAM_SKILL_CONVERSION_REGISTRY_REL",
+    "UPSTREAM_SKILL_CONVERSION_REGISTRY_CANONICAL_REL",
+    "UPSTREAM_SKILL_CONVERSION_REGISTRY_COMPAT_REL",
     "load_upstream_skill_conversion_registry",
     "resolve_upstream_skill_conversion_entry",
     "upstream_skill_conversion_registry_file",

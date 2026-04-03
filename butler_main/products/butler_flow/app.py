@@ -11,8 +11,6 @@ from uuid import uuid4
 
 from butler_main.agents_os.execution.cli_runner import cli_provider_available, run_prompt_receipt
 from butler_main.chat.config_runtime import load_active_config, resolve_default_config_path
-from butler_main.chat.pathing import resolve_butler_root
-
 from .constants import (
     DEFAULT_CATALOG_FLOW_ID,
     DEFAULT_EXECUTION_LEVEL,
@@ -93,6 +91,7 @@ from .state import (
     read_flow_state,
     read_json,
     resolve_flow_dir,
+    resolve_flow_workspace_root,
     safe_int,
     template_asset_root,
     write_bundle_sources,
@@ -771,7 +770,7 @@ class FlowApp:
     def _load_config(self, raw_config: str | None) -> tuple[dict[str, Any], str, str]:
         config_path = str(raw_config or "").strip() or resolve_default_config_path("butler_bot")
         cfg = load_active_config(config_path)
-        workspace_root = str(cfg.get("workspace_root") or resolve_butler_root(Path.cwd())).strip() or str(resolve_butler_root(Path.cwd()))
+        workspace_root = str(resolve_flow_workspace_root(cfg.get("workspace_root"))).strip()
         return cfg, config_path, workspace_root
 
     def _normalize_launch_mode(self, raw: Any) -> str:
@@ -1332,6 +1331,7 @@ class FlowApp:
         return {
             "flow_id": flow_id,
             "flow_dir": str(flow_path),
+            "workspace_root": str(workspace_root or "").strip(),
             "flow_state": flow_state,
             "role_runtime": extract_role_runtime_summary(flow_state),
             "runtime_snapshot": {

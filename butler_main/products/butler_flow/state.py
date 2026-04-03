@@ -55,6 +55,19 @@ from .flow_definition import default_phase_plan, first_phase_id
 from .version import BUTLER_FLOW_VERSION
 
 
+def resolve_flow_workspace_root(workspace: str | Path | None = None) -> Path:
+    if isinstance(workspace, Path):
+        candidate = workspace
+    else:
+        token = str(workspace or "").strip()
+        candidate = Path(token).expanduser() if token else Path("")
+    if str(candidate).strip():
+        if candidate.exists() and candidate.is_file():
+            return candidate.parent.resolve()
+        return candidate.resolve()
+    return resolve_butler_root(Path.cwd())
+
+
 def now_text() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -218,27 +231,27 @@ def read_json(path: Path) -> dict[str, Any]:
 
 
 def flow_asset_root(workspace: str | Path) -> Path:
-    return resolve_butler_root(workspace) / FLOW_ASSET_HOME_REL
+    return resolve_flow_workspace_root(workspace) / FLOW_ASSET_HOME_REL
 
 
 def builtin_asset_root(workspace: str | Path) -> Path:
-    return resolve_butler_root(workspace) / FLOW_BUILTIN_HOME_REL
+    return resolve_flow_workspace_root(workspace) / FLOW_BUILTIN_HOME_REL
 
 
 def template_asset_root(workspace: str | Path) -> Path:
-    return resolve_butler_root(workspace) / FLOW_TEMPLATE_HOME_REL
+    return resolve_flow_workspace_root(workspace) / FLOW_TEMPLATE_HOME_REL
 
 
 def instance_asset_root(workspace: str | Path) -> Path:
-    return resolve_butler_root(workspace) / FLOW_INSTANCE_HOME_REL
+    return resolve_flow_workspace_root(workspace) / FLOW_INSTANCE_HOME_REL
 
 
 def flow_asset_audit_path(workspace: str | Path) -> Path:
-    return resolve_butler_root(workspace) / FLOW_AUDIT_LOG_REL
+    return resolve_flow_workspace_root(workspace) / FLOW_AUDIT_LOG_REL
 
 
 def flow_bundle_root(workspace: str | Path) -> Path:
-    return resolve_butler_root(workspace) / FLOW_BUNDLE_HOME_REL
+    return resolve_flow_workspace_root(workspace) / FLOW_BUNDLE_HOME_REL
 
 
 def builtin_bundle_root(workspace: str | Path) -> Path:
@@ -677,7 +690,7 @@ def write_compiled_supervisor_knowledge(
 
 
 def legacy_flow_root(workspace: str | Path) -> Path:
-    return resolve_butler_root(workspace) / FLOW_RUN_HOME_REL
+    return resolve_flow_workspace_root(workspace) / FLOW_RUN_HOME_REL
 
 
 def legacy_flow_dir(workspace: str | Path, flow_id: str) -> Path:
@@ -1300,6 +1313,7 @@ __all__ = [
     "prepare_flow_codex_home",
     "read_flow_state",
     "read_json",
+    "resolve_flow_workspace_root",
     "safe_int",
     "system_codex_home",
     "write_bundle_sources",

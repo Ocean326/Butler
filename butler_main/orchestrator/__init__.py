@@ -1,17 +1,23 @@
 from __future__ import annotations
 
+import importlib
 import sys
-from importlib import import_module
 from pathlib import Path
 from typing import Any
 
-_BUTLER_MAIN_DIR = Path(__file__).resolve().parents[1]
-_BODY_MODULE_DIR = _BUTLER_MAIN_DIR / "butler_bot_code" / "butler_bot"
+from butler_main.repo_layout import BUTLER_MAIN_REL, HOST_BODY_MODULE_REL, resolve_repo_root
+
+_REPO_ROOT = resolve_repo_root(__file__)
+_BUTLER_MAIN_DIR = _REPO_ROOT / BUTLER_MAIN_REL
+_BODY_MODULE_DIR = _REPO_ROOT / HOST_BODY_MODULE_REL
+_PRODUCT_DIR = (_REPO_ROOT / "butler_main" / "products" / "campaign_orchestrator" / "orchestrator").resolve()
 
 if str(_BUTLER_MAIN_DIR) not in sys.path:
     sys.path.insert(0, str(_BUTLER_MAIN_DIR))
 if str(_BODY_MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(_BODY_MODULE_DIR))
+
+__path__ = [str(_PRODUCT_DIR)]
 
 _EXPORTS: dict[str, tuple[str, str]] = {
     "Branch": (".models", "Branch"),
@@ -92,7 +98,7 @@ def __getattr__(name: str) -> Any:
     if target is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     module_name, attribute_name = target
-    module = import_module(module_name, __name__)
+    module = importlib.import_module(module_name, __name__)
     value = getattr(module, attribute_name)
     globals()[name] = value
     return value

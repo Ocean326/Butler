@@ -1,0 +1,8 @@
+{
+  "candidate_id": "stackexchange-api-ingest",
+  "active_skill_name": "stackexchange-search",
+  "active_skill_path": "./butler_main/platform/skills/pool/forum/stackexchange-search",
+  "promoted_at": "2026-03-24",
+  "promotion_mode": "auto_template",
+  "upstream_name": "Stack Exchange API"
+}

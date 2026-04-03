@@ -1,13 +1,52 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from butler_main._package_alias import configure_package_alias
-
-
-configure_package_alias(
-    globals(),
-    target_package="butler_main.console",
-    target_dir=Path(__file__).resolve().parents[3] / "console",
+from .app import create_console_app
+from .server import create_console_http_server, create_console_wsgi_app, run_console_http_server
+from .service import ConsoleControlService, ConsoleQueryService
+from .types import (
+    AccessDiagnostics,
+    AgentDetailEnvelope,
+    AgentExecutionView,
+    ArtifactListItem,
+    BoardEdgeView,
+    BoardNodeView,
+    BoardSnapshot,
+    ChannelThreadSummary,
+    ConsoleEventEnvelope,
+    ControlActionRequest,
+    ControlActionResult,
+    FrontdoorDraftView,
+    GraphEdgeView,
+    GraphNodeActionState,
+    GraphNodeView,
+    GraphSnapshot,
+    PreviewEnvelope,
+    RecordListItem,
 )
 
+__all__ = [
+    "AccessDiagnostics",
+    "AgentDetailEnvelope",
+    "AgentExecutionView",
+    "ArtifactListItem",
+    "BoardEdgeView",
+    "BoardNodeView",
+    "BoardSnapshot",
+    "ChannelThreadSummary",
+    "ConsoleControlService",
+    "ConsoleEventEnvelope",
+    "ConsoleQueryService",
+    "ControlActionRequest",
+    "ControlActionResult",
+    "create_console_app",
+    "create_console_http_server",
+    "create_console_wsgi_app",
+    "FrontdoorDraftView",
+    "GraphEdgeView",
+    "GraphNodeActionState",
+    "GraphNodeView",
+    "GraphSnapshot",
+    "PreviewEnvelope",
+    "RecordListItem",
+    "run_console_http_server",
+]

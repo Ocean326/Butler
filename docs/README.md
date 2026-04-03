@@ -1,6 +1,6 @@
 # Butler Docs
 
-`docs/` 是 Butler 的唯一正式文档入口。  
+`docs/` 是 Butler 的唯一正式文档入口。
 从 2026-03-26 起，agent 改动前的当前导航层统一收口到 [`project-map/`](./project-map/README.md)。
 
 ## 目录结构
@@ -25,12 +25,14 @@
 3. [分层地图](./project-map/01_layer_map.md)
 4. [功能地图](./project-map/02_feature_map.md)
 5. [真源矩阵](./project-map/03_truth_matrix.md)
-6. [0403 当日总纲](./daily-upgrade/0403/00_当日总纲.md)
+6. [0404 当日总纲](./daily-upgrade/0404/00_当日总纲.md)
+- 补充：`0404/00` 已回写本轮仓库级重构完成态；当前应按 canonical tree 理解三产品与 repo 导航
+7. [0403 当日总纲](./daily-upgrade/0403/00_当日总纲.md)
 - 补充：[0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](./daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
 - 补充：[0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](./daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
 - 补充：[0403 跨机器开发仓库收口与私有层隔离](./daily-upgrade/0403/03_跨机器开发仓库收口与私有层隔离.md)
 - 补充：[0403 仓库级重构实施稿：三产品 / Platform / Repo Governance](./daily-upgrade/0403/04_仓库级重构实施稿_三产品_platform_repo治理.md)
-- 补充：`0403/04` 当前已进入 Wave 2 首批代码实施：canonical `products / platform / compat / incubation` 已落，`products/butler_flow/` 已真实迁移，其余高耦合目录先保 alias + compat 壳
+- 补充：`0403/04` 已在 `0404` 收口为完成态：`products/chat`、`products/butler_flow`、`products/campaign_orchestrator` 已成为真实主树，旧路径只保 compat 壳
 - 补充：[跨机器开发仓库启动说明](./concepts/跨机器开发仓库启动说明.md)
 - 补充：[仓库级重构远景规划（产品 / Platform / Repo Governance 版）](./远景草稿/仓库级重构.md)
 - 补充：0403 同日继续回写了 Manage Center manager 的 `session/draft/pending_action` 持久化与 `draft_payload` 提交口径；同日再补了 manager chat 的 target sticky、悬空 `$` 清理、非 JSON reply 的 `parse_status / raw_reply / error_text` 透传，以及 `resume` 失败后同 provider fresh Codex exec 的自愈口径；随后再把 manager 从“长 prompt 约束”进一步收口到 `skill-style` 机制：`manager skill registry + reference progressive disclosure + lightweight asset/session summary + draft ownership/action validator`，正文收口在 [0402 Butler Flow Manage Center 资产中心升级与会话式交互落地](./daily-upgrade/0402/02_butler-flow_manage-center资产中心升级与会话式交互落地.md)

@@ -1,0 +1,29 @@
+{
+  "candidate": {
+    "id": "openalex-pyalex",
+    "name": "OpenAlex plus PyAlex",
+    "category": "research_information",
+    "priority": "P0",
+    "maturity": "high",
+    "upstream_type": "official_api_with_client",
+    "repo_url": "https://github.com/J535D165/pyalex",
+    "docs_url": "https://docs.openalex.org/",
+    "butler_skill_shape": "institution and author lookup, work graph traversal, topic and concept monitoring",
+    "why_recommended": [
+      "Broad and modern scholarly graph with practical Python wrapper support.",
+      "Best candidate when Butler needs research landscape mapping, not just single-paper lookup."
+    ],
+    "risks": [
+      "Recent API-key changes mean Butler should centralize credentials and retry policy.",
+      "Result richness can increase prompt noise if not post-filtered."
+    ],
+    "suggested_collection_ids": [
+      "skill_ops",
+      "automation_safe"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/platform/skills/pool/incubating/research/openalex-pyalex",
+  "review_state": "imported_for_review"
+}

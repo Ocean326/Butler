@@ -1,0 +1,28 @@
+{
+  "candidate": {
+    "id": "praw-reddit-ingest",
+    "name": "PRAW",
+    "category": "forum_information",
+    "priority": "P0",
+    "maturity": "high",
+    "upstream_type": "open_source_library",
+    "repo_url": "https://github.com/praw-dev/praw",
+    "docs_url": "https://praw.readthedocs.io/en/stable/",
+    "butler_skill_shape": "Reddit thread search, subreddit watch, comment tree retrieval, discussion digest",
+    "why_recommended": [
+      "Most mature Python entrypoint for Reddit-based forum retrieval.",
+      "Strong fit for market sentiment, product feedback, and community monitoring."
+    ],
+    "risks": [
+      "Depends on Reddit API credentials and quota policy.",
+      "Moderation removals and NSFW boundaries need explicit handling."
+    ],
+    "suggested_collection_ids": [
+      "skill_ops"
+    ]
+  },
+  "imported_at": "2026-03-24",
+  "status": "incubating",
+  "relative_dir": "./butler_main/platform/skills/pool/incubating/forum/praw-reddit-ingest",
+  "review_state": "imported_for_review"
+}

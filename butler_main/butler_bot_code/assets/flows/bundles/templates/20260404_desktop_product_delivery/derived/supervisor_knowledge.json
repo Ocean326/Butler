@@ -1,0 +1,48 @@
+{
+  "composition_mode": "handwritten+compiled",
+  "knowledge_text": "[run brief]\nUse this template when the work needs clear delivery cadence.\n\n[control profile]\n- task_archetype: repo_delivery\n- packet_size: medium\n- evidence_level: standard\n- gate_cadence: phase\n- repo_binding_policy: disabled\n\n[supervisor profile]\n- archetype: delivery_manager\n- primary_posture: steady_delivery\n- quality_bar: reviewable_increment\n- risk_bias: balanced\n- manager_notes: Prefer stable weekly delivery.\n- done_policy.must_block_on: broken build\n- done_policy.can_defer_with_note: minor polish\n- review_focus: release readiness, user-visible regression\n\n[sources]\n- PRD: Desktop product direction\n\n[review checklist]\n- check delivery scope\n- check release notes",
+  "control_profile": {
+    "task_archetype": "repo_delivery",
+    "packet_size": "medium",
+    "evidence_level": "standard",
+    "gate_cadence": "phase",
+    "repo_binding_policy": "disabled",
+    "repo_contract_paths": [],
+    "manager_notes": "",
+    "force_gate_next_turn": false,
+    "force_doctor_next_turn": false
+  },
+  "supervisor_profile": {
+    "archetype": "delivery_manager",
+    "primary_posture": "steady_delivery",
+    "quality_bar": "reviewable_increment",
+    "risk_bias": "balanced",
+    "review_focus": [
+      "release readiness",
+      "user-visible regression"
+    ],
+    "done_policy": {
+      "must_block_on": [
+        "broken build"
+      ],
+      "can_defer_with_note": [
+        "minor polish"
+      ]
+    },
+    "manager_notes": "Prefer stable weekly delivery."
+  },
+  "run_brief": "Use this template when the work needs clear delivery cadence.",
+  "source_items": [
+    {
+      "kind": "doc",
+      "label": "PRD",
+      "ref": "docs/daily-upgrade/0402/prd.md",
+      "notes": "Desktop product direction"
+    }
+  ],
+  "review_checklist": [
+    "check delivery scope",
+    "check release notes"
+  ],
+  "updated_at": "2026-04-04 00:34:48"
+}

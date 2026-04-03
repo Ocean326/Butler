@@ -38,7 +38,7 @@ class AgentsOsSkillToolTests(unittest.TestCase):
   "collections": {
     "chat_default": {
       "skills": [
-        "./butler_main/sources/skills/pool/ops/beta"
+        "./butler_main/platform/skills/pool/ops/beta"
       ]
     }
   }

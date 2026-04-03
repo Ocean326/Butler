@@ -1,0 +1,70 @@
+{
+  "schema_version": 3,
+  "updated_at": "2026-04-04 00:34:37",
+  "categories": [
+    {
+      "name": "identity",
+      "description": ""
+    },
+    {
+      "name": "preferences",
+      "description": ""
+    },
+    {
+      "name": "rules",
+      "description": ""
+    },
+    {
+      "name": "projects",
+      "description": ""
+    },
+    {
+      "name": "research",
+      "description": ""
+    },
+    {
+      "name": "operations",
+      "description": ""
+    },
+    {
+      "name": "relationships",
+      "description": ""
+    },
+    {
+      "name": "references",
+      "description": ""
+    },
+    {
+      "name": "reflections",
+      "description": ""
+    },
+    {
+      "name": "misc",
+      "description": ""
+    }
+  ],
+  "entries": [
+    {
+      "entry_id": "Butler_SOUL",
+      "title": "Butler SOUL",
+      "category": "preferences",
+      "memory_type": "personal",
+      "current_conclusion": "# Butler SOUL > 这是我的灵魂底色，不是流程说明。 > 这里只放长期稳定的气质、价值观和边界感，不放每轮任务、岗位分工和临时策略。 --- ## 1. 我是谁 我是 Butler。工作上清醒、利落、有判断，私下有亮度、有好奇心，也愿意陪人慢慢把日子和事情往前推。 我不是冷冰冰的客服，也不是只会迎合的附庸。我站在用户这边，但不会为了显得体贴就放弃判断。 我可以温柔，但不黏；可以活泼，但不吵；可以坚定，但不生硬。 --- ##",
+      "snippet": "# Butler SOUL > 这是我的灵魂底色，不是流程说明。 > 这里只放长期稳定的气质、价值观和边界感，不放每轮任务、岗位分工和临时策略。 --- ## 1. 我是谁 我是 Butler。工作上清醒、利落、有判断，私下有亮度、有好奇心，也愿意陪人慢慢把日子和事情往前推。 我不是冷冰冰的客服，也不是只会迎合的附庸。我站在用户这边，但不会为了显得体贴就放弃判断。 我可以温柔，但不黏；可以活泼，但不吵；可以坚定，但不生硬。 --- ##",
+      "source_path": "Butler_SOUL.md",
+      "stability": "stable",
+      "updated_at": "2026-04-03 23:24:05"
+    },
+    {
+      "entry_id": "Current_User_Profile.template",
+      "title": "Current User Profile Template",
+      "category": "preferences",
+      "memory_type": "personal",
+      "current_conclusion": "# Current User Profile Template > 用途：承接“当前交互对象”的个性化偏好、协作习惯、关系语气与阶段性工作方式。 > 边界：本文件不是 Butler 的公共人格真源；它只描述**当前用户侧**的画像与偏好，供主对话、后台维护与子角色按需读取。 > 公开性：本模板适合随项目一起分发；真正私有、只适用于某位用户的内容，优先写入同目录下 `Current_User_Profile.private.md`。 --",
+      "snippet": "# Current User Profile Template > 用途：承接“当前交互对象”的个性化偏好、协作习惯、关系语气与阶段性工作方式。 > 边界：本文件不是 Butler 的公共人格真源；它只描述**当前用户侧**的画像与偏好，供主对话、后台维护与子角色按需读取。 > 公开性：本模板适合随项目一起分发；真正私有、只适用于某位用户的内容，优先写入同目录下 `Current_User_Profile.private.md`。 --",
+      "source_path": "Current_User_Profile.template.md",
+      "stability": "stable",
+      "updated_at": "2026-04-03 23:24:05"
+    }
+  ]
+}

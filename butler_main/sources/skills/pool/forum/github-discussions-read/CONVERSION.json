@@ -1,8 +1,0 @@
-{
-  "candidate_id": "github-discussions-graphql",
-  "active_skill_name": "github-discussions-read",
-  "active_skill_path": "./butler_main/sources/skills/pool/forum/github-discussions-read",
-  "promoted_at": "2026-03-24",
-  "promotion_mode": "auto_template",
-  "upstream_name": "GitHub Discussions GraphQL API"
-}

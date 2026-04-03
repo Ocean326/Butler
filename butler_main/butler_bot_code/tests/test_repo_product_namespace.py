@@ -11,7 +11,7 @@ def test_products_chat_alias_preserves_exports_and_submodules() -> None:
 
     assert canonical.ChatApp is legacy.ChatApp
     assert canonical_bootstrap.__file__ is not None
-    assert canonical_bootstrap.__file__.endswith("butler_main/chat/cli/bootstrap.py")
+    assert canonical_bootstrap.__file__.endswith("butler_main/products/chat/cli/bootstrap.py")
 
 
 def test_butler_flow_move_keeps_legacy_entry_and_canonical_entry() -> None:
