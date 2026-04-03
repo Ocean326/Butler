@@ -113,6 +113,7 @@
   - [0403 当日总纲](../daily-upgrade/0403/00_当日总纲.md)
   - [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](../daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
   - [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](../daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
+  - [0403 Butler Flow Desktop 壳与 shared surface bridge 落地](../daily-upgrade/0403/03_butler-flow_desktop壳与shared_surface_bridge落地.md)
   - [0401 当日总纲](../daily-upgrade/0401/00_当日总纲.md)
   - [0402 当日总纲](../daily-upgrade/0402/00_当日总纲.md)
   - [0402 Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）](../daily-upgrade/0402/20260402_Butler-flow%20Desktop%20V2.1%20PRD_main%E5%88%86%E6%94%AF%E5%AF%B9%E9%BD%90_flow%20CLI%E5%85%A5%E5%8F%A3%E4%B8%8E%E5%8F%8C%E8%BD%A8%E5%AE%9E%E6%96%BD_%E6%9B%B4%E6%96%B0%E7%89%88.md)
@@ -132,6 +133,9 @@
   - [0329 Chat 显式模式与 Project 循环收口](../daily-upgrade/0329/02_Chat显式模式与Project循环收口.md)
 - 默认代码目录：
   - `butler_main/butler_flow/`
+  - `butler_main/butler_flow/surface/`
+  - `butler_main/butler_flow/desktop_bridge.py`
+  - `butler_main/butler_flow/desktop/`
   - `butler_main/butler_flow/role_packs/`
   - `butler_main/__main__.py`
   - `butler_main/runtime_os/agent_runtime/`
@@ -145,6 +149,8 @@
   - `test_agents_os_wave1.py`
   - `test_butler_flow_tui_controller.py`
   - `test_butler_flow_tui_app.py`
+  - `test_butler_flow_surface.py`
+  - `test_butler_flow_desktop_bridge.py`
 - TUI 信息架构附加检查：
   - 先确认当前实现是否已是 `workspace + single flow single-column dual-stream console + /manage + /settings`，并注意 `/history` `/flows` 都已经退成兼容语义，不要再把它们写成产品级主入口
   - 再看 `butler_main/butler_flow/tui/controller.py` 的 payload 是否已抽象成 `workspace / single_flow.navigator_summary / single_flow.supervisor_view / single_flow.workflow_view / single_flow.inspector` 这些现役投影；`operator_rail_payload / role_strip_payload` 只应作为兼容层
@@ -197,6 +203,8 @@
   - TTY 下优先核对是否正确进入 Textual launcher / attached run screen；若未进入，再检查 `requirements-cli.txt`、终端宽度与 `--plain`
   - 若排查 TUI，优先看 `butler_main/butler_flow/tui/`、`events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
   - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
+  - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/butler_flow/desktop/ + butler_main/butler_flow/desktop_bridge.py + butler_main/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars
+  - 若排查 Desktop 是否“已完成”，把验证拆成三层记录：Python bridge 回归、desktop `typecheck/build`、Electron runtime 二进制是否已成功下载并实际启动；不要把源码编译通过误记成运行时已验证
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
   - 最后补跑 `tools/butler-flow ... --help`、`butler-flow --help` 与 `python -m butler_main --help`
   - 若目标是系统级 CLI，再补跑 `./tools/install-butler-flow` 并确认 `command -v butler-flow`
