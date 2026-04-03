@@ -203,8 +203,9 @@
   - TTY 下优先核对是否正确进入 Textual launcher / attached run screen；若未进入，再检查 `requirements-cli.txt`、终端宽度与 `--plain`
   - 若排查 TUI，优先看 `butler_main/butler_flow/tui/`、`events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
   - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
-  - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/butler_flow/desktop/ + butler_main/butler_flow/desktop_bridge.py + butler_main/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars
-  - 若排查 Desktop 是否“已完成”，把验证拆成三层记录：Python bridge 回归、desktop `typecheck/build`、Electron runtime 二进制是否已成功下载并实际启动；不要把源码编译通过误记成运行时已验证
+  - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/butler_flow/desktop/ + butler_main/butler_flow/desktop_bridge.py + butler_main/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars；远程/无头环境下优先走手填 `Config Path Fallback`，不要把原生 file dialog 当唯一验证入口
+  - 若排查 Desktop 是否“已完成”，把验证拆成四层记录：Python bridge 回归、desktop `typecheck/build`、renderer `vitest`、Electron `Playwright` 点击回归；不要把源码编译通过误记成运行时已验证
+  - 若跑 Desktop e2e，优先直接用 `cd butler_main/butler_flow/desktop && npm run test:e2e`；当前脚本会先 `build`，再优先使用现有 `DISPLAY`，无图形时自动尝试 `xvfb-run`
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
   - 最后补跑 `tools/butler-flow ... --help`、`butler-flow --help` 与 `python -m butler_main --help`
   - 若目标是系统级 CLI，再补跑 `./tools/install-butler-flow` 并确认 `command -v butler-flow`
