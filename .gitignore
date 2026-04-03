@@ -78,6 +78,8 @@ _openclaw_probe_*/
 # 本机私有配置 / 密钥（不进仓库）
 ########################
 butler_private/
+.codex/config.toml
+butler_main/butler_bot_code/assets/flows/instances/*/codex_home/config.toml
 
 
 ########################
