@@ -13,7 +13,18 @@ from butler_main.butler_flow.app import FlowApp
 from butler_main.butler_flow.display import EventFlowDisplay
 from butler_main.butler_flow.events import FlowLifecycleHook, FlowUiEvent, FlowUiEventCallback
 from butler_main.butler_flow.models import PreparedFlowRun
-from butler_main.butler_flow.surface import build_flow_summary, latest_handoff_summary
+from butler_main.butler_flow.surface import (
+    build_flow_console,
+    build_flow_summary,
+    build_manage_center_surface,
+    build_operator_rail,
+    build_role_runtime,
+    build_single_flow_surface,
+    build_supervisor_view,
+    build_workflow_view,
+    build_workspace_surface,
+    latest_handoff_summary,
+)
 from butler_main.butler_flow.state import (
     append_jsonl,
     flow_actions_path,
@@ -673,7 +684,7 @@ class FlowTuiController:
         app = self._new_plain_app()
         preflight = app.build_preflight_payload(argparse.Namespace(config=config, json=False))
         assets = app.build_manage_payload(argparse.Namespace(config=config, limit=limit, json=False, manage="", goal="", guard_condition="", instruction=""))
-        return {"preflight": preflight, "assets": assets}
+        return build_manage_center_surface(preflight_payload=preflight, assets_payload=assets).to_dict()
 
     def history_payload(self, *, config: str | None) -> dict[str, Any]:
         return self.launcher_snapshot(config=config)
@@ -892,16 +903,20 @@ class FlowTuiController:
             payload["state"] = str(chip.get("state") or "").strip()
             payload["is_active"] = bool(chip.get("is_active"))
             roles.append(payload)
-        return {
-            "execution_mode": str(flow_state.get("execution_mode") or "").strip(),
-            "session_strategy": str(flow_state.get("session_strategy") or "").strip(),
-            "active_role_id": str(flow_state.get("active_role_id") or "").strip(),
-            "role_pack_id": str(flow_state.get("role_pack_id") or "").strip(),
-            "roles": roles,
-            "role_chips": self._role_chips(flow_state=flow_state, handoffs=handoffs),
-            "latest_role_handoffs": dict(flow_state.get("latest_role_handoffs") or {}),
-            "latest_handoff_summary": self._latest_handoff_summary(handoffs),
-        }
+        return build_role_runtime(
+            payload={
+                "execution_mode": str(flow_state.get("execution_mode") or "").strip(),
+                "session_strategy": str(flow_state.get("session_strategy") or "").strip(),
+                "active_role_id": str(flow_state.get("active_role_id") or "").strip(),
+                "role_pack_id": str(flow_state.get("role_pack_id") or "").strip(),
+                "roles": roles,
+                "role_chips": self._role_chips(flow_state=flow_state, handoffs=handoffs),
+                "latest_role_handoffs": dict(flow_state.get("latest_role_handoffs") or {}),
+                "pending_handoffs": self._pending_handoffs(handoffs),
+                "recent_handoffs": self._recent_handoffs(handoffs),
+                "latest_handoff_summary": self._latest_handoff_summary(handoffs),
+            }
+        ).to_dict()
 
     def operator_rail_payload(self, *, config: str | None, flow_id: str) -> dict[str, Any]:
         inspected = self.inspect_payload(config=config, flow_id=flow_id)
@@ -910,28 +925,32 @@ class FlowTuiController:
         timeline = self.timeline_payload(config=config, flow_id=flow_id)
         promoted_kinds = {"warning", "error", "phase_transition", "role_handoff_created", "role_handoff_consumed", "manage_handoff_ready"}
         promoted = [row for row in timeline if str(row.get("kind") or "") in promoted_kinds]
-        return {
-            "approval_state": str(flow_state.get("approval_state") or "").strip() or "not_required",
-            "pending_codex_prompt": str(flow_state.get("pending_codex_prompt") or "").strip(),
-            "latest_judge_decision": dict(flow_state.get("latest_judge_decision") or {}),
-            "latest_operator_action": dict(flow_state.get("last_operator_action") or {}),
-            "latest_supervisor_decision": dict(flow_state.get("latest_supervisor_decision") or {}),
-            "latest_handoff_summary": self._latest_handoff_summary(list(inspected.get("handoffs") or [])),
-            "manage_handoff": dict(flow_state.get("manage_handoff") or {}),
-            "role_strip": self.role_strip_payload(config=config, flow_id=flow_id),
-            "promoted_events": promoted,
-        }
+        return build_operator_rail(
+            payload={
+                "approval_state": str(flow_state.get("approval_state") or "").strip() or "not_required",
+                "pending_codex_prompt": str(flow_state.get("pending_codex_prompt") or "").strip(),
+                "latest_judge_decision": dict(flow_state.get("latest_judge_decision") or {}),
+                "latest_operator_action": dict(flow_state.get("last_operator_action") or {}),
+                "latest_supervisor_decision": dict(flow_state.get("latest_supervisor_decision") or {}),
+                "latest_handoff_summary": self._latest_handoff_summary(list(inspected.get("handoffs") or [])),
+                "manage_handoff": dict(flow_state.get("manage_handoff") or {}),
+                "role_strip": self.role_strip_payload(config=config, flow_id=flow_id),
+                "promoted_events": promoted,
+            }
+        ).to_dict()
 
     def flow_console_payload(self, *, config: str | None, flow_id: str) -> dict[str, Any]:
         inspected = self.inspect_payload(config=config, flow_id=flow_id)
         summary = self._flow_summary(status_payload=inspected.get("status") or {}, handoffs=list(inspected.get("handoffs") or []))
         steps = self._step_history(payload=inspected)
-        return {
-            "flow_id": flow_id,
-            "summary": summary,
-            "recent_steps": steps[-3:] if steps else [],
-            "step_history": steps,
-        }
+        return build_flow_console(
+            payload={
+                "flow_id": flow_id,
+                "summary": summary,
+                "recent_steps": steps[-3:] if steps else [],
+                "step_history": steps,
+            }
+        ).to_dict()
 
     def detail_payload(self, *, config: str | None, flow_id: str) -> dict[str, Any]:
         inspected = self.inspect_payload(config=config, flow_id=flow_id)
@@ -979,40 +998,17 @@ class FlowTuiController:
 
     def workspace_payload(self, *, config: str | None, limit: int = 10) -> dict[str, Any]:
         snapshot = self.launcher_snapshot(config=config)
-        flows = dict(snapshot.get("flows") or {})
-        rows = list(flows.get("items") or [])
-        enriched = []
-        for row in rows[: max(1, int(limit or 10))]:
-            entry = dict(row or {})
-            flow_id = str(entry.get("flow_id") or "").strip()
-            if not flow_id:
-                enriched.append(entry)
-                continue
-            try:
-                status_payload = self.status_payload(config=config, flow_id=flow_id)
-                flow_state = dict(status_payload.get("flow_state") or {})
-                flow_dir_value = str(status_payload.get("flow_dir") or "").strip()
-                handoffs = list(_read_jsonl(handoffs_path(Path(flow_dir_value)))) if flow_dir_value else []
-                summary = self._flow_summary(status_payload=status_payload, handoffs=handoffs)
-                entry.update(
-                    {
-                        "approval_state": summary.get("approval_state"),
-                        "execution_mode": summary.get("execution_mode"),
-                        "session_strategy": summary.get("session_strategy"),
-                        "active_role_id": summary.get("active_role_id"),
-                        "latest_judge_decision": summary.get("latest_judge_decision"),
-                        "latest_operator_action": summary.get("latest_operator_action"),
-                        "latest_handoff_summary": summary.get("latest_handoff_summary"),
-                        "role_pack_id": summary.get("role_pack_id"),
-                        "flow_state": flow_state,
-                    }
-                )
-            except Exception:
-                enriched.append(entry)
-                continue
-            enriched.append(entry)
-        flows["items"] = enriched
-        return {"preflight": snapshot.get("preflight"), "flows": flows}
+        return build_workspace_surface(
+            preflight_payload=dict(snapshot.get("preflight") or {}),
+            flows_payload=dict(snapshot.get("flows") or {}),
+            resolve_status_payload=lambda flow_id: self.status_payload(config=config, flow_id=flow_id),
+            read_handoffs=lambda _flow_id, status_payload: (
+                list(_read_jsonl(handoffs_path(Path(str(status_payload.get("flow_dir") or "").strip()))))
+                if str(status_payload.get("flow_dir") or "").strip()
+                else []
+            ),
+            limit=limit,
+        ).to_dict()
 
     def _step_history(self, *, payload: dict[str, Any]) -> list[dict[str, Any]]:
         status = dict(payload.get("status") or {})
@@ -1057,32 +1053,36 @@ class FlowTuiController:
         summary = self._flow_summary(status_payload=inspected.get("status") or {}, handoffs=list(inspected.get("handoffs") or []))
         timeline = self.timeline_payload(config=config, flow_id=flow_id)
         runtime_plan = self._read_optional_json(flow_path / "runtime_plan.json")
-        return {
-            "flow_id": flow_id,
-            "status": status,
-            "summary": summary,
-            "step_history": self._step_history(payload=inspected),
-            "timeline": timeline,
-            "artifacts": list(inspected.get("artifacts") or []),
-            "turns": list(inspected.get("turns") or []),
-            "actions": list(inspected.get("actions") or []),
-            "handoffs": list(inspected.get("handoffs") or []),
-            "navigator_summary": summary,
-            "supervisor_view": self._supervisor_view_payload(
-                flow_id=flow_id,
-                summary=summary,
-                flow_state=flow_state,
-                timeline=timeline,
-                runtime_plan=runtime_plan,
-            ),
-            "workflow_view": self._workflow_view_payload(timeline=timeline),
-            "inspector": self._inspector_payload(flow_id=flow_id, inspected=inspected),
-            # Legacy compatibility projections; the current flow page reads the
-            # view-specific payloads above rather than rendering a fixed rail.
-            "role_strip": self.role_strip_payload(config=config, flow_id=flow_id),
-            "operator_rail": self.operator_rail_payload(config=config, flow_id=flow_id),
-            "flow_console": self.flow_console_payload(config=config, flow_id=flow_id),
-        }
+        return build_single_flow_surface(
+            payload={
+                "flow_id": flow_id,
+                "status": status,
+                "summary": summary,
+                "step_history": self._step_history(payload=inspected),
+                "timeline": timeline,
+                "artifacts": list(inspected.get("artifacts") or []),
+                "turns": list(inspected.get("turns") or []),
+                "actions": list(inspected.get("actions") or []),
+                "handoffs": list(inspected.get("handoffs") or []),
+                "navigator_summary": summary,
+                "supervisor_view": build_supervisor_view(
+                    payload=self._supervisor_view_payload(
+                        flow_id=flow_id,
+                        summary=summary,
+                        flow_state=flow_state,
+                        timeline=timeline,
+                        runtime_plan=runtime_plan,
+                    )
+                ).to_dict(),
+                "workflow_view": build_workflow_view(payload=self._workflow_view_payload(timeline=timeline)).to_dict(),
+                "inspector": self._inspector_payload(flow_id=flow_id, inspected=inspected),
+                # Legacy compatibility projections; the current flow page reads the
+                # view-specific payloads above rather than rendering a fixed rail.
+                "role_strip": self.role_strip_payload(config=config, flow_id=flow_id),
+                "operator_rail": self.operator_rail_payload(config=config, flow_id=flow_id),
+                "flow_console": self.flow_console_payload(config=config, flow_id=flow_id),
+            }
+        )
 
     def artifacts_payload(self, *, config: str | None, flow_id: str) -> list[dict[str, Any]]:
         inspected = self.inspect_payload(config=config, flow_id=flow_id)

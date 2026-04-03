@@ -526,9 +526,6 @@ class ButlerFlowTuiApp(App[int]):
             if self._view_mode == "flow" and self._target_flow_id():
                 self._refresh_snapshot()
                 return
-            if self._view_mode == "history" and self._selected_flow_id:
-                self._refresh_snapshot()
-                return
             self._set_action_bar()
         except NoMatches:
             return
