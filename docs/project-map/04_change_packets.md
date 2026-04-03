@@ -154,7 +154,7 @@
   - 当前 `/manage` 主视图必须是 transcript-first shell，而不是栏式资产卡片；底部输入框是主入口，支持 `$template:<id>` / `$builtin:<id>` mention 与自然语言管理意图
   - 当前纯文本路由固定为：`manage -> manager chat`、`flow -> supervisor queue`、`history -> reject`
   - 若改 `/manage` 输入协议，先看 `butler_main/butler_flow/tui/manage_interaction.py` 与 `tui/app.py` 的 bare target/`$target` 解析、mention picker 7 项窗口、manager queue/session 续接；当前口径是：首轮纯文本默认绑定当前 asset focus，同一 manager session 后续轮次默认依赖 sticky target；提交前会清理悬空 `$` / 无效 mention 前缀；会话同时把 `manage_session / draft / pending_action` 落盘，支撑 `template_confirm -> flow_confirm` 的连续讨论
-  - 若改 manager chat prompt，优先看 `butler_main/butler_flow/manage_agent.py` 与 `butler_main/butler_flow/manager_prompt_assets/`；现役口径是 `manager role + skills + bundle/manager.md` 注入，但真正执行门控在代码侧：首次 draft 不自动提交，只有纯确认才能消费已有 `pending_action`
+  - 若改 manager chat prompt/runtime，优先看 `butler_main/butler_flow/manage_agent.py` 与 `butler_main/butler_flow/manager_prompt_assets/`；现役口径是 `manager role + skills + bundle/manager.md + references/`，但职责和提交门控的真源在代码侧：`manager skill registry` 决定当前 skill 的 scope / draft ownership / action capability，prompt payload 只注入轻量 `asset/session/pending_action` 摘要；首次 draft 不自动提交，只有纯确认才能消费已有 `pending_action`
   - 若排查 manager “不说话 / 只显示 Manager chat completed.”，先看 `manage_agent.py` 的 parse-failure 透传链路；当前非 JSON reply 会原样返回 UI，并把 `parse_status / raw_reply / error_text` 写入 manage turn，且 parse failed 时不主动清空既有 `pending_action`
   - 若排查 manager `resume` 卡在 `Reconnecting... / timeout waiting for child process to exit / no rollout found`，先看 `manage_agent.py` 的 manager-specific Codex self-heal；当前口径是同 provider 内自动从 `resume` 改跑一次 fresh Codex exec，成功后切到新 `manager_session_id`，但不切 Cursor，也不对首轮 fresh exec 做二次重试
   - 若涉及 builtin 修改，必须核对当前是否仍要求显式 `clone` 或 `edit`，不要回退到隐式原地修改
@@ -345,6 +345,8 @@
   - 根 `README.md` 是否仍给 GitHub / ChatGPT 网页端读者清晰指向 `docs/` 与 `project-map/`
   - 功能条目是否能一跳命中代码目录和测试入口
   - 近期新增能力是否已回写到 `project-map/`
+  - 跨机器开发说明是否仍能一跳命中 `.env.example`、`.codex/config.template.toml` 与 bootstrap 文档
+  - runtime artifact / private overlay 的 git 边界是否仍清晰，避免把 `instances/`、`manage_sessions/`、`hot recent_memory/` 或 `.codex/config.toml` 再次纳入版本库
 
 ## `system-audit-upgrade`
 

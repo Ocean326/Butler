@@ -1,0 +1,20 @@
+profile = "openai"
+
+model_provider = "openai"
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+disable_response_storage = true
+
+[profiles.openai]
+model_provider = "openai"
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+disable_response_storage = true
+
+[agents]
+max_threads = 4
+max_depth = 3
+job_max_runtime_seconds = 1200
+
+# Copy to `.codex/config.toml` and customize for the current machine.
+# Keep real provider URLs, local approvals, and any private profiles out of git.

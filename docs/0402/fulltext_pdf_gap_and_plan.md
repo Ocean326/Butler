@@ -2,14 +2,14 @@
 
 ## Current status
 - Local `docs/0402/fulltext_cache/` is not materialized in this repository.
-- The current 100-paper chain is recoverable only through flow-local artifacts captured in earlier attempts.
-- `drafts/attempt_0067.json` records a prior remote verification that five evidence tables and one bibliography file each existed with 100 data rows (or 100 entries plus header) and that `stable_access_url` coverage was 100/100.
+- The current 100-paper chain is recoverable only through bounded-repair notes summarized into the stable `docs/0402` package.
+- The bounded repair recorded a prior remote verification that five evidence tables and one bibliography file each existed with 100 data rows (or 100 entries plus header) and that `stable_access_url` coverage was 100/100.
 - A fresh SSH re-check on 2026-04-02 could not find `/home/jianghy/Transfer_Recovery/docs/0402`, so the evidence tables are presently missing from both the local repo and the remote target path.
 
 ## Provenance used in this bounded repair
-- Main evidence recovery source: `butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/drafts/attempt_0032.json`.
-- Verification log source: `butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/drafts/attempt_0067.json`.
-- Main draft source: `butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/KDD_Section1_en.md`.
+- Main evidence recovery source: flow-local drafting notes used during the bounded repair and intentionally omitted from the portable repo snapshot.
+- Verification log source: flow-local verification notes used during the bounded repair and intentionally omitted from the portable repo snapshot.
+- Main draft source: `docs/0402/20260402_KDD_Section1_en.md`.
 
 ## 100-paper key list
 1. `Ren2021MTrajRec`
