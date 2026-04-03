@@ -39,6 +39,10 @@ def _receipt_thread_id(receipt: Any) -> str:
     return str(external_session.get("thread_id") or "").strip()
 
 
+def _receipt_metadata(receipt: Any) -> dict[str, Any]:
+    return dict(getattr(receipt, "metadata", {}) or {})
+
+
 def _parse_json_object(text: str) -> dict[str, Any]:
     stripped = str(text or "").strip()
     if not stripped:
@@ -226,6 +230,66 @@ def _asset_kind_from_manage_target(manage_target: str, *, fallback: str = "insta
     if normalized in {"template", "builtin", "instance"}:
         return normalized
     return "instance"
+
+
+def _manage_chat_runtime_request(
+    *,
+    flow_state: dict[str, Any] | None,
+    manage_target: str,
+    manager_session_id: str = "",
+) -> dict[str, Any]:
+    return {
+        "cli": "codex",
+        "_disable_runtime_fallback": True,
+        "workflow_id": str((flow_state or {}).get("workflow_id") or manage_target or "butler_flow.manage_chat").strip(),
+        "agent_id": "butler_flow.manager_chat",
+        "codex_mode": "resume" if str(manager_session_id or "").strip() else "exec",
+        "codex_session_id": str(manager_session_id or "").strip(),
+        "execution_context": EXECUTION_CONTEXT_ISOLATED,
+        "execution_scope_id": str(manager_session_id or manage_target or "butler_flow.manage_chat").strip(),
+    }
+
+
+def _is_manage_chat_resume_recoverable(receipt: Any, *, raw_reply: str) -> bool:
+    metadata = _receipt_metadata(receipt)
+    external_session = dict(metadata.get("external_session") or {})
+    vendor_session_state = str(external_session.get("vendor_session_state") or "").strip().lower()
+    if bool(external_session.get("resume_failed")) or vendor_session_state == "resume_failed":
+        return True
+    lowered = str(raw_reply or "").strip().lower()
+    markers = (
+        "thread/resume failed",
+        "no rollout found",
+        "resume session not found",
+        "timeout waiting for child process to exit",
+        "codex 子进程退出超时",
+        "reconnecting...",
+        "stream disconnected before completion",
+    )
+    return any(marker in lowered for marker in markers)
+
+
+def _payload_from_manage_chat_receipt(
+    receipt: Any,
+    *,
+    manage_target: str,
+    current_draft: dict[str, Any] | None,
+    fallback_manager_session_id: str = "",
+) -> tuple[dict[str, Any], str, str]:
+    raw_reply = _receipt_text(receipt)
+    parsed = _parse_json_object(raw_reply)
+    parse_status = "ok" if parsed else ("failed" if raw_reply else "empty")
+    error_text = "manager chat returned non-JSON output" if parse_status == "failed" else ""
+    payload = normalize_manage_chat_result(
+        parsed,
+        manage_target=manage_target,
+        current_draft=current_draft,
+        parse_status=parse_status,
+        raw_reply=raw_reply,
+        error_text=error_text,
+    )
+    payload["manager_session_id"] = _receipt_thread_id(receipt) or str(fallback_manager_session_id or "").strip()
+    return payload, raw_reply, parse_status
 
 
 def select_manage_chat_skill(
@@ -1174,16 +1238,11 @@ def run_manage_chat_agent(
         current_draft=current_draft,
         pending_action=pending_action,
     )
-    runtime_request = {
-        "cli": "codex",
-        "_disable_runtime_fallback": True,
-        "workflow_id": str((flow_state or {}).get("workflow_id") or manage_target or "butler_flow.manage_chat").strip(),
-        "agent_id": "butler_flow.manager_chat",
-        "codex_mode": "resume" if str(manager_session_id or "").strip() else "exec",
-        "codex_session_id": str(manager_session_id or "").strip(),
-        "execution_context": EXECUTION_CONTEXT_ISOLATED,
-        "execution_scope_id": str(manager_session_id or manage_target or "butler_flow.manage_chat").strip(),
-    }
+    runtime_request = _manage_chat_runtime_request(
+        flow_state=flow_state,
+        manage_target=manage_target,
+        manager_session_id=manager_session_id,
+    )
     receipt = run_prompt_receipt_fn(
         prompt,
         workspace_root,
@@ -1192,19 +1251,46 @@ def run_manage_chat_agent(
         runtime_request,
         stream=False,
     )
-    raw_reply = _receipt_text(receipt)
-    parsed = _parse_json_object(raw_reply)
-    parse_status = "ok" if parsed else ("failed" if raw_reply else "empty")
-    error_text = "manager chat returned non-JSON output" if parse_status == "failed" else ""
-    payload = normalize_manage_chat_result(
-        parsed,
+    payload, raw_reply, parse_status = _payload_from_manage_chat_receipt(
+        receipt,
         manage_target=manage_target,
         current_draft=current_draft,
-        parse_status=parse_status,
-        raw_reply=raw_reply,
-        error_text=error_text,
+        fallback_manager_session_id=manager_session_id,
     )
-    payload["manager_session_id"] = _receipt_thread_id(receipt) or str(manager_session_id or "").strip()
+    if str(manager_session_id or "").strip() and parse_status != "ok" and _is_manage_chat_resume_recoverable(receipt, raw_reply=raw_reply):
+        fresh_receipt = run_prompt_receipt_fn(
+            prompt,
+            workspace_root,
+            300,
+            cfg,
+            _manage_chat_runtime_request(
+                flow_state=flow_state,
+                manage_target=manage_target,
+                manager_session_id="",
+            ),
+            stream=False,
+        )
+        fresh_payload, _, _ = _payload_from_manage_chat_receipt(
+            fresh_receipt,
+            manage_target=manage_target,
+            current_draft=current_draft,
+            fallback_manager_session_id="",
+        )
+        fresh_payload["session_recovery"] = {
+            "applied": True,
+            "kind": "resume_to_fresh_exec",
+            "previous_manager_session_id": str(manager_session_id or "").strip(),
+            "recovered_manager_session_id": str(fresh_payload.get("manager_session_id") or "").strip(),
+            "initial_raw_reply": raw_reply,
+        }
+        return fresh_payload
+    payload["session_recovery"] = {
+        "applied": False,
+        "kind": "",
+        "previous_manager_session_id": "",
+        "recovered_manager_session_id": "",
+        "initial_raw_reply": "",
+    }
     return payload
 
 

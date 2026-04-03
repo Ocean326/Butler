@@ -156,6 +156,7 @@
   - 若改 `/manage` 输入协议，先看 `butler_main/butler_flow/tui/manage_interaction.py` 与 `tui/app.py` 的 bare target/`$target` 解析、mention picker 7 项窗口、manager queue/session 续接；当前口径是：首轮纯文本默认绑定当前 asset focus，同一 manager session 后续轮次默认依赖 sticky target；提交前会清理悬空 `$` / 无效 mention 前缀；会话同时把 `manage_session / draft / pending_action` 落盘，支撑 `template_confirm -> flow_confirm` 的连续讨论
   - 若改 manager chat prompt，优先看 `butler_main/butler_flow/manage_agent.py` 与 `butler_main/butler_flow/manager_prompt_assets/`；现役口径是 `manager role + skills + bundle/manager.md` 注入，但真正执行门控在代码侧：首次 draft 不自动提交，只有纯确认才能消费已有 `pending_action`
   - 若排查 manager “不说话 / 只显示 Manager chat completed.”，先看 `manage_agent.py` 的 parse-failure 透传链路；当前非 JSON reply 会原样返回 UI，并把 `parse_status / raw_reply / error_text` 写入 manage turn，且 parse failed 时不主动清空既有 `pending_action`
+  - 若排查 manager `resume` 卡在 `Reconnecting... / timeout waiting for child process to exit / no rollout found`，先看 `manage_agent.py` 的 manager-specific Codex self-heal；当前口径是同 provider 内自动从 `resume` 改跑一次 fresh Codex exec，成功后切到新 `manager_session_id`，但不切 Cursor，也不对首轮 fresh exec 做二次重试
   - 若涉及 builtin 修改，必须核对当前是否仍要求显式 `clone` 或 `edit`，不要回退到隐式原地修改
   - 若涉及静态资产，补看 shared JSON 是否带有 `asset_state / lineage / instance_defaults / review_checklist / role_guidance / supervisor_profile / run_brief / source_bindings / bundle_manifest`
   - 若涉及 runtime 注入，补看 instance `flow_definition.json` 是否已写入 `source_asset_key / source_asset_kind / source_asset_version`，以及 bundle 中 `sources.json + supervisor.md + derived/supervisor_knowledge.json` 是否仍由 compiler/runtime 混合注入

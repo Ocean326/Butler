@@ -2520,6 +2520,7 @@ class FlowApp:
             pending_action=persisted_pending_action or None,
             manager_session_id=manager_session_id,
         )
+        session_recovery = dict(result.get("session_recovery") or {})
         parse_status = str(result.get("parse_status") or "").strip().lower()
         parse_failed = parse_status not in {"", "ok"}
         resolved_session_id = str(result.get("manager_session_id") or manager_session_id).strip()
@@ -2615,6 +2616,7 @@ class FlowApp:
                     "parse_status": parse_status or "ok",
                     "raw_reply": str(result.get("raw_reply") or "").strip(),
                     "error_text": str(result.get("error_text") or "").strip(),
+                    "session_recovery": session_recovery,
                     "manager_stage": str(result.get("manager_stage") or "").strip(),
                     "draft": merged_draft,
                     "pending_action": pending_action,
@@ -2641,9 +2643,10 @@ class FlowApp:
             "should_edit_asset": bool(result.get("should_edit_asset")),
             "edit_hint": str(result.get("edit_hint") or "").strip(),
             "draft": merged_draft,
-            "draft_summary": self._draft_summary(merged_draft),
+            "draft_summary": "" if parse_failed else self._draft_summary(merged_draft),
             "pending_action_preview": pending_action_preview,
             "supervisor_profile_preview": str(result.get("supervisor_profile_preview") or "").strip(),
+            "session_recovery": session_recovery,
             "action": action,
             "action_ready": action_ready,
             "action_manage_target": action_manage_target,

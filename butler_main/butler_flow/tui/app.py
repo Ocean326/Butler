@@ -2496,6 +2496,20 @@ class ButlerFlowTuiApp(App[int]):
             if manage_target:
                 self._manage_cursor_asset_key = manage_target
             parse_status = str(payload.get("parse_status") or "").strip().lower()
+            session_recovery = dict(payload.get("session_recovery") or {})
+            if bool(session_recovery.get("applied")) and str(session_recovery.get("kind") or "").strip() == "resume_to_fresh_exec":
+                if parse_status in {"", "ok"}:
+                    self._write_manage_note(
+                        family="manage",
+                        body="manager session reset · codex resume failed -> started fresh session",
+                        tone="action",
+                    )
+                else:
+                    self._write_manage_note(
+                        family="manage",
+                        body="last saved draft unchanged",
+                        tone="muted",
+                    )
             payload_error = str(payload.get("error_text") or "").strip()
             if payload_error and parse_status not in {"", "ok"}:
                 self._write_manage_note(family="error", body=payload_error, tone="error")
@@ -2528,10 +2542,10 @@ class ButlerFlowTuiApp(App[int]):
             if confirmation_scope and confirmation_scope != "none":
                 details.append(f"confirm={confirmation_scope}")
             state_summary = "manager · " + " · ".join(details) if details else ""
-            if state_summary and state_summary != self._last_manage_state_summary:
+            if parse_status in {"", "ok"} and state_summary and state_summary != self._last_manage_state_summary:
                 self._write_manage_note(family="state", body=state_summary, tone="action")
                 self._last_manage_state_summary = state_summary
-            if confirmation_prompt and confirmation_prompt != self._last_manage_confirmation_prompt:
+            if parse_status in {"", "ok"} and confirmation_prompt and confirmation_prompt != self._last_manage_confirmation_prompt:
                 self._write_manage_note(family="hint", body=confirmation_prompt, tone="action")
                 self._last_manage_confirmation_prompt = confirmation_prompt
             action = str(payload.get("action") or "").strip().lower()

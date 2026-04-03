@@ -207,6 +207,7 @@ instance materialization 新增以下来源字段：
    - TUI 提交前会清理悬空 `$`/无效 mention 前缀，避免把残留 picker token 直接送进 manager
    - 若 manager 返回的不是合法 JSON，系统会把原始 reply 透传给 operator，并把 `parse_status / raw_reply / error_text` 记入 manage turn，而不是回退成 `Manager chat completed.`
    - parse failed 时不清空既有 `pending_action`，避免讨论阶段把待确认草稿意外冲掉
+   - 若已有 manager session 的 Codex `resume` 命中 `thread/resume failed`、`no rollout found`、`timeout waiting for child process to exit`、`Reconnecting...` 等典型故障，manager chat 会在同 provider 内自动新开一次 fresh Codex session 重试当前轮；首轮 fresh exec 失败不自动重试，也不切到 Cursor
 
 同时补充 shared asset / instance static asset 字段：
 

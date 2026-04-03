@@ -1027,6 +1027,88 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                     self.assertIn("manager chat returned non-JSON output", transcript)
                     self.assertIn("先把模板和 supervisor 方向讨论清楚", transcript)
 
+    async def test_manage_chat_recovery_note_shows_when_resume_restarts_fresh_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test() as pilot:
+                await pilot.pause(0.2)
+                app._open_manage_center()
+                app._manage_chat_session_id = "manager-thread-old"
+                await pilot.pause(0.1)
+                with mock.patch.object(
+                    app._controller,
+                    "manage_chat",
+                    return_value={
+                        "response": "我先按这个模板重新梳理讨论，再决定 flow。",
+                        "parse_status": "ok",
+                        "manager_session_id": "manager-thread-fresh",
+                        "session_recovery": {
+                            "applied": True,
+                            "kind": "resume_to_fresh_exec",
+                            "previous_manager_session_id": "manager-thread-old",
+                            "recovered_manager_session_id": "manager-thread-fresh",
+                            "initial_raw_reply": "Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        },
+                    },
+                ):
+                    command_input = app._command_input()
+                    command_input.value = "继续讨论一下模板"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    transcript = _manage_transcript_text(app)
+                    self.assertIn("manager session reset", transcript)
+                    self.assertIn("started fresh session", transcript)
+                    self.assertIn("我先按这个模板重新梳理讨论", transcript)
+                    self.assertNotIn("timeout waiting for child process to exit", transcript)
+
+    async def test_manage_chat_failed_recovery_keeps_old_draft_muted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = ButlerFlowTuiApp(
+                run_prompt_receipt_fn=lambda *args, **kwargs: None,
+                initial_args=Namespace(config=config),
+                initial_mode="launcher",
+            )
+            async with app.run_test() as pilot:
+                await pilot.pause(0.2)
+                app._open_manage_center()
+                await pilot.pause(0.1)
+                with mock.patch.object(
+                    app._controller,
+                    "manage_chat",
+                    return_value={
+                        "response": "Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        "parse_status": "failed",
+                        "raw_reply": "Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        "error_text": "manager chat returned non-JSON output",
+                        "draft_summary": "",
+                        "manager_stage": "discuss",
+                        "manager_session_id": "manager-thread-old",
+                        "session_recovery": {
+                            "applied": True,
+                            "kind": "resume_to_fresh_exec",
+                            "previous_manager_session_id": "manager-thread-old",
+                            "recovered_manager_session_id": "",
+                            "initial_raw_reply": "Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        },
+                    },
+                ):
+                    command_input = app._command_input()
+                    command_input.value = "继续讨论一下模板"
+                    app.on_input_submitted(Input.Submitted(command_input, command_input.value, None))
+                    await pilot.pause(0.3)
+                    transcript = _manage_transcript_text(app)
+                    self.assertIn("last saved draft unchanged", transcript)
+                    self.assertIn("manager chat returned non-JSON output", transcript)
+                    self.assertNotIn("stage=discuss", transcript)
+
     async def test_manage_chat_shows_manager_stage_and_confirmation_prompt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

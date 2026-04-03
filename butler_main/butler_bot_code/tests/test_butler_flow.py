@@ -221,6 +221,175 @@ class ButlerFlowTests(unittest.TestCase):
         self.assertEqual(payload["raw_reply"], "我建议先讨论模板，再决定是否创建 flow。")
         self.assertEqual(payload["error_text"], "manager chat returned non-JSON output")
 
+    def test_manage_chat_resume_failure_restarts_with_fresh_codex_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).parent.mkdir(parents=True, exist_ok=True)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).write_text(
+                json.dumps(
+                    {
+                        "flow_id": "desktop_delivery_v1",
+                        "label": "Desktop Delivery",
+                        "workflow_kind": "managed_flow",
+                        "phase_plan": [{"phase_id": "plan", "title": "Plan", "objective": "plan", "done_when": "done", "retry_phase_id": "plan", "fallback_phase_id": "plan", "next_phase_id": ""}],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="Reconnecting... 2/5 (timeout waiting for child process to exit)\n\n[butler] Codex 子进程退出超时（timeout waiting for child process to exit），已由 Butler 中止",
+                        metadata={
+                            "external_session": {
+                                "provider": "codex",
+                                "thread_id": "",
+                                "resume_capable": True,
+                                "vendor_session_state": "resume_requested",
+                            },
+                            "recovery_state": {"resume_requested": True},
+                            "failure_class": "failed",
+                        },
+                        agent_id="butler_flow.manager_chat",
+                    ),
+                    _receipt(
+                        text=json.dumps(
+                            {
+                                "response": "我先按这个模板重新梳理讨论，再决定 flow。",
+                                "summary": "fresh exec recovered",
+                                "manage_target": "template:desktop_delivery_v1",
+                                "manager_stage": "discuss",
+                            },
+                            ensure_ascii=False,
+                        ),
+                        metadata={
+                            "external_session": {
+                                "provider": "codex",
+                                "thread_id": "manager-thread-fresh",
+                                "resume_capable": True,
+                                "vendor_session_state": "started",
+                            }
+                        },
+                        agent_id="butler_flow.manager_chat",
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch("butler_main.butler_flow.manage_agent.cli_provider_available", return_value=True):
+                app.manage_chat(
+                    argparse.Namespace(
+                        command="manage-chat",
+                        config=config,
+                        json=True,
+                        manage="template:desktop_delivery_v1",
+                        instruction="继续讨论 template 和 flow",
+                        manager_session_id="manager-thread-old",
+                    )
+                )
+            payload = json.loads(app._stdout.getvalue())
+            self.assertEqual(len(runner.calls), 2)
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_mode"], "resume")
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_session_id"], "manager-thread-old")
+            self.assertEqual(runner.calls[1]["runtime_request"]["codex_mode"], "exec")
+            self.assertEqual(runner.calls[1]["runtime_request"]["codex_session_id"], "")
+            self.assertEqual(payload["parse_status"], "ok")
+            self.assertEqual(payload["manager_session_id"], "manager-thread-fresh")
+            self.assertTrue(payload["session_recovery"]["applied"])
+            self.assertEqual(payload["session_recovery"]["kind"], "resume_to_fresh_exec")
+            self.assertEqual(payload["session_recovery"]["previous_manager_session_id"], "manager-thread-old")
+            self.assertEqual(payload["session_recovery"]["recovered_manager_session_id"], "manager-thread-fresh")
+            self.assertIn("timeout waiting for child process to exit", payload["session_recovery"]["initial_raw_reply"])
+            session_root = manage_session_dir(root, "manager-thread-fresh")
+            self.assertTrue((session_root / "session.json").exists())
+
+    def test_manage_chat_first_exec_failure_does_not_retry_with_fresh_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).parent.mkdir(parents=True, exist_ok=True)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).write_text(
+                json.dumps(
+                    {
+                        "flow_id": "desktop_delivery_v1",
+                        "label": "Desktop Delivery",
+                        "workflow_kind": "managed_flow",
+                        "phase_plan": [{"phase_id": "plan", "title": "Plan", "objective": "plan", "done_when": "done", "retry_phase_id": "plan", "fallback_phase_id": "plan", "next_phase_id": ""}],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            runner = _ReceiptRunner(
+                [
+                    _receipt(
+                        text="Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                        metadata={
+                            "external_session": {
+                                "provider": "codex",
+                                "thread_id": "",
+                                "resume_capable": False,
+                                "vendor_session_state": "fresh_exec",
+                            }
+                        },
+                        agent_id="butler_flow.manager_chat",
+                    )
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch("butler_main.butler_flow.manage_agent.cli_provider_available", return_value=True):
+                app.manage_chat(
+                    argparse.Namespace(
+                        command="manage-chat",
+                        config=config,
+                        json=True,
+                        manage="template:desktop_delivery_v1",
+                        instruction="继续讨论",
+                        manager_session_id="",
+                    )
+                )
+            payload = json.loads(app._stdout.getvalue())
+            self.assertEqual(len(runner.calls), 1)
+            self.assertEqual(payload["parse_status"], "failed")
+            self.assertFalse(payload["session_recovery"]["applied"])
+
     def test_manage_chat_requires_existing_pending_action_for_commit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -319,8 +488,22 @@ class ButlerFlowTests(unittest.TestCase):
                 _ReceiptRunner(
                     [
                         _receipt(
-                            text="我建议先把模板目标和 supervisor 方向再讨论清楚，不要直接创建。",
-                            metadata={"external_session": {"provider": "codex", "thread_id": "manager-thread-parse", "resume_capable": True}},
+                            text="Reconnecting... 2/5 (timeout waiting for child process to exit)\n\n[butler] Codex 子进程退出超时（timeout waiting for child process to exit），已由 Butler 中止",
+                            metadata={
+                                "external_session": {
+                                    "provider": "codex",
+                                    "thread_id": "",
+                                    "resume_capable": True,
+                                    "vendor_session_state": "resume_requested",
+                                },
+                                "recovery_state": {"resume_requested": True},
+                                "failure_class": "failed",
+                            },
+                            agent_id="butler_flow.manager_chat",
+                        ),
+                        _receipt(
+                            text="Reconnecting... 2/5 (timeout waiting for child process to exit)\n\n[butler] Codex 子进程退出超时（timeout waiting for child process to exit），已由 Butler 中止",
+                            metadata={"external_session": {"provider": "codex", "thread_id": "", "resume_capable": True, "vendor_session_state": "fresh_exec"}},
                             agent_id="butler_flow.manager_chat",
                         )
                     ]
@@ -431,11 +614,13 @@ class ButlerFlowTests(unittest.TestCase):
             turns = self._read_jsonl(session_root / "turns.jsonl")
             pending = self._read_json(session_root / "pending_action.json")
             self.assertEqual(payload["parse_status"], "failed")
-            self.assertIn("不要直接创建", payload["response"])
-            self.assertIn("不要直接创建", payload["raw_reply"])
+            self.assertTrue(payload["session_recovery"]["applied"])
+            self.assertIn("timeout waiting for child process to exit", payload["response"])
+            self.assertIn("timeout waiting for child process to exit", payload["raw_reply"])
             self.assertEqual(pending["preview"], "如果你认可这版模板草稿，我就更新 template。")
             self.assertEqual(turns[-1]["parse_status"], "failed")
-            self.assertIn("不要直接创建", turns[-1]["raw_reply"])
+            self.assertTrue(turns[-1]["session_recovery"]["applied"])
+            self.assertIn("timeout waiting for child process to exit", turns[-1]["session_recovery"]["initial_raw_reply"])
 
     def test_project_loop_defaults_to_medium_role_bound_control_profile(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
