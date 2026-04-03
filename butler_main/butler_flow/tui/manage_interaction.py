@@ -11,6 +11,8 @@ _ASSET_KEY_RE = r"(?:template|builtin|instance):[A-Za-z0-9_.-]+"
 _MENTION_SUFFIX_RE = re.compile(rf"(^|\s)\$(?P<token>[^\s]*)$")
 _MENTION_ANY_RE = re.compile(rf"(^|\s)\$(?P<asset>{_ASSET_KEY_RE})\b")
 _BARE_PREFIX_RE = re.compile(rf"^\s*(?P<asset>{_ASSET_KEY_RE})\b")
+_INVALID_MENTION_RE = re.compile(r"(?P<prefix>^|\s)\$(?P<token>[^\s]+)")
+_DANGLING_DOLLAR_RE = re.compile(r"(^|\s)\$(?=\s|$)")
 
 
 @dataclass(slots=True)
@@ -159,8 +161,25 @@ def replace_manage_prompt_token(text: str, asset_key: str, *, trailing_space: bo
     return updated, True
 
 
+def sanitize_manage_prompt(text: str) -> str:
+    raw = str(text or "")
+    if not raw:
+        return ""
+
+    def _replace(match: re.Match[str]) -> str:
+        prefix = str(match.group("prefix") or "")
+        token = str(match.group("token") or "").strip()
+        if re.fullmatch(_ASSET_KEY_RE, token):
+            return f"{prefix}${token}"
+        return f"{prefix}{token}"
+
+    sanitized = _INVALID_MENTION_RE.sub(_replace, raw)
+    sanitized = _DANGLING_DOLLAR_RE.sub(lambda match: str(match.group(1) or ""), sanitized)
+    return sanitized.strip()
+
+
 def split_manage_prompt(text: str) -> tuple[str, str]:
-    raw = str(text or "").strip()
+    raw = sanitize_manage_prompt(text)
     if not raw:
         return "", ""
     match = _MENTION_ANY_RE.search(raw)
@@ -177,7 +196,7 @@ def split_manage_prompt(text: str) -> tuple[str, str]:
 
 
 def parse_manage_prompt(text: str, *, active_asset_key: str = "") -> ManagePromptRequest:
-    raw = str(text or "").strip()
+    raw = sanitize_manage_prompt(text)
     asset_key, instruction = split_manage_prompt(raw)
     manage_target = str(asset_key or active_asset_key or "").strip()
     return ManagePromptRequest(

@@ -415,7 +415,10 @@ class FlowApp:
         merged = normalize_manage_chat_draft_payload(result_draft, current=merged)
         if not str(merged.get("manage_target") or "").strip():
             merged["manage_target"] = manage_target
-        if not str(merged.get("asset_kind") or "").strip():
+        merged_target_kind, _ = self._parse_manage_target(str(merged.get("manage_target") or "").strip())
+        if merged_target_kind in {"template", "builtin", "instance"}:
+            merged["asset_kind"] = merged_target_kind
+        elif not str(merged.get("asset_kind") or "").strip():
             merged["asset_kind"] = asset_kind or "instance"
         return merged
 
@@ -2517,6 +2520,8 @@ class FlowApp:
             pending_action=persisted_pending_action or None,
             manager_session_id=manager_session_id,
         )
+        parse_status = str(result.get("parse_status") or "").strip().lower()
+        parse_failed = parse_status not in {"", "ok"}
         resolved_session_id = str(result.get("manager_session_id") or manager_session_id).strip()
         resolved_manage_target = str(
             result.get("manage_target")
@@ -2526,14 +2531,25 @@ class FlowApp:
             or ""
         ).strip()
         resolved_asset_kind, resolved_asset_id = self._parse_manage_target(resolved_manage_target) if resolved_manage_target else (asset_kind, asset_id)
-        merged_draft = self._merge_manage_chat_draft(
-            manage_target=resolved_manage_target,
-            asset_kind=resolved_asset_kind or asset_kind or "instance",
-            current_draft=persisted_draft or dict(persisted_pending_action.get("draft") or {}),
-            result_draft=result.get("draft"),
-            flow_state=flow_state or None,
-            asset_definition=asset_definition or None,
-        )
+        if parse_failed and persisted_draft:
+            merged_draft = normalize_manage_chat_draft_payload(
+                persisted_draft,
+                current=self._manage_draft_seed(
+                    manage_target=resolved_manage_target,
+                    asset_kind=resolved_asset_kind or asset_kind or "instance",
+                    flow_state=flow_state or None,
+                    asset_definition=asset_definition or None,
+                ),
+            )
+        else:
+            merged_draft = self._merge_manage_chat_draft(
+                manage_target=resolved_manage_target,
+                asset_kind=resolved_asset_kind or asset_kind or "instance",
+                current_draft=persisted_draft or dict(persisted_pending_action.get("draft") or {}),
+                result_draft=result.get("draft"),
+                flow_state=flow_state or None,
+                asset_definition=asset_definition or None,
+            )
         pending_action = dict(persisted_pending_action or {})
         pure_confirm = self._is_pure_manage_confirmation(requested_instruction, pending_action=pending_action)
         action = "none"
@@ -2569,7 +2585,7 @@ class FlowApp:
                 pending_action_preview = str(
                     pending_action.get("preview") or pending_action.get("draft_summary") or pending_action_preview
                 ).strip()
-            elif requested_instruction.strip():
+            elif requested_instruction.strip() and not parse_failed:
                 pending_action = {}
         if resolved_session_id:
             write_manage_session(
@@ -2596,6 +2612,9 @@ class FlowApp:
                     "manage_target": resolved_manage_target,
                     "instruction": requested_instruction,
                     "response": str(result.get("response") or "").strip(),
+                    "parse_status": parse_status or "ok",
+                    "raw_reply": str(result.get("raw_reply") or "").strip(),
+                    "error_text": str(result.get("error_text") or "").strip(),
                     "manager_stage": str(result.get("manager_stage") or "").strip(),
                     "draft": merged_draft,
                     "pending_action": pending_action,
@@ -2609,6 +2628,9 @@ class FlowApp:
             "asset_kind": resolved_asset_kind or asset_kind,
             "asset_id": resolved_asset_id or asset_id,
             "response": str(result.get("response") or "").strip(),
+            "parse_status": parse_status or "ok",
+            "raw_reply": str(result.get("raw_reply") or "").strip(),
+            "error_text": str(result.get("error_text") or "").strip(),
             "summary": str(result.get("summary") or "").strip(),
             "manager_stage": str(result.get("manager_stage") or "").strip(),
             "active_skill": str(result.get("active_skill") or "").strip(),

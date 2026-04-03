@@ -198,6 +198,29 @@ class ButlerFlowTests(unittest.TestCase):
         )
         self.assertEqual(draft["control_profile"]["repo_binding_policy"], "disabled")
 
+    def test_manage_chat_draft_corrects_asset_kind_from_manage_target(self) -> None:
+        draft = normalize_manage_chat_draft_payload(
+            {
+                "manage_target": "template:academic_paper_review_v1",
+                "asset_kind": "instance",
+                "workflow_kind": "managed_flow",
+            }
+        )
+        self.assertEqual(draft["asset_kind"], "template")
+
+    def test_manage_chat_result_surfaces_raw_reply_when_parse_fails(self) -> None:
+        payload = normalize_manage_chat_result(
+            {},
+            manage_target="template:academic_paper_review_v1",
+            parse_status="failed",
+            raw_reply="我建议先讨论模板，再决定是否创建 flow。",
+            error_text="manager chat returned non-JSON output",
+        )
+        self.assertEqual(payload["parse_status"], "failed")
+        self.assertEqual(payload["response"], "我建议先讨论模板，再决定是否创建 flow。")
+        self.assertEqual(payload["raw_reply"], "我建议先讨论模板，再决定是否创建 flow。")
+        self.assertEqual(payload["error_text"], "manager chat returned non-JSON output")
+
     def test_manage_chat_requires_existing_pending_action_for_commit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -287,6 +310,132 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertTrue((session_root / "session.json").exists())
             self.assertTrue((session_root / "draft.json").exists())
             self.assertTrue((session_root / "pending_action.json").exists())
+
+    def test_manage_chat_parse_failure_preserves_pending_action_and_persists_raw_reply(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = self._app(
+                _ReceiptRunner(
+                    [
+                        _receipt(
+                            text="我建议先把模板目标和 supervisor 方向再讨论清楚，不要直接创建。",
+                            metadata={"external_session": {"provider": "codex", "thread_id": "manager-thread-parse", "resume_capable": True}},
+                            agent_id="butler_flow.manager_chat",
+                        )
+                    ]
+                )
+            )
+            session_root = manage_session_dir(root, "manager-thread-parse")
+            session_root.mkdir(parents=True, exist_ok=True)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).parent.mkdir(parents=True, exist_ok=True)
+            (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery_v1.json"
+            ).write_text(
+                json.dumps(
+                    {
+                        "flow_id": "desktop_delivery_v1",
+                        "label": "Desktop Delivery",
+                        "workflow_kind": "managed_flow",
+                        "phase_plan": [
+                            {
+                                "phase_id": "plan",
+                                "title": "Plan",
+                                "objective": "plan",
+                                "done_when": "done",
+                                "retry_phase_id": "plan",
+                                "fallback_phase_id": "plan",
+                                "next_phase_id": "",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (session_root / "session.json").write_text(
+                json.dumps(
+                    {
+                        "manager_session_id": "manager-thread-parse",
+                        "active_manage_target": "template:desktop_delivery_v1",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (session_root / "draft.json").write_text(
+                json.dumps(
+                    {
+                        "manage_target": "template:desktop_delivery_v1",
+                        "asset_kind": "template",
+                        "label": "Desktop Delivery",
+                        "workflow_kind": "managed_flow",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (session_root / "pending_action.json").write_text(
+                json.dumps(
+                    {
+                        "manage_target": "template:desktop_delivery_v1",
+                        "instruction": "update template from approved draft",
+                        "draft": {
+                            "manage_target": "template:desktop_delivery_v1",
+                            "asset_kind": "template",
+                            "label": "Desktop Delivery",
+                            "workflow_kind": "managed_flow",
+                        },
+                        "preview": "如果你认可这版模板草稿，我就更新 template。",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with mock.patch("butler_main.butler_flow.manage_agent.cli_provider_available", return_value=True):
+                app.manage_chat(
+                    argparse.Namespace(
+                        command="manage-chat",
+                        config=config,
+                        json=True,
+                        manage="",
+                        instruction="继续讨论一下 supervisor 应该怎么写",
+                        manager_session_id="manager-thread-parse",
+                    )
+                )
+
+            payload = json.loads(app._stdout.getvalue())
+            turns = self._read_jsonl(session_root / "turns.jsonl")
+            pending = self._read_json(session_root / "pending_action.json")
+            self.assertEqual(payload["parse_status"], "failed")
+            self.assertIn("不要直接创建", payload["response"])
+            self.assertIn("不要直接创建", payload["raw_reply"])
+            self.assertEqual(pending["preview"], "如果你认可这版模板草稿，我就更新 template。")
+            self.assertEqual(turns[-1]["parse_status"], "failed")
+            self.assertIn("不要直接创建", turns[-1]["raw_reply"])
 
     def test_project_loop_defaults_to_medium_role_bound_control_profile(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

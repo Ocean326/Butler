@@ -218,6 +218,16 @@ def _parse_manage_target_token(token: str) -> tuple[str, str]:
     return str(kind or "").strip().lower(), str(asset_id or "").strip()
 
 
+def _asset_kind_from_manage_target(manage_target: str, *, fallback: str = "instance") -> str:
+    target_kind, _ = _parse_manage_target_token(manage_target)
+    if target_kind in {"template", "builtin", "instance"}:
+        return target_kind
+    normalized = str(fallback or "").strip().lower()
+    if normalized in {"template", "builtin", "instance"}:
+        return normalized
+    return "instance"
+
+
 def select_manage_chat_skill(
     *,
     manage_target: str,
@@ -369,9 +379,15 @@ def normalize_manage_chat_draft_payload(
                 return str(existing.get(item) or "").strip()
         return ""
 
+    manage_target = _text("manage_target")
+    asset_kind = _asset_kind_from_manage_target(
+        manage_target,
+        fallback=_text("asset_kind") or str(existing.get("asset_kind") or "").strip(),
+    )
+
     return {
-        "manage_target": _text("manage_target"),
-        "asset_kind": _text("asset_kind") or "instance",
+        "manage_target": manage_target,
+        "asset_kind": asset_kind,
         "builtin_mode": _text("builtin_mode", "action_builtin_mode"),
         "label": _text("label"),
         "description": _text("description"),
@@ -1011,8 +1027,16 @@ def normalize_manage_chat_result(
     *,
     manage_target: str = "",
     current_draft: dict[str, Any] | None = None,
+    parse_status: str = "ok",
+    raw_reply: str = "",
+    error_text: str = "",
 ) -> dict[str, Any]:
+    normalized_parse_status = str(parse_status or result.get("parse_status") or "ok").strip().lower() or "ok"
+    normalized_raw_reply = str(raw_reply or result.get("raw_reply") or "").strip()
+    normalized_error_text = str(error_text or result.get("error_text") or "").strip()
     response = str(result.get("response") or result.get("answer") or result.get("summary") or "").strip()
+    if normalized_parse_status != "ok" and normalized_raw_reply:
+        response = normalized_raw_reply
     if not response:
         response = "Manager chat completed."
     action = str(result.get("action") or "none").strip().lower()
@@ -1038,12 +1062,16 @@ def normalize_manage_chat_result(
     draft = normalize_manage_chat_draft_payload(result.get("draft"), current=current_draft)
     if not str(draft.get("manage_target") or "").strip():
         draft["manage_target"] = action_manage_target or str(result.get("manage_target") or manage_target or "").strip()
-    if not str(draft.get("asset_kind") or "").strip():
-        target_kind, _ = _parse_manage_target_token(str(draft.get("manage_target") or "").strip())
-        draft["asset_kind"] = target_kind or "instance"
+    draft["asset_kind"] = _asset_kind_from_manage_target(
+        str(draft.get("manage_target") or "").strip(),
+        fallback=str(draft.get("asset_kind") or "").strip(),
+    )
     return {
         "summary": str(result.get("summary") or response).strip(),
         "response": response,
+        "parse_status": normalized_parse_status,
+        "raw_reply": normalized_raw_reply,
+        "error_text": normalized_error_text,
         "manage_target": str(result.get("manage_target") or manage_target or "").strip(),
         "manager_stage": manager_stage,
         "active_skill": active_skill,
@@ -1164,10 +1192,17 @@ def run_manage_chat_agent(
         runtime_request,
         stream=False,
     )
+    raw_reply = _receipt_text(receipt)
+    parsed = _parse_json_object(raw_reply)
+    parse_status = "ok" if parsed else ("failed" if raw_reply else "empty")
+    error_text = "manager chat returned non-JSON output" if parse_status == "failed" else ""
     payload = normalize_manage_chat_result(
-        _parse_json_object(_receipt_text(receipt)),
+        parsed,
         manage_target=manage_target,
         current_draft=current_draft,
+        parse_status=parse_status,
+        raw_reply=raw_reply,
+        error_text=error_text,
     )
     payload["manager_session_id"] = _receipt_thread_id(receipt) or str(manager_session_id or "").strip()
     return payload

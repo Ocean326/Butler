@@ -202,6 +202,11 @@ instance materialization 新增以下来源字段：
 3. 真正提交改为 `draft_payload -> manage_flow()`：
    - 提交结果以规范化后的实际写盘结果为准
    - `manage_handoff.summary` 与 `manage_audit` 改为从 canonical saved definition 生成
+4. manager chat 的当前稳态修补口径补齐为：
+   - 首轮纯文本会默认绑定当前 manage focus asset；同一 manager session 的后续轮次改为依赖 session sticky target，除非用户显式重新指定 target
+   - TUI 提交前会清理悬空 `$`/无效 mention 前缀，避免把残留 picker token 直接送进 manager
+   - 若 manager 返回的不是合法 JSON，系统会把原始 reply 透传给 operator，并把 `parse_status / raw_reply / error_text` 记入 manage turn，而不是回退成 `Manager chat completed.`
+   - parse failed 时不清空既有 `pending_action`，避免讨论阶段把待确认草稿意外冲掉
 
 同时补充 shared asset / instance static asset 字段：
 

@@ -341,6 +341,10 @@ class ButlerFlowTuiApp(App[int]):
         self._manage_chat_queue: list[ManagePromptRequest] = []
         self._manage_chat_session_id = ""
         self._manage_chat_started_at = 0.0
+        self._last_manage_draft_summary = ""
+        self._last_manage_state_summary = ""
+        self._last_manage_pending_preview = ""
+        self._last_manage_confirmation_prompt = ""
         self._attached_run_active = False
         self._history_cursor_flow_id = ""
         self._flow_view_mode = "supervisor"
@@ -2481,17 +2485,27 @@ class ButlerFlowTuiApp(App[int]):
         else:
             payload = _mapping_payload(message.payload)
             session_id = str(payload.get("manager_session_id") or "").strip()
+            if session_id and session_id != self._manage_chat_session_id:
+                self._last_manage_draft_summary = ""
+                self._last_manage_state_summary = ""
+                self._last_manage_pending_preview = ""
+                self._last_manage_confirmation_prompt = ""
             if session_id:
                 self._manage_chat_session_id = session_id
             manage_target = str(payload.get("manage_target") or message.request.manage_target or "").strip()
             if manage_target:
                 self._manage_cursor_asset_key = manage_target
+            parse_status = str(payload.get("parse_status") or "").strip().lower()
+            payload_error = str(payload.get("error_text") or "").strip()
+            if payload_error and parse_status not in {"", "ok"}:
+                self._write_manage_note(family="error", body=payload_error, tone="error")
             response = str(payload.get("response") or payload.get("summary") or "").strip()
             if response:
                 self._write_manage_note(family="manager", body=response, tone="system")
             draft_summary = str(payload.get("draft_summary") or "").strip()
-            if draft_summary:
+            if draft_summary and draft_summary != self._last_manage_draft_summary:
                 self._write_manage_note(family="draft", body=draft_summary, tone="default")
+                self._last_manage_draft_summary = draft_summary
             next_action = str(payload.get("suggested_next_action") or "").strip()
             if next_action:
                 self._write_manage_note(family="hint", body=f"next · {next_action}", tone="action")
@@ -2499,24 +2513,27 @@ class ButlerFlowTuiApp(App[int]):
             if edit_hint:
                 self._write_manage_note(family="hint", body=edit_hint, tone="action")
             pending_action_preview = str(payload.get("pending_action_preview") or "").strip()
-            if pending_action_preview:
+            if pending_action_preview and pending_action_preview != self._last_manage_pending_preview:
                 self._write_manage_note(family="hint", body=pending_action_preview, tone="action")
+                self._last_manage_pending_preview = pending_action_preview
             manager_stage = str(payload.get("manager_stage") or "").strip()
             active_skill = str(payload.get("active_skill") or "").strip()
             confirmation_scope = str(payload.get("confirmation_scope") or "").strip()
             confirmation_prompt = str(payload.get("confirmation_prompt") or "").strip()
-            if manager_stage or active_skill or (confirmation_scope and confirmation_scope != "none"):
-                details: list[str] = []
-                if manager_stage:
-                    details.append(f"stage={manager_stage}")
-                if active_skill:
-                    details.append(f"skill={active_skill}")
-                if confirmation_scope and confirmation_scope != "none":
-                    details.append(f"confirm={confirmation_scope}")
-                if details:
-                    self._write_manage_note(family="state", body="manager · " + " · ".join(details), tone="action")
-            if confirmation_prompt:
+            details: list[str] = []
+            if manager_stage:
+                details.append(f"stage={manager_stage}")
+            if active_skill:
+                details.append(f"skill={active_skill}")
+            if confirmation_scope and confirmation_scope != "none":
+                details.append(f"confirm={confirmation_scope}")
+            state_summary = "manager · " + " · ".join(details) if details else ""
+            if state_summary and state_summary != self._last_manage_state_summary:
+                self._write_manage_note(family="state", body=state_summary, tone="action")
+                self._last_manage_state_summary = state_summary
+            if confirmation_prompt and confirmation_prompt != self._last_manage_confirmation_prompt:
                 self._write_manage_note(family="hint", body=confirmation_prompt, tone="action")
+                self._last_manage_confirmation_prompt = confirmation_prompt
             action = str(payload.get("action") or "").strip().lower()
             action_ready = bool(payload.get("action_ready"))
             action_manage_target = str(payload.get("action_manage_target") or manage_target or "").strip()
@@ -2924,7 +2941,7 @@ class ButlerFlowTuiApp(App[int]):
             self.notify("Supervisor instruction queued.", severity="information")
 
     def _handle_manage_prompt(self, text: str) -> None:
-        active_asset_key = self._manage_cursor_asset_key if self._manage_chat_session_id else ""
+        active_asset_key = "" if self._manage_chat_session_id else self._manage_cursor_asset_key
         request = parse_manage_prompt(text, active_asset_key=active_asset_key)
         if not request.raw_text:
             return
