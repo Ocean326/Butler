@@ -1176,7 +1176,7 @@ class ButlerFlowTuiApp(App[int]):
                     kind = str(item.get("kind") or "-").strip() or "-"
                     message = str(item.get("message") or "").strip()
                     if not message:
-                        payload_text = dict(item.get("payload") or {})
+                        payload_text = _mapping_payload(item.get("payload"))
                         message = str(payload_text.get("summary") or payload_text.get("text") or "").strip()
                     if stamp:
                         lines.append(f"{stamp}  [{kind}] {message or '-'}")

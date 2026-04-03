@@ -119,6 +119,7 @@
   - [0403 当日总纲](../daily-upgrade/0403/00_当日总纲.md)
   - [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](../daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
   - [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](../daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
+  - [0403 Butler Flow Desktop 壳与 shared surface bridge 落地](../daily-upgrade/0403/03_butler-flow_desktop壳与shared_surface_bridge落地.md)
   - [0401 当日总纲](../daily-upgrade/0401/00_当日总纲.md)
   - [0402 当日总纲](../daily-upgrade/0402/00_当日总纲.md)
   - [0402 Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）](../daily-upgrade/0402/20260402_Butler-flow%20Desktop%20V2.1%20PRD_main%E5%88%86%E6%94%AF%E5%AF%B9%E9%BD%90_flow%20CLI%E5%85%A5%E5%8F%A3%E4%B8%8E%E5%8F%8C%E8%BD%A8%E5%AE%9E%E6%96%BD_%E6%9B%B4%E6%96%B0%E7%89%88.md)
@@ -138,6 +139,9 @@
   - [0329 Chat 显式模式与 Project 循环收口](../daily-upgrade/0329/02_Chat显式模式与Project循环收口.md)
 - 默认代码目录：
   - `butler_main/products/butler_flow/`
+  - `butler_main/products/butler_flow/surface/`
+  - `butler_main/products/butler_flow/desktop_bridge.py`
+  - `butler_main/products/butler_flow/desktop/`
   - `butler_main/products/butler_flow/role_packs/`
   - `butler_main/butler_flow/`（compat shell）
   - `butler_main/__main__.py`
@@ -153,16 +157,18 @@
   - `test_agents_os_wave1.py`
   - `test_butler_flow_tui_controller.py`
   - `test_butler_flow_tui_app.py`
+  - `test_butler_flow_surface.py`
+  - `test_butler_flow_desktop_bridge.py`
 - TUI 信息架构附加检查：
   - 先确认当前实现是否已是 `workspace + single flow single-column dual-stream console + /manage + /settings`，并注意 `/history` `/flows` 都已经退成兼容语义，不要再把它们写成产品级主入口
-  - 再看 `butler_main/butler_flow/tui/controller.py` 的 payload 是否已抽象成 `workspace / single_flow.navigator_summary / single_flow.supervisor_view / single_flow.workflow_view / single_flow.inspector` 这些现役投影；`operator_rail_payload / role_strip_payload` 只应作为兼容层
+- 再看 `butler_main/products/butler_flow/tui/controller.py` 的 payload 是否已抽象成 `workspace / single_flow.navigator_summary / single_flow.supervisor_view / single_flow.workflow_view / single_flow.inspector` 这些现役投影；`operator_rail_payload / role_strip_payload` 只应作为兼容层
   - 若做本轮升级，主屏常驻信息以 `0401/02` 为准：`workspace navigator + default supervisor stream + Shift+Tab -> workflow stream`
   - 当前 `workspace` 左栏应是 instance runtime list，右栏应是 runtime preview / timeline；如保留 `/history` 语义，也只承接 archive/recovery，不回到主导航职责
   - 当前 `/manage` 已收口为 shared asset center，只显示 `builtin + template`；`/flows` 只保留兼容别名，free 设计链路只应在 setup 内部通过 `/manage template:new ...` 进入
   - 当前 `/manage` 主视图必须是 transcript-first shell，而不是栏式资产卡片；底部输入框是主入口，支持 `$template:<id>` / `$builtin:<id>` mention 与自然语言管理意图
   - 当前纯文本路由固定为：`manage -> manager chat`、`flow -> supervisor queue`、`history -> reject`
-  - 若改 `/manage` 输入协议，先看 `butler_main/butler_flow/tui/manage_interaction.py` 与 `tui/app.py` 的 bare target/`$target` 解析、mention picker 7 项窗口、manager queue/session 续接；当前口径是：首轮纯文本默认绑定当前 asset focus，同一 manager session 后续轮次默认依赖 sticky target；提交前会清理悬空 `$` / 无效 mention 前缀；会话同时把 `manage_session / draft / pending_action` 落盘，支撑 `template_confirm -> flow_confirm` 的连续讨论
-  - 若改 manager chat prompt/runtime，优先看 `butler_main/butler_flow/manage_agent.py` 与 `butler_main/butler_flow/manager_prompt_assets/`；现役口径是 `manager role + skills + bundle/manager.md + references/`，但职责和提交门控的真源在代码侧：`manager skill registry` 决定当前 skill 的 scope / draft ownership / action capability，prompt payload 只注入轻量 `asset/session/pending_action` 摘要；首次 draft 不自动提交，只有纯确认才能消费已有 `pending_action`
+- 若改 `/manage` 输入协议，先看 `butler_main/products/butler_flow/tui/manage_interaction.py` 与 `tui/app.py` 的 bare target/`$target` 解析、mention picker 7 项窗口、manager queue/session 续接；当前口径是：首轮纯文本默认绑定当前 asset focus，同一 manager session 后续轮次默认依赖 sticky target；提交前会清理悬空 `$` / 无效 mention 前缀；会话同时把 `manage_session / draft / pending_action` 落盘，支撑 `template_confirm -> flow_confirm` 的连续讨论
+- 若改 manager chat prompt/runtime，优先看 `butler_main/products/butler_flow/manage_agent.py` 与 `butler_main/products/butler_flow/manager_prompt_assets/`；现役口径是 `manager role + skills + bundle/manager.md + references/`，但职责和提交门控的真源在代码侧：`manager skill registry` 决定当前 skill 的 scope / draft ownership / action capability，prompt payload 只注入轻量 `asset/session/pending_action` 摘要；首次 draft 不自动提交，只有纯确认才能消费已有 `pending_action`
   - 若排查 manager “不说话 / 只显示 Manager chat completed.”，先看 `manage_agent.py` 的 parse-failure 透传链路；当前非 JSON reply 会原样返回 UI，并把 `parse_status / raw_reply / error_text` 写入 manage turn，且 parse failed 时不主动清空既有 `pending_action`
   - 若排查 manager `resume` 卡在 `Reconnecting... / timeout waiting for child process to exit / no rollout found`，先看 `manage_agent.py` 的 manager-specific Codex self-heal；当前口径是同 provider 内自动从 `resume` 改跑一次 fresh Codex exec，成功后切到新 `manager_session_id`，但不切 Cursor，也不对首轮 fresh exec 做二次重试
   - 若涉及 builtin 修改，必须核对当前是否仍要求显式 `clone` 或 `edit`，不要回退到隐式原地修改
@@ -203,8 +209,11 @@
   - 当前 CLI 升级已按 `04c` 落地：`system CLI entry + serializable event spine + operator TUI shell`
   - 当前还新增 `exec`：最后一行固定 `flow_exec_receipt`，退出码按 flow 终态收口
   - TTY 下优先核对是否正确进入 Textual launcher / attached run screen；若未进入，再检查 `requirements-cli.txt`、终端宽度与 `--plain`
-  - 若排查 TUI，优先看 `butler_main/butler_flow/tui/`、`events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
+- 若排查 TUI，优先看 `butler_main/products/butler_flow/tui/`、`butler_main/products/butler_flow/events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
   - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
+- 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/products/butler_flow/desktop/ + butler_main/products/butler_flow/desktop_bridge.py + butler_main/products/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars；远程/无头环境下优先走手填 `Config Path Fallback`，不要把原生 file dialog 当唯一验证入口
+  - 若排查 Desktop 是否“已完成”，把验证拆成四层记录：Python bridge 回归、desktop `typecheck/build`、renderer `vitest`、Electron `Playwright` 点击回归；不要把源码编译通过误记成运行时已验证
+- 若跑 Desktop e2e，优先直接用 `cd butler_main/products/butler_flow/desktop && npm run test:e2e`；当前脚本会先 `build`，再优先使用现有 `DISPLAY`，无图形时自动尝试 `xvfb-run`
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
   - 最后补跑 `tools/butler-flow ... --help`、`butler-flow --help` 与 `python -m butler_main --help`
   - 若目标是系统级 CLI，再补跑 `./tools/install-butler-flow` 并确认 `command -v butler-flow`

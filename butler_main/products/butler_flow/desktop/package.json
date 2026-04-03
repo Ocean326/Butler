@@ -1,0 +1,51 @@
+{
+  "name": "butler-flow-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Butler Flow Desktop workbench",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev:renderer": "vite --host 127.0.0.1 --port 4178",
+    "build:renderer": "vite build",
+    "build:main": "tsc --project tsconfig.node.json",
+    "build": "npm run build:renderer && npm run build:main",
+    "dev:electron": "wait-on tcp:4178 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:4178 npm run build:main && electron .",
+    "dev": "concurrently -k \"npm run dev:renderer\" \"npm run dev:electron\"",
+    "start": "npm run build && electron .",
+    "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.node.json --noEmit",
+    "test:renderer": "vitest run --config vitest.config.ts",
+    "test:renderer:watch": "vitest --config vitest.config.ts",
+    "test:e2e": "npm run build && ./scripts/run-playwright-with-display.sh",
+    "test:e2e:xvfb": "npm run build && FORCE_XVFB=1 ./scripts/run-playwright-with-display.sh",
+    "test:desktop": "npm run test:renderer && npm run test:e2e"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.2",
+    "jotai": "^2.12.5",
+    "lucide-react": "^0.542.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@testing-library/jest-dom": "^6.7.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.18.1",
+    "@types/react": "^18.3.24",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.0.0",
+    "electron": "^37.4.0",
+    "electron-builder": "^26.0.12",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.2",
+    "vite": "^5.4.19",
+    "vitest": "^2.1.9",
+    "wait-on": "^8.0.5"
+  }
+}

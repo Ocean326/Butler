@@ -38,9 +38,33 @@ class FlowSummaryDTO:
 
 
 @dataclass(frozen=True, slots=True)
+class RoleRuntimeDTO:
+    active_role_id: str = ""
+    role_sessions: dict[str, Any] = field(default_factory=dict)
+    pending_handoffs: list[dict[str, Any]] = field(default_factory=list)
+    recent_handoffs: list[dict[str, Any]] = field(default_factory=list)
+    latest_handoff_summary: dict[str, Any] = field(default_factory=dict)
+    latest_role_handoffs: dict[str, Any] = field(default_factory=dict)
+    role_chips: list[dict[str, Any]] = field(default_factory=list)
+    roles: list[dict[str, Any]] = field(default_factory=list)
+    execution_mode: str = ""
+    session_strategy: str = ""
+    role_pack_id: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class SupervisorViewDTO:
     header: dict[str, Any] = field(default_factory=dict)
     events: list[dict[str, Any]] = field(default_factory=list)
+    latest_supervisor_decision: dict[str, Any] = field(default_factory=dict)
+    latest_judge_decision: dict[str, Any] = field(default_factory=dict)
+    latest_operator_action: dict[str, Any] = field(default_factory=dict)
+    latest_handoff_summary: dict[str, Any] = field(default_factory=dict)
+    context_governor: dict[str, Any] = field(default_factory=dict)
+    latest_token_usage: dict[str, Any] = field(default_factory=dict)
     pointers: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -50,23 +74,8 @@ class SupervisorViewDTO:
 @dataclass(frozen=True, slots=True)
 class WorkflowViewDTO:
     events: list[dict[str, Any]] = field(default_factory=list)
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass(frozen=True, slots=True)
-class RoleRuntimeDTO:
-    execution_mode: str = ""
-    session_strategy: str = ""
-    active_role_id: str = ""
-    role_pack_id: str = ""
-    roles: list[dict[str, Any]] = field(default_factory=list)
-    role_chips: list[dict[str, Any]] = field(default_factory=list)
-    latest_role_handoffs: dict[str, Any] = field(default_factory=dict)
-    pending_handoffs: list[dict[str, Any]] = field(default_factory=list)
-    recent_handoffs: list[dict[str, Any]] = field(default_factory=list)
-    latest_handoff_summary: dict[str, Any] = field(default_factory=dict)
+    runtime_summary: dict[str, Any] = field(default_factory=dict)
+    artifact_refs: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -103,20 +112,22 @@ class FlowConsoleDTO:
 class FlowDetailDTO:
     flow_id: str = ""
     status: dict[str, Any] = field(default_factory=dict)
-    summary: FlowSummaryDTO = field(default_factory=FlowSummaryDTO)
+    summary: FlowSummaryDTO | dict[str, Any] = field(default_factory=FlowSummaryDTO)
     step_history: list[dict[str, Any]] = field(default_factory=list)
     timeline: list[dict[str, Any]] = field(default_factory=list)
-    artifacts: list[dict[str, Any]] = field(default_factory=list)
     turns: list[dict[str, Any]] = field(default_factory=list)
     actions: list[dict[str, Any]] = field(default_factory=list)
+    artifacts: list[dict[str, Any]] = field(default_factory=list)
     handoffs: list[dict[str, Any]] = field(default_factory=list)
-    navigator_summary: FlowSummaryDTO = field(default_factory=FlowSummaryDTO)
-    supervisor_view: SupervisorViewDTO = field(default_factory=SupervisorViewDTO)
-    workflow_view: WorkflowViewDTO = field(default_factory=WorkflowViewDTO)
+    flow_definition: dict[str, Any] = field(default_factory=dict)
+    runtime_snapshot: dict[str, Any] = field(default_factory=dict)
+    navigator_summary: FlowSummaryDTO | dict[str, Any] = field(default_factory=FlowSummaryDTO)
+    supervisor_view: SupervisorViewDTO | dict[str, Any] = field(default_factory=SupervisorViewDTO)
+    workflow_view: WorkflowViewDTO | dict[str, Any] = field(default_factory=WorkflowViewDTO)
     inspector: dict[str, Any] = field(default_factory=dict)
-    role_strip: RoleRuntimeDTO = field(default_factory=RoleRuntimeDTO)
-    operator_rail: OperatorRailDTO = field(default_factory=OperatorRailDTO)
-    flow_console: FlowConsoleDTO = field(default_factory=FlowConsoleDTO)
+    role_strip: RoleRuntimeDTO | dict[str, Any] = field(default_factory=RoleRuntimeDTO)
+    operator_rail: OperatorRailDTO | dict[str, Any] = field(default_factory=OperatorRailDTO)
+    flow_console: FlowConsoleDTO | dict[str, Any] = field(default_factory=FlowConsoleDTO)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -135,6 +146,11 @@ class WorkspaceSurfaceDTO:
 class ManageCenterDTO:
     preflight: dict[str, Any] = field(default_factory=dict)
     assets: dict[str, Any] = field(default_factory=dict)
+    selected_asset: dict[str, Any] = field(default_factory=dict)
+    role_guidance: dict[str, Any] = field(default_factory=dict)
+    review_checklist: list[str] = field(default_factory=list)
+    bundle_manifest: dict[str, Any] = field(default_factory=dict)
+    manager_notes: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
