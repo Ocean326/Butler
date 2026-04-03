@@ -1,4 +1,4 @@
-import { startTransition, useEffect } from "react";
+import { KeyboardEvent, startTransition, useEffect, useState } from "react";
 import { useAtom } from "jotai";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, FolderSearch, RefreshCcw } from "lucide-react";
@@ -15,6 +15,10 @@ import { useHome } from "./state/queries/use-home";
 import { useManage } from "./state/queries/use-manage";
 
 const STORAGE_KEY = "butler.desktop.configPath";
+
+function normalizeConfigPath(value: string): string {
+  return String(value || "").trim();
+}
 
 function HomeView({
   selectedFlowId,
@@ -88,6 +92,7 @@ function HomeView({
 
 export default function App() {
   const queryClient = useQueryClient();
+  const [manualConfigPath, setManualConfigPath] = useState("");
   const [activePage, setActivePage] = useAtom(activePageAtom);
   const [detailTab, setDetailTab] = useAtom(detailTabAtom);
   const [actionDraft, setActionDraft] = useAtom(actionDraftAtom);
@@ -122,14 +127,42 @@ export default function App() {
   }, [manageQuery.data, selectedManageAssetId, setSelectedManageAssetId]);
 
   async function chooseConfig(): Promise<void> {
-    const result = await electronApi.chooseConfigPath();
-    if (result.canceled || !result.configPath) {
+    try {
+      const result = await electronApi.chooseConfigPath();
+      if (result.canceled || !result.configPath) {
+        setStatusMessage("Native config picker canceled or unavailable.");
+        return;
+      }
+      const nextConfigPath = normalizeConfigPath(result.configPath);
+      window.localStorage.setItem(STORAGE_KEY, nextConfigPath);
+      setConfigPath(nextConfigPath);
+      setManualConfigPath(nextConfigPath);
+      setStatusMessage(`Config attached: ${nextConfigPath}`);
+      void queryClient.invalidateQueries({ queryKey: ["desktop"] });
+    } catch (error) {
+      setStatusMessage(`Config picker failed: ${String((error as Error)?.message || error)}`);
+    }
+  }
+
+  async function attachConfigPath(pathValue: string): Promise<void> {
+    const nextConfigPath = normalizeConfigPath(pathValue);
+    if (!nextConfigPath) {
+      setStatusMessage("Config path cannot be empty.");
       return;
     }
-    window.localStorage.setItem(STORAGE_KEY, result.configPath);
-    setConfigPath(result.configPath);
-    setStatusMessage(`Config attached: ${result.configPath}`);
-    void queryClient.invalidateQueries({ queryKey: ["desktop"] });
+    window.localStorage.setItem(STORAGE_KEY, nextConfigPath);
+    setConfigPath(nextConfigPath);
+    setManualConfigPath(nextConfigPath);
+    setStatusMessage(`Config attached: ${nextConfigPath}`);
+    await queryClient.invalidateQueries({ queryKey: ["desktop"] });
+  }
+
+  function onManualConfigKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    void attachConfigPath(manualConfigPath);
   }
 
   async function refreshAll(): Promise<void> {
@@ -217,6 +250,32 @@ export default function App() {
               <button className="ui-button ui-button-primary" onClick={() => void chooseConfig()} type="button">
                 Select Butler Config
               </button>
+              <div className="manual-config-panel">
+                <label className="manual-config-label" htmlFor="manual-config-path">
+                  Config Path Fallback
+                </label>
+                <p className="manual-config-copy">
+                  If the native file dialog is blocked by your environment, paste the absolute config path here and attach it directly.
+                </p>
+                <div className="manual-config-form">
+                  <input
+                    id="manual-config-path"
+                    className="action-input"
+                    placeholder="/abs/path/to/butler_bot.json"
+                    value={manualConfigPath}
+                    onChange={(event) => setManualConfigPath(event.target.value)}
+                    onKeyDown={onManualConfigKeyDown}
+                  />
+                  <button
+                    className="ui-button ui-button-secondary"
+                    disabled={!manualConfigPath.trim()}
+                    onClick={() => void attachConfigPath(manualConfigPath)}
+                    type="button"
+                  >
+                    Attach Path
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
         ) : null}

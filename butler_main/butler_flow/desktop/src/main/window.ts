@@ -11,6 +11,7 @@ export function createMainWindow(): BrowserWindow {
     title: "Butler Desktop",
     webPreferences: {
       contextIsolation: true,
+      sandbox: false,
       preload: path.join(app.getAppPath(), "dist/preload/index.js")
     }
   });

@@ -15,7 +15,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["node"]
+    "types": ["vitest/globals", "@testing-library/jest-dom", "node"]
   },
-  "include": ["src/renderer", "src/shared", "vite.config.ts", "tailwind.config.ts"]
+  "include": ["src/renderer", "src/shared", "src/test", "vite.config.ts", "vitest.config.ts", "tailwind.config.ts"]
 }

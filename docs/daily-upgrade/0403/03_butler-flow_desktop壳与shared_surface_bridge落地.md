@@ -114,6 +114,10 @@
   - config attach / switch
   - `Workspace / Workbench / Manage` 三段导航
   - flow 搜索与 runtime list
+- 空态 config attach
+  - 原生 `Select Butler Config`
+  - 手填 `Config Path Fallback`
+  - 允许在远程桌面 / xvfb / 原生文件对话框不可见时继续验证 workbench
 - `Home`
   - 当前 focus 摘要
   - workbench 规则说明
@@ -152,35 +156,59 @@
 - `npm run build`
 - 结果：通过，已生成 `dist/main/`、`dist/preload/`、`dist/renderer/`
 
+### Desktop 测试链补齐
+
+- `npm run test:renderer`
+- 结果：`4 passed`
+- 覆盖：
+  - 空态点击原生 config picker
+  - 手填 config path attach 并加载 workspace flow
+  - workbench `Pause` action 点击回归
+  - manage center 资产详情渲染
+
+- `npm run test:e2e`
+- 结果：`2 passed`
+- 覆盖：
+  - Electron 真窗口启动 -> 手填 config path -> 打开 workbench
+  - Electron 真窗口启动 -> 手填 config path -> 切到 manage center
+
+- `./.venv/bin/python -m pytest butler_main/butler_bot_code/tests/test_butler_flow_surface.py butler_main/butler_bot_code/tests/test_butler_flow_desktop_bridge.py -q`
+- 结果：`4 passed`
+
+当前 e2e 裁决补充为：
+
+- Electron `BrowserWindow` 需显式 `sandbox: false`，确保 preload 能注入 `window.butlerDesktop`
+- `npm run test:e2e` 会先 `build`，再优先使用当前 `DISPLAY`
+- 若当前环境无图形显示，则自动回退到系统 `xvfb-run`；若系统未安装，但存在本地 `/tmp/butler-xvfb/root/usr/bin/xvfb-run`，也会自动接管
+- Playwright 产物写入 `test-results/`，该目录不进入版本控制
+
 ## 当前剩余风险
 
-当前唯一未完成的环境项是：
+当前剩余风险更新为：
 
-- `electron` npm postinstall 二进制下载在本机网络下出现 `socket hang up`
+- 原生文件选择器仍受宿主桌面环境影响；在远程桌面、无窗口管理器或虚拟显示环境下，`Select Config` 可能无法提供可见反馈
+- 因此自动化测试与远程人工验证当前都应优先使用手填 `Config Path Fallback`
+- 当前 e2e 验证使用 mock adapter，说明 Electron 壳、preload、IPC、renderer 点击链路已通；但对真实 Python sidecars 的全量资产覆盖，后续仍需要补更多 workspace 样本
 
-影响：
-
-- 源码已完成编译与打包
-- 但本轮无法在当前环境中完成 `npx electron --version` / `npm run start` 的最终运行验证
-
-因此当前结论是：
+因此当前结论更新为：
 
 - **源码层面：已落地**
 - **bridge 层面：已可用**
 - **工程编译：已通过**
-- **Electron runtime 二进制：受当前网络下载中断影响，待环境恢复后二次验证**
+- **Electron runtime：已在 xvfb 环境下实际启动并完成点击回归**
+- **真实 workspace 样本回归：仍需扩充**
 
 ## 后续接力建议
 
 下一轮如果继续做 Butler Desktop，不要再回到纯规划，直接沿以下顺序：
 
-1. 先解决 Electron binary 下载，完成 `npm run start`
+1. 先扩充 real workspace fixture / 样本库，覆盖 running / paused / failed / no-asset / approval-required 等状态
 2. 再补 real payload 的细节 polish：
    - artifact open 的 file-path 映射
    - action receipt 与 status toast 的细化
    - preflight / settings 面板
 3. 再补 Desktop 侧自动刷新或 watcher 推送
-4. 再视需要补 packaging / release
+4. 最后再视需要补 packaging / release
 
 ## 现役结论
 
