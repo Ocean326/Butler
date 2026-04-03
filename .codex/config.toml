@@ -1,7 +1,7 @@
-profile = "aixj"
+profile = "codex_proxy_codex"
 
 model_provider = "codex_proxy_codex"
-model = "gpt-5.4"
+model = "gpt-5.4" 
 model_reasoning_effort = "high"
 disable_response_storage = true
 approvals_reviewer = "user"

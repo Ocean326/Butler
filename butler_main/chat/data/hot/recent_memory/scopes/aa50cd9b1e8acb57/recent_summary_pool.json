@@ -46,10 +46,10 @@
   {
     "summary_id": "6084d283d797",
     "created_at": "2026-03-30 17:07:24",
-    "updated_at": "2026-03-30 17:07:24",
+    "updated_at": "2026-04-02 23:10:56",
     "title": "博士全流程科研 SKILL 读博最痛",
-    "summary_text": "这 10 轮主要围绕“博士全流程科研 SKILL 读博最痛”推进，最近结论与要求已整理为可续接摘要。",
-    "user_summary": "这 10 轮主要围绕“博士全流程科研 SKILL 读博最痛”推进，最近结论与要求已整理为可续接摘要。",
+    "summary_text": "这 10 轮主要围绕“博士全流程科研 SKILL 读博最痛”推进，最近结论与要求已整理为可续接摘要。 同一会话后续澄清：除原 SKILL 链接外，用户还在推进飞书 Codex 超时与回退配置，并要求把 Agentic 工程笔记归档到 docs/每日/0403。",
+    "user_summary": "这 10 轮主要围绕“博士全流程科研 SKILL 读博最痛”推进，最近结论与要求已整理为可续接摘要。 同一会话后续澄清：除原 SKILL 链接外，用户还在推进飞书 Codex 超时与回退配置，并要求把 Agentic 工程笔记归档到 docs/每日/0403。",
     "process_reflection": "出现 3 条过程告警；最近过程记录：2026-03-30T08:30:53.735451Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when AuthRe；出现 3 条过程告警；最近过程记录：2026-03-30T08:48:27.314692Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when AuthRe；出现 3 条过程告警；最近过程记录：2026-03-30T09:05:44.2110",
     "topics": [
       "博士全流程科研 SKILL 读博最痛",
@@ -63,15 +63,21 @@
       "Research 优化Skill的正确方式 用 Karpathy ... http://xhslink.com/o/4BvDUqmePtP 复制后打开【小红书】查看笔记！",
       "Research 优化Skill的正确方式 用 Karpathy ... http://xhslink.com/o/4BvDUqmePtP 复制后打开【小红书】查看笔记！ xhslink.com xhslink.com 用 Auto Res",
       "Research 优化Skill的正确方式 用 Karpathy ... http://xhslink.com/o/4BvDUqmePtP 复制后打开【小红书】查看笔记！ [xhslink.com](http://xhslink.com/)",
-      "/brainstorm [Harness Design：重塑我的全栈 AI协作系 - 小红书](https://www.xiaohongshu.com/explore/69c6b4bb000000002200f4fb?xsec_token="
+      "/brainstorm [Harness Design：重塑我的全栈 AI协作系 - 小红书](https://www.xiaohongshu.com/explore/69c6b4bb000000002200f4fb?xsec_token=",
+      "在 butler_bot.json 收紧 Codex stall：stall_wall_seconds=30、min_reconnect_marketers_for_stall=2（用户需求表述为 min_reconnect_markers_for_stall=2）",
+      "将小红书 Agentic 工程体系笔记整理进 docs/每日/0403"
     ],
     "decisions": [],
     "open_loops": [
       "Reconnecting... 5/5 (timeout waiting for child process to exit)",
       "已终止当前执行。",
-      "Reconnecting... 2/5 (timeout waiting for child process to exit) [butler] Codex 子进程退出超时（timeout waiti"
+      "Reconnecting... 2/5 (timeout waiting for child process to exit) [butler] Codex 子进程退出超时（timeout waiti",
+      "确认 codex_stall_detection 已写入配置并完成端到端验证",
+      "核对 docs/每日/0403 是否已按用户要求完整落盘（含原文/头脑风暴边界说明）"
     ],
-    "user_preferences_updates": [],
+    "user_preferences_updates": [
+      "复盘开发文档时优先沿 daily-upgrade 各日 00_总纲 链接主线"
+    ],
     "window_turn_ids": [
       "170108e0-c504-4688-9d69-872ef81f08ae",
       "62647175-56b3-42c1-a58c-c6228d9c9193",
@@ -86,5 +92,54 @@
     ],
     "window_start_seq": 11,
     "window_end_seq": 20
+  },
+  {
+    "summary_id": "2a3f2c6d88f1",
+    "created_at": "2026-04-02 23:10:56",
+    "updated_at": "2026-04-02 23:10:56",
+    "title": "Codex 子进程超时与 Cursor 回退链路排障，续接 docs 主线复盘与 0403 笔记落盘",
+    "summary_text": "持续推进 Codex 卡住与超时问题；同意收紧 codex stall 阈值（30s、2 次标记）；要求复盘 docs 开发每日文档脉络；要求基于小红书笔记做 Agentic 工程体系头脑风暴、整理原文并落到 docs/每日/0403。",
+    "user_summary": "持续推进 Codex 卡住与超时问题；同意收紧 codex stall 阈值（30s、2 次标记）；要求复盘 docs 开发每日文档脉络；要求基于小红书笔记做 Agentic 工程体系头脑风暴、整理原文并落到 docs/每日/0403。",
+    "process_reflection": "前半程用户指令简短，助手依赖读日志、cli_runner/cursor 路径与实机探测把问题从现象拆到可操作建议；对「确认」的回合出现意图错位（列出 1/2/3 而未承接已确认的改配置），会造成协作反复。后半程复盘与 daily 导航有效用了 project-map 与多天 00_总纲；末轮任务跨抓取与文档落盘，需在摘要中区分「用户目标」与「助手宣称的完成度」，避免把未验证的仓库状态写成事实。",
+    "topics": [
+      "Butler Codex 子进程超时与 stall 检测",
+      "Cursor CLI 回退与模型名兼容性",
+      "docs/daily-upgrade 复盘导航",
+      "小红书笔记抓取与 docs/每日/0403 归档"
+    ],
+    "requirements": [
+      "继续处理飞书链路下 Codex Reconnecting / timeout waiting for child process to exit",
+      "在 butler_main/butler_bot_code/configs/butler_bot.json 的 cli_runtime 增加 codex_stall_detection：stall_wall_seconds=30、min_reconnect_markers_for_stall=2（用户已明确要求与口头确认）",
+      "梳理根目录 docs/ 下开发每日文档（daily-upgrade 等）的主线阅读顺序",
+      "针对小红书短链 Agentic 工程体系笔记：头脑风暴、整理原文，输出到 docs/每日/0403"
+    ],
+    "decisions": [
+      "用户明确选择收紧 stall 参数为 stall_wall_seconds=30 与 min_reconnect_markers_for_stall=2（是否已写入配置文件在提供的 turn 中未闭环）",
+      "复盘 docs 每日开发文档时，以 0326→0327→0329→0330→0331→0401 的各日 00_当日总纲 为最短主线链（助手给出）"
+    ],
+    "open_loops": [
+      "butler_bot.json 是否已实际写入 codex_stall_detection 并重启 Butler 验证（turn 26 后未在片段内闭环）",
+      "用户是否在「改配置」与「先定位」之间做出最终选择并执行（turn 27  proposed，后续未在片段内看到明确跟进行为）",
+      "docs/每日/0403 产物是否已在工作区就绪、内容是否满足「用 Codex」与「原文」诉求，需以仓库实际文件为准核对",
+      "若继续主要用 Codex：需在失败时可靠触发 Cursor 回退的情况下，统一模型/CLI 配置与路径（Linux 下禁用 Windows .cmd 路径、gpt-5.4 与 Cursor agent 模型策略）"
+    ],
+    "user_preferences_updates": [
+      "希望按 docs/daily-upgrade 的多日 00_总纲梳理「最近开发主线」，而非平铺扫目录",
+      "外部笔记整理类任务倾向于落到 docs/每日/<MMDD>/ 目录结构"
+    ],
+    "window_turn_ids": [
+      "ad81fc29-9aa6-4645-885e-e4ec481283df",
+      "348d8568-d01b-4af9-9a15-a2ee7e0aa4a6",
+      "c9213bd0-6b93-475c-919b-f10de853d000",
+      "658b37c1-9a66-4735-b0b5-b271923b5ef2",
+      "4d88eca9-9bea-4ae8-a75e-287ead3786bd",
+      "b5896a10-7bb5-4181-8310-18cf009f7644",
+      "32479b39-09b9-45e9-b2a8-bdff8cf8d357",
+      "002a46b0-479f-4eee-a1a9-3ee59ae90f7c",
+      "2311a70f-cfad-4ae9-b3e5-4fe9355d7a81",
+      "7ace4052-c3db-487f-996f-52705a918a88"
+    ],
+    "window_start_seq": 21,
+    "window_end_seq": 30
   }
 ]

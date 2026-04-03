@@ -130,6 +130,27 @@ class ChatEngineModelControlTests(unittest.TestCase):
         self.assertEqual(resolved["cli"], "cursor")
         self.assertEqual(resolved["model"], "auto")
 
+    def test_router_selected_cursor_runtime_is_not_promoted_to_codex(self):
+        cfg = {
+            "agent_model": "auto",
+            "cli_runtime": {
+                "active": "cursor",
+                "providers": {
+                    "cursor": {"enabled": True},
+                    "codex": {"enabled": True, "path": "codex"},
+                },
+            },
+        }
+        with mock.patch.object(chat_engine.cli_runtime_service, "cli_provider_available", side_effect=lambda cli, cfg=None: cli in {"cursor", "codex"}), \
+             mock.patch.object(chat_engine.cli_runtime_service.codex_cursor_switchover, "resolve_codex_first_switchover", return_value=(False, False)):
+            resolved = chat_engine.cli_runtime_service.resolve_runtime_request(
+                cfg,
+                {"cli": "cursor", "model": "composer-2-fast", "_router_selected_runtime": True},
+                model_override="composer-2-fast",
+            )
+        self.assertEqual(resolved["cli"], "cursor")
+        self.assertTrue(bool(resolved.get("_router_selected_runtime")))
+
     def test_format_current_model_reply_normalizes_cursor_default(self):
         reply = chat_engine._format_current_model_reply(
             {

@@ -85,6 +85,7 @@ butler_private/
 ########################
 # 运行时快照、状态
 butler_main/butler_bot_code/run/
+butler_main/butler_bot_code/assets/flows/instances/flow_*/
 
 # agent 最近记忆、状态、私有画像与本地长期记忆默认忽略
 butler_main/butler_bot_agent/agents/recent_memory/

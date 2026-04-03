@@ -67,20 +67,34 @@ class ChatRouter:
 
     def route(self, invocation: Invocation) -> RouteDecision:
         route = self._normalize_route(invocation.entrypoint, invocation.user_text, invocation.metadata)
-        runtime_owner = "MissionOrchestrator" if route == "mission_ingress" else "AgentRuntime"
+        return self.make_route_decision(
+            invocation,
+            route,
+            reason=f"route={route} from invocation entrypoint={invocation.entrypoint or 'chat'}",
+        )
+
+    def make_route_decision(
+        self,
+        invocation: Invocation,
+        route: str,
+        *,
+        reason: str,
+        metadata_extra: dict[str, Any] | None = None,
+    ) -> RouteDecision:
+        normalized_route = self._normalize_route(route, invocation.user_text, invocation.metadata)
+        runtime_owner = "MissionOrchestrator" if normalized_route == "mission_ingress" else "AgentRuntime"
         delivery_mode = self._resolve_delivery_mode(invocation.metadata)
-        legacy_boundary = ""
-        reason = f"route={route} from invocation entrypoint={invocation.entrypoint or 'chat'}"
         metadata = {
             "channel": invocation.channel,
             "session_id": invocation.session_id,
+            **dict(metadata_extra or {}),
         }
         return RouteDecision(
-            route=route,
+            route=normalized_route,
             runtime_owner=runtime_owner,
-            reason=reason,
+            reason=str(reason or "").strip(),
             delivery_mode=delivery_mode,
-            legacy_boundary=legacy_boundary,
+            legacy_boundary="",
             metadata=metadata,
         )
 
@@ -144,10 +158,21 @@ class ChatRouter:
             explicit_project_phase=str(metadata.get("chat_project_phase") or "").strip(),
             explicit_override_source=str(metadata.get("router_explicit_override_source") or "").strip(),
             runtime_cli=str(metadata.get("runtime_cli") or "").strip(),
+            runtime_model=str(metadata.get("runtime_model") or "").strip(),
+            runtime_profile=str(metadata.get("runtime_profile") or "").strip(),
+            runtime_extra_args=str(metadata.get("runtime_extra_args") or "").splitlines(),
             router_session_action=str(metadata.get("router_session_action") or "").strip(),
             router_session_confidence=str(metadata.get("router_session_confidence") or "").strip(),
             router_session_reason_flags=str(metadata.get("router_session_reason_flags") or "").strip(),
             chat_session_id=str(metadata.get("chat_session_id") or "").strip(),
+            route=str(metadata.get("route") or "").strip(),
+            frontdoor_action=str(metadata.get("frontdoor_action") or "").strip(),
+            router_source=str(metadata.get("router_source") or "").strip(),
+            router_reason=str(metadata.get("router_reason") or "").strip(),
+            router_confidence=str(metadata.get("router_confidence") or "").strip(),
+            request_intake_mode=str(metadata.get("request_intake_mode") or "").strip(),
+            should_discuss_mode_first=str(metadata.get("should_discuss_mode_first") or "").strip() == "1",
+            external_execution_risk=str(metadata.get("external_execution_risk") or "").strip() == "1",
         )
 
     def resolve_agent_spec(

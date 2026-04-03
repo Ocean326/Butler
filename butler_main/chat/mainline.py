@@ -10,6 +10,7 @@ from agents_os.runtime import RequestIntakeService, RouteProjection, RuntimeRequ
 from butler_main.orchestrator import ButlerMissionOrchestrator
 from .channel_profiles import normalize_output_bundle_for_channel
 from .feature_switches import chat_frontdoor_slash_mode_enabled, chat_frontdoor_tasks_enabled
+from .frontdoor_cli_router import FrontDoorCliRouter
 from .frontdoor_modes import (
     is_background_compat_mode,
     is_control_mode,
@@ -79,6 +80,7 @@ class ChatMainlineService:
         delivery_adapter: FeishuDeliveryAdapter | None = None,
         weixin_delivery_adapter: WeixinDeliveryAdapter | None = None,
         request_intake_service: RequestIntakeService | None = None,
+        frontdoor_cli_router: FrontDoorCliRouter | None = None,
     ) -> None:
         self._feishu_input_adapter = feishu_input_adapter or FeishuInputAdapter()
         self._weixin_input_adapter = weixin_input_adapter or WeixinInputAdapter()
@@ -93,6 +95,7 @@ class ChatMainlineService:
         self._delivery_adapter = delivery_adapter or FeishuDeliveryAdapter()
         self._weixin_delivery_adapter = weixin_delivery_adapter or WeixinDeliveryAdapter()
         self._request_intake_service = request_intake_service or RequestIntakeService()
+        self._frontdoor_cli_router = frontdoor_cli_router or FrontDoorCliRouter(chat_router=self._chat_router)
 
     def handle_prompt(
         self,
@@ -107,17 +110,7 @@ class ChatMainlineService:
             runtime_request = self._chat_router.build_runtime_request(invocation)
             return self._result_for_prompt_purity_help(runtime_request)
         frontdoor_tasks_enabled = chat_frontdoor_tasks_enabled()
-        route_decision = self._chat_router.route(invocation)
-        if frontdoor_tasks_enabled and route_decision.route == "mission_ingress":
-            mission_runtime_request = self._chat_router.build_runtime_request(
-                invocation,
-                decision=route_decision,
-                mode_state=None,
-            )
-            bootstrap = self._ensure_orchestrator_online()
-            if bootstrap is not None and not bootstrap.ok:
-                return self._result_for_orchestrator_unavailable(mission_runtime_request, bootstrap)
-            return self._handle_mission_request(mission_runtime_request)
+        legacy_route_decision = self._chat_router.route(invocation)
         workspace = str(invocation.metadata.get("workspace") or invocation.metadata.get("workspace_root") or ".")
         session_scope_id = resolve_session_scope_id_from_invocation(invocation)
         mode_state = load_chat_session_mode_state(workspace, session_scope_id=session_scope_id)
@@ -197,23 +190,54 @@ class ChatMainlineService:
                 conversation_id=invocation.session_id,
                 forced_frontdoor_mode=explicit_frontdoor_mode,
             )
+        compile_result = self._frontdoor_cli_router.compile(
+            invocation=replace(invocation, user_text=frontdoor_text),
+            workspace=workspace,
+            mode_state=effective_mode_state.to_dict() if hasattr(effective_mode_state, "to_dict") else dict(effective_mode_state or {}),
+            explicit_main_mode=canonical_main_mode(effective_mode_state.main_mode),
+            explicit_project_phase=explicit_phase
+            or (
+                project_phase_from_state(effective_mode_state)
+                if canonical_main_mode(effective_mode_state.main_mode) == PROJECT_MAIN_MODE
+                else ""
+            ),
+            explicit_override_source=router_override_source,
+            session_selection=session_selection,
+            intake_decision=intake_decision,
+            legacy_route_decision=legacy_route_decision,
+            explicit_frontdoor_mode=explicit_frontdoor_mode,
+        )
+        route_decision = compile_result.route_decision
+        intake_decision = dict(compile_result.intake_decision or {})
+        if frontdoor_tasks_enabled and route_decision.route == "mission_ingress":
+            mission_invocation = replace(
+                invocation,
+                user_text=frontdoor_text,
+                metadata={
+                    **dict(invocation.metadata or {}),
+                    **compile_result.compile_plan.to_metadata(),
+                    "prefilled_intake_decision": dict(intake_decision or {}),
+                    "chat_mode_state_snapshot": effective_mode_state.to_dict(),
+                    "chat_session_state_snapshot": effective_chat_session_state.to_dict(),
+                },
+            )
+            mission_runtime_request = self._chat_router.build_runtime_request(
+                mission_invocation,
+                decision=route_decision,
+                mode_state=effective_mode_state.to_dict() if hasattr(effective_mode_state, "to_dict") else dict(effective_mode_state or {}),
+            )
+            bootstrap = self._ensure_orchestrator_online()
+            if bootstrap is not None and not bootstrap.ok:
+                return self._result_for_orchestrator_unavailable(mission_runtime_request, bootstrap)
+            result = self._handle_mission_request(mission_runtime_request)
+            self._record_frontdoor_router_outcome(workspace=workspace, result=result)
+            return result
         effective_invocation = replace(
             invocation,
             user_text=frontdoor_text,
             metadata={
                 **dict(invocation.metadata or {}),
-                "chat_main_mode": canonical_main_mode(effective_mode_state.main_mode),
-                "chat_recent_mode": canonical_main_mode(effective_mode_state.main_mode),
-                "chat_project_phase": explicit_phase or (
-                    project_phase_from_state(effective_mode_state)
-                    if canonical_main_mode(effective_mode_state.main_mode) == PROJECT_MAIN_MODE
-                    else ""
-                ),
-                "router_explicit_override_source": router_override_source,
-                "router_session_action": session_selection.action,
-                "router_session_confidence": session_selection.confidence,
-                "router_session_reason_flags": session_selection.reason_flags_text(),
-                "chat_session_id": str(effective_chat_session_state.active_chat_session_id or session_selection.chat_session_id or "").strip(),
+                **compile_result.compile_plan.to_metadata(),
                 "prefilled_intake_decision": dict(intake_decision or {}),
                 "chat_mode_state_snapshot": effective_mode_state.to_dict(),
                 "chat_session_state_snapshot": effective_chat_session_state.to_dict(),
@@ -224,7 +248,8 @@ class ChatMainlineService:
             decision=route_decision,
             mode_state=effective_mode_state.to_dict() if hasattr(effective_mode_state, "to_dict") else dict(effective_mode_state or {}),
         )
-        if slash_command is not None and slash_command.mode_id == "govern":
+        frontdoor_action = str(runtime_request.compile_plan.frontdoor_action or "normal_chat").strip() or "normal_chat"
+        if frontdoor_action == "govern" or (slash_command is not None and slash_command.mode_id == "govern"):
             govern_result = self._govern_service.handle(
                 workspace=workspace,
                 session_id=runtime_request.invocation.session_id,
@@ -235,7 +260,7 @@ class ChatMainlineService:
                 bundle = normalize_output_bundle_for_channel(govern_result.output_bundle, runtime_request.channel_profile)
                 text = self._text_from_bundle(bundle, fallback=str(bundle.summary or "").strip())
                 delivery_plan = self._create_delivery_plan(runtime_request.delivery_session, bundle)
-                return ChatMainlineResult(
+                result = ChatMainlineResult(
                     text=text,
                     invocation=runtime_request.invocation,
                     runtime_request=runtime_request,
@@ -243,22 +268,33 @@ class ChatMainlineService:
                     delivery_plan=delivery_plan,
                     metadata={**(govern_result.metadata or {}), "route": runtime_request.decision.route},
                 )
+                self._record_frontdoor_router_outcome(workspace=workspace, result=result)
+                return result
         task_query = None
         if frontdoor_capabilities_enabled:
             task_query = self._task_query.handle(
                 workspace=workspace,
                 session_id=runtime_request.invocation.session_id,
                 user_text=frontdoor_text,
-                force_status=slash_command is not None and slash_command.mode_id == "status",
+                force_status=frontdoor_action == "query_status" or (slash_command is not None and slash_command.mode_id == "status"),
             )
         if task_query is not None and task_query.handled and task_query.output_bundle is not None:
+            task_query_metadata = self._normalize_query_metadata(
+                task_query.metadata,
+                explicit_frontdoor_mode=explicit_frontdoor_mode,
+            )
             executor = chat_executor or talk_executor
-            model_reply_prompt = str((task_query.metadata or {}).get("model_reply_prompt") or "").strip()
+            model_reply_prompt = str(task_query_metadata.get("model_reply_prompt") or "").strip()
             if executor is not None and model_reply_prompt and not self._frontdoor_execution_blocked(task_query):
+                capability_result = type(
+                    "FrontdoorCapabilityProxy",
+                    (),
+                    {"metadata": task_query_metadata},
+                )()
                 result = self._handle_frontdoor_capability_via_model(
                     runtime_request,
                     chat_executor=executor,
-                    capability_result=task_query,
+                    capability_result=capability_result,
                     model_reply_prompt=model_reply_prompt,
                     workspace=workspace,
                     session_scope_id=session_scope_id,
@@ -266,6 +302,7 @@ class ChatMainlineService:
                     chat_session_state=effective_chat_session_state,
                     source_user_text=frontdoor_text,
                 )
+                self._record_frontdoor_router_outcome(workspace=workspace, result=result)
                 return result
             bundle = normalize_output_bundle_for_channel(task_query.output_bundle, runtime_request.channel_profile)
             text = self._text_from_bundle(bundle, fallback=str(bundle.summary or "").strip())
@@ -276,7 +313,7 @@ class ChatMainlineService:
                 runtime_request=runtime_request,
                 output_bundle=bundle,
                 delivery_plan=delivery_plan,
-                metadata={**(task_query.metadata or {}), "route": runtime_request.decision.route},
+                metadata={**task_query_metadata, "route": runtime_request.decision.route},
             )
             self._persist_mode_state_after_result(
                 workspace=workspace,
@@ -287,6 +324,7 @@ class ChatMainlineService:
                 user_text=frontdoor_text,
                 assistant_text=result.text,
             )
+            self._record_frontdoor_router_outcome(workspace=workspace, result=result)
             return result
         negotiation = None
         if frontdoor_capabilities_enabled:
@@ -296,7 +334,8 @@ class ChatMainlineService:
                 user_text=frontdoor_text,
                 delivery_session=runtime_request.delivery_session,
                 force_open=(
-                    canonical_main_mode(effective_mode_state.main_mode) == BACKGROUND_MAIN_MODE
+                    frontdoor_action == "background_entry"
+                    or canonical_main_mode(effective_mode_state.main_mode) == BACKGROUND_MAIN_MODE
                     or bool(intake_decision.get("should_discuss_mode_first"))
                     or (slash_command is not None and slash_command.mode_id in {"bg", "delivery", "research"})
                 ),
@@ -318,6 +357,7 @@ class ChatMainlineService:
                     chat_session_state=effective_chat_session_state,
                     source_user_text=frontdoor_text,
                 )
+                self._record_frontdoor_router_outcome(workspace=workspace, result=result)
                 return result
             bundle = normalize_output_bundle_for_channel(negotiation.output_bundle, runtime_request.channel_profile)
             text = self._text_from_bundle(bundle, fallback=str(bundle.summary or "").strip())
@@ -343,11 +383,12 @@ class ChatMainlineService:
                 user_text=frontdoor_text,
                 assistant_text=result.text,
             )
+            self._record_frontdoor_router_outcome(workspace=workspace, result=result)
             return result
         executor = chat_executor or talk_executor
         if executor is None:
             raise ValueError("ChatMainlineService.handle_prompt requires chat_executor or talk_executor")
-        return self._handle_chat_request(
+        result = self._handle_chat_request(
             runtime_request,
             chat_executor=executor,
             workspace=workspace,
@@ -356,6 +397,8 @@ class ChatMainlineService:
             chat_session_state=effective_chat_session_state,
             source_user_text=frontdoor_text,
         )
+        self._record_frontdoor_router_outcome(workspace=workspace, result=result)
+        return result
 
     def build_invocation(
         self,
@@ -547,6 +590,25 @@ class ChatMainlineService:
             return "sticky_mode"
         return ""
 
+    def _record_frontdoor_router_outcome(self, *, workspace: str, result: ChatMainlineResult) -> None:
+        try:
+            self._frontdoor_cli_router.record_outcome(
+                workspace=workspace,
+                compile_plan=result.runtime_request.compile_plan,
+                invocation=result.invocation,
+                assistant_text=result.text,
+                result_metadata=result.metadata,
+            )
+        except Exception:
+            return
+
+    @staticmethod
+    def _normalize_query_metadata(metadata: Mapping[str, Any] | None, *, explicit_frontdoor_mode: str) -> dict[str, Any]:
+        normalized = dict(metadata or {})
+        if explicit_frontdoor_mode == "status" and not str(normalized.get("mode_id") or "").strip():
+            normalized["mode_id"] = "delivery"
+        return normalized
+
     def _persist_mode_state_after_result(
         self,
         *,
@@ -638,9 +700,11 @@ class ChatMainlineService:
     ) -> ChatMainlineResult:
         execution = chat_executor(runtime_request)
         bundle: OutputBundle
+        execution_metadata: dict[str, Any] = {}
         if hasattr(execution, "output_bundle") and hasattr(execution, "reply_text"):
             text = str(getattr(execution, "reply_text") or "").strip()
             bundle = getattr(execution, "output_bundle")
+            execution_metadata = dict(getattr(execution, "metadata", {}) or {})
             if not isinstance(bundle, OutputBundle):
                 bundle = OutputBundle(
                     summary=f"chat reply [{runtime_request.decision.route}]",
@@ -667,7 +731,7 @@ class ChatMainlineService:
             runtime_request=runtime_request,
             output_bundle=bundle,
             delivery_plan=delivery_plan,
-            metadata={"route": runtime_request.decision.route},
+            metadata={"route": runtime_request.decision.route, **execution_metadata},
         )
         self._persist_mode_state_after_result(
             workspace=workspace,

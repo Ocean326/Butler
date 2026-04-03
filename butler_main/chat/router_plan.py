@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from butler_main.agents_os.skills import resolve_skill_collection_id
 
@@ -25,6 +25,7 @@ from .session_modes import (
 
 INJECTION_TIERS = ("minimal", "standard", "extended")
 CAPABILITY_POLICIES = ("disabled", "conditional", "enabled")
+RUNTIME_LANES = ("cursor_fast", "cursor_exec", "codex_deep")
 
 _SHARE_HINTS = (
     "润色",
@@ -189,6 +190,19 @@ class RouterCompilePlan:
     router_session_confidence: str = "medium"
     router_session_reason_flags: str = ""
     chat_session_id: str = ""
+    route: str = "chat"
+    frontdoor_action: str = "normal_chat"
+    runtime_lane: str = "cursor_fast"
+    runtime_cli: str = "cursor"
+    runtime_model: str = "composer-2-fast"
+    runtime_profile: str = ""
+    runtime_extra_args: tuple[str, ...] = ()
+    router_source: str = "legacy"
+    router_reason: str = ""
+    router_confidence: str = "medium"
+    request_intake_mode: str = ""
+    should_discuss_mode_first: bool = False
+    external_execution_risk: bool = False
 
     def to_metadata(self) -> dict[str, str]:
         return {
@@ -206,6 +220,19 @@ class RouterCompilePlan:
             "router_session_confidence": self.router_session_confidence,
             "router_session_reason_flags": self.router_session_reason_flags,
             "chat_session_id": self.chat_session_id,
+            "route": self.route,
+            "frontdoor_action": self.frontdoor_action,
+            "runtime_lane": self.runtime_lane,
+            "runtime_cli": self.runtime_cli,
+            "runtime_model": self.runtime_model,
+            "runtime_profile": self.runtime_profile,
+            "runtime_extra_args": "\n".join(self.runtime_extra_args),
+            "router_source": self.router_source,
+            "router_reason": self.router_reason,
+            "router_confidence": self.router_confidence,
+            "request_intake_mode": self.request_intake_mode,
+            "should_discuss_mode_first": "1" if self.should_discuss_mode_first else "0",
+            "external_execution_risk": "1" if self.external_execution_risk else "0",
         }
 
 
@@ -217,10 +244,21 @@ def resolve_router_compile_plan(
     explicit_project_phase: str = "",
     explicit_override_source: str = "",
     runtime_cli: str = "",
+    runtime_model: str = "",
+    runtime_profile: str = "",
+    runtime_extra_args: Sequence[str] | None = None,
     router_session_action: str = "",
     router_session_confidence: str = "",
     router_session_reason_flags: str = "",
     chat_session_id: str = "",
+    route: str = "",
+    frontdoor_action: str = "",
+    router_source: str = "",
+    router_reason: str = "",
+    router_confidence: str = "",
+    request_intake_mode: str = "",
+    should_discuss_mode_first: bool = False,
+    external_execution_risk: bool = False,
 ) -> RouterCompilePlan:
     text = compact_text(user_text)
     sticky_mode = canonical_main_mode((mode_state or {}).get("main_mode"))
@@ -230,7 +268,7 @@ def resolve_router_compile_plan(
     selected_phase = ""
     route_reason = ""
 
-    if override_source == "slash_command":
+    if override_source in {"slash_command", "model_router"}:
         selected_mode = canonical_main_mode(explicit_main_mode) or sticky_mode or CHAT_MAIN_MODE
         selected_phase = canonical_project_phase(explicit_project_phase) or (
             sticky_phase if selected_mode == PROJECT_MAIN_MODE else ""
@@ -269,8 +307,32 @@ def resolve_router_compile_plan(
         capability_policy=capability_policy,
     )
     recent_profile_key = selected_mode or CHAT_MAIN_MODE
+    resolved_route = canonical_route(route)
+    resolved_frontdoor_action = canonical_frontdoor_action(frontdoor_action)
+    runtime_lane = canonical_runtime_lane(
+        _default_runtime_lane(
+            text,
+            main_mode=selected_mode,
+            project_phase=selected_phase,
+            request_intake_mode=request_intake_mode,
+            should_discuss_mode_first=should_discuss_mode_first,
+            external_execution_risk=external_execution_risk,
+            route=resolved_route,
+            frontdoor_action=resolved_frontdoor_action,
+        )
+    )
+    effective_runtime_cli = str(runtime_cli or "").strip()
+    effective_runtime_model = str(runtime_model or "").strip()
+    effective_runtime_profile = str(runtime_profile or "").strip()
+    effective_runtime_extra_args = tuple(str(item).strip() for item in (runtime_extra_args or ()) if str(item).strip())
+    if not effective_runtime_cli:
+        lane_defaults = runtime_lane_defaults(runtime_lane)
+        effective_runtime_cli = lane_defaults["cli"]
+        effective_runtime_model = effective_runtime_model or lane_defaults["model"]
+        effective_runtime_profile = effective_runtime_profile or lane_defaults["profile"]
+        effective_runtime_extra_args = effective_runtime_extra_args or lane_defaults["extra_args"]
     skill_collection_id = str(
-        resolve_skill_collection_id(recent_mode=recent_profile_key, runtime_cli=str(runtime_cli or "").strip())
+        resolve_skill_collection_id(recent_mode=recent_profile_key, runtime_cli=effective_runtime_cli)
         or ""
     ).strip()
     return RouterCompilePlan(
@@ -288,6 +350,19 @@ def resolve_router_compile_plan(
         router_session_confidence=str(router_session_confidence or "medium").strip() or "medium",
         router_session_reason_flags=str(router_session_reason_flags or "").strip(),
         chat_session_id=str(chat_session_id or "").strip(),
+        route=resolved_route,
+        frontdoor_action=resolved_frontdoor_action,
+        runtime_lane=runtime_lane,
+        runtime_cli=effective_runtime_cli,
+        runtime_model=effective_runtime_model,
+        runtime_profile=effective_runtime_profile,
+        runtime_extra_args=effective_runtime_extra_args,
+        router_source=str(router_source or "legacy").strip() or "legacy",
+        router_reason=str(router_reason or route_reason).strip() or route_reason,
+        router_confidence=str(router_confidence or "medium").strip() or "medium",
+        request_intake_mode=str(request_intake_mode or "").strip(),
+        should_discuss_mode_first=bool(should_discuss_mode_first),
+        external_execution_risk=bool(external_execution_risk),
     )
 
 
@@ -317,6 +392,51 @@ def canonical_capability_policy(value: Any) -> str:
     if text in CAPABILITY_POLICIES:
         return text
     return "conditional"
+
+
+def canonical_route(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if text == "mission_ingress":
+        return "mission_ingress"
+    return "chat"
+
+
+def canonical_frontdoor_action(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if text in {"query_status", "govern", "background_entry", "mission_ingress"}:
+        return text
+    return "normal_chat"
+
+
+def canonical_runtime_lane(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if text in RUNTIME_LANES:
+        return text
+    return "cursor_fast"
+
+
+def runtime_lane_defaults(runtime_lane: str) -> dict[str, Any]:
+    lane = canonical_runtime_lane(runtime_lane)
+    if lane == "codex_deep":
+        return {
+            "cli": "codex",
+            "model": "gpt-5.4",
+            "profile": "",
+            "extra_args": (),
+        }
+    if lane == "cursor_exec":
+        return {
+            "cli": "cursor",
+            "model": "composer-2",
+            "profile": "",
+            "extra_args": (),
+        }
+    return {
+        "cli": "cursor",
+        "model": "composer-2-fast",
+        "profile": "",
+        "extra_args": ("--mode", "ask"),
+    }
 
 
 def _auto_route_mode(text: str, *, sticky_mode: str, sticky_phase: str) -> tuple[str, str, str]:
@@ -394,12 +514,46 @@ def _injection_tier_for_mode(
     return "standard"
 
 
+def _default_runtime_lane(
+    text: str,
+    *,
+    main_mode: str,
+    project_phase: str,
+    request_intake_mode: str,
+    should_discuss_mode_first: bool,
+    external_execution_risk: bool,
+    route: str,
+    frontdoor_action: str,
+) -> str:
+    lowered = str(text or "").lower()
+    normalized_phase = canonical_project_phase(project_phase)
+    if canonical_route(route) == "mission_ingress" or canonical_frontdoor_action(frontdoor_action) == "mission_ingress":
+        return "codex_deep"
+    if main_mode == BACKGROUND_MAIN_MODE or canonical_frontdoor_action(frontdoor_action) == "background_entry":
+        return "codex_deep"
+    if external_execution_risk or should_discuss_mode_first:
+        return "codex_deep"
+    if request_intake_mode in {"async_program", "sync_then_async"}:
+        return "codex_deep"
+    if main_mode == PROJECT_MAIN_MODE and normalized_phase in {"imp", "review"}:
+        return "cursor_exec"
+    if any(token in lowered for token in _EXTENDED_HINTS):
+        return "cursor_exec"
+    if len(lowered) >= 220:
+        return "cursor_exec"
+    return "cursor_fast"
+
+
 __all__ = [
     "CAPABILITY_POLICIES",
     "INJECTION_TIERS",
     "RouterCompilePlan",
     "canonical_capability_policy",
+    "canonical_frontdoor_action",
     "canonical_injection_tier",
+    "canonical_route",
+    "canonical_runtime_lane",
     "render_role_prompt",
     "resolve_router_compile_plan",
+    "runtime_lane_defaults",
 ]

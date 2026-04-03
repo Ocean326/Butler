@@ -308,6 +308,30 @@ def _resolve_turn_runtime(user_prompt: str, cfg: dict) -> dict:
     }
 
 
+def _runtime_override_from_control(control: dict, cfg: dict) -> dict:
+    runtime_request = dict(control.get("runtime") or {})
+    if control.get("cli"):
+        runtime_request["cli"] = control.get("cli")
+    if control.get("model"):
+        runtime_request["model"] = control.get("model")
+    if not runtime_request:
+        return {}
+    resolved = cli_runtime_service.resolve_runtime_request(
+        cfg,
+        runtime_request,
+        model_override=runtime_request.get("model") or cfg.get("agent_model", "auto"),
+    )
+    explicit_keys = {"cli", "model", "profile", "speed", "config_overrides", "extra_args"}
+    if not any(key in runtime_request for key in explicit_keys):
+        return {}
+    return {
+        key: value
+        for key, value in resolved.items()
+        if key in {"cli", "model", "profile", "speed", "config_overrides", "extra_args", "_profile_explicit"}
+        and value not in (None, "", [])
+    }
+
+
 def describe_runtime_target(user_prompt: str, invocation_metadata: dict | None = None) -> dict:
     _ = invocation_metadata
     cfg = get_config()
@@ -728,6 +752,27 @@ def _get_turn_delivery_plan():
     return TURN_STATE.get("turn_delivery_plan")
 
 
+def _runtime_request_from_compile_plan(runtime_request) -> dict:
+    compile_plan = getattr(runtime_request, "compile_plan", None)
+    request: dict = {}
+    if compile_plan is not None:
+        cli_name = str(getattr(compile_plan, "runtime_cli", "") or "").strip()
+        model_name = str(getattr(compile_plan, "runtime_model", "") or "").strip()
+        profile_name = str(getattr(compile_plan, "runtime_profile", "") or "").strip()
+        extra_args = [str(item).strip() for item in getattr(compile_plan, "runtime_extra_args", ()) if str(item).strip()]
+        if cli_name:
+            request["cli"] = cli_name
+        if model_name:
+            request["model"] = model_name
+        if profile_name:
+            request["profile"] = profile_name
+        if extra_args:
+            request["extra_args"] = extra_args
+    if request:
+        request["_router_selected_runtime"] = True
+    return request
+
+
 def _execute_chat_turn_runtime(
     runtime_request,
     *,
@@ -736,10 +781,13 @@ def _execute_chat_turn_runtime(
     image_paths: list[str] | None,
     workspace: str,
     timeout: int,
-    effective_model: str,
     max_len: int,
     stream_callback: Callable[[str], None] | None,
 ):
+    selected_runtime_request = _runtime_request_from_compile_plan(runtime_request)
+    effective_model = str(selected_runtime_request.get("model") or "auto")
+    if selected_runtime_request:
+        TURN_STATE.set(turn_cli_request=selected_runtime_request)
     TURN_STATE.set(turn_session_scope_id=resolve_session_scope_id_from_invocation(runtime_request.invocation))
     execution = _chat_runtime_service().execute(
         runtime_request,
@@ -795,10 +843,11 @@ def run_agent(
     if control.get("kind") == "current-cli":
         return _format_current_cli_reply(cfg)
 
-    runtime_request = dict(resolved_turn_runtime.get("runtime_request") or {})
-    effective_model = str(resolved_turn_runtime.get("effective_model") or "auto")
-    effective_cli = str(resolved_turn_runtime.get("effective_cli") or "cursor")
-    effective_profile = str(runtime_request.get("profile") or "").strip()
+    runtime_request_override = _runtime_override_from_control(control, cfg)
+    effective_runtime_request = dict(resolved_turn_runtime.get("runtime_request") or {})
+    effective_model = str(effective_runtime_request.get("model") or "auto")
+    effective_cli = str(effective_runtime_request.get("cli") or "cursor")
+    effective_profile = str(effective_runtime_request.get("profile") or "").strip()
     max_len = cfg.get("max_reply_len", 4000)
     use_stream = bool(stream_callback) or stream_output
     effective_prompt = str(control.get("prompt") or "").strip()
@@ -811,14 +860,13 @@ def run_agent(
             f'【cli_runtime_json】{{"cli":"{effective_cli}"{example_profile},"model":"{effective_model}"}}【/cli_runtime_json】你的问题'
         )
 
-    TURN_STATE.set(turn_model=effective_model, turn_cli_request=runtime_request)
     TURN_STATE.set(turn_invocation_metadata=dict(invocation_metadata or {}))
     result = _chat_mainline_service().handle_prompt(
         effective_prompt,
         invocation_metadata={
             "workspace": workspace,
             "channel": "local",
-            "runtime_cli": effective_cli,
+            **({"runtime_request_override": runtime_request_override} if runtime_request_override else {}),
             **dict(invocation_metadata or {}),
         },
         talk_executor=lambda talk_runtime_request: _execute_chat_turn_runtime(
@@ -833,7 +881,6 @@ def run_agent(
             image_paths=image_paths,
             workspace=workspace,
             timeout=timeout,
-            effective_model=effective_model,
             max_len=int(max_len),
             stream_callback=stream_callback if use_stream else None,
         ),

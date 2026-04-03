@@ -1,9 +1,9 @@
 {
-  "plan_id": "runtime_plan_729b02f515",
+  "plan_id": "runtime_plan_e2bef4b588",
   "flow_id": "flow_20260402111642_01929624",
   "workflow_kind": "managed_flow",
-  "phase": "execute",
-  "attempt_no": 64,
+  "phase": "quality_review",
+  "attempt_no": 85,
   "phase_attempt_no": 1,
   "plan_stage": "judge_compiled",
   "active_role_id": "implementer",
@@ -19,7 +19,7 @@
     "workflow_kind": "managed_flow",
     "goal": "登录 `jianghy@10.254.73.179` 并进入 `Transfer_Recovery`，先基于项目现有材料确认研究主题；随后系统梳理不少于 100 篇高相关文献，产出分类矩阵、阅读摘要与参考文献库；最终完成一版符合 KDD 风格的论文第一部分“研究背景与现状”，突出问题定义、方法演进、现有不足与本文切入点。",
     "guard_condition": "仅在以下条件全部满足时可结束：已确认并记录最终研究主题；文献样本不少于 100 且相关性可说明；分类矩阵、阅读摘要、参考文献库三类产物齐备并可追溯到证据来源；质量审查通过后方可进入 finalize。",
-    "current_phase": "execute",
+    "current_phase": "quality_review",
     "phase_plan": [
       {
         "phase_id": "clarify",
@@ -86,19 +86,19 @@
       }
     ],
     "current_phase_context": {
-      "phase_id": "execute",
-      "title": "Execute",
-      "objective": "执行检索、筛选与阅读，沉淀不少于 100 篇高相关文献的分类矩阵、阅读摘要与参考文献库。",
-      "done_when": "达到数量与相关性门槛，三类核心产物完整并与证据源可追溯关联。",
-      "retry_phase_id": "execute",
-      "fallback_phase_id": "structure",
-      "next_phase_id": "synthesize",
+      "phase_id": "quality_review",
+      "title": "Quality Review",
+      "objective": "对证据链、覆盖度、论证一致性、引用规范与写作质量做审查并修正缺陷。",
+      "done_when": "质量审查通过，剩余风险已记录且不阻塞交付。",
+      "retry_phase_id": "quality_review",
+      "fallback_phase_id": "synthesize",
+      "next_phase_id": "finalize",
       "available_next_phases": [
         "clarify",
         "discover",
         "structure",
+        "execute",
         "synthesize",
-        "quality_review",
         "finalize"
       ]
     },
@@ -110,17 +110,17 @@
     "role_pack_id": "coding_flow",
     "recent_phase_history": [
       {
-        "at": "2026-04-02 19:27:28",
-        "attempt_no": 58,
-        "phase": "execute",
+        "at": "2026-04-02 21:27:49",
+        "attempt_no": 79,
+        "phase": "quality_review",
         "codex_status": "failed",
         "cursor_status": "completed",
         "decision": {
           "decision": "RETRY",
-          "next_phase": "execute",
-          "reason": "第58轮执行器仍为 codex resume 失败（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout）；与上轮裁定要求的冷 exec 不符，本轮无有效仓库产物，execute 的 done_when 与排队修正均未满足。",
-          "next_codex_prompt": "强制 codex_mode=exec（全新冷会话），禁止对任何旧 thread/session 使用 resume。最小交付：在 flow 约定产出路径创建或更新单文件英文 KDD Section1.md，四级标题：Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末用括号标注证据锚点→既有分类矩阵/阅读摘要/bib 路径。文末附：Overleaf 友好说明、LaTeX→PDF 占位；100 篇文献的编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。学术英语 KDD 口吻，主张与证据表可追溯。服务不稳时仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
-          "completion_summary": "执行失败：resume/rollout 缺失；无增量产物；仍处于 execute，需用冷 exec 落盘最小英文 Section1 与证据锚点/占位清单。",
+          "next_phase": "quality_review",
+          "reason": "仍处于 quality_review：guard（主题确认、≥100 篇可说明相关性、三类产物与证据可追溯、审查通过）与操作员队列（KDD 终稿 PDF/Overleaf 合规 MD、篇幅格式、100 篇全文 PDF 及系统整理）尚未结案；handoff 明示全局交付未满足且不可 COMPLETE；context_governor 为 repeated_service_fault，宜同阶段收缩重试。",
+          "next_codex_prompt": "极小包：读 docs/0402/fulltext_pdf_gap_and_plan.md，用 1–2 句写明全文 PDF+参考文献库是否阻塞本节点、是否需回退 execute。对照 docs/0402/kdd_section1_overleaf.md 与 docs/0402/kdd_template_pdf_build.md；交叉核对 KDD_Section1_en.md 与 docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md 的 claim→证据。将两条 queued 操作员要求写入风险/待办。仅做必要修补与证据映射更新；输出简短英文 readiness note（已改正、剩余、建议下一轮审阅路径）。禁止 broad 检索与大幅扩写。",
+          "completion_summary": "未通过质量审查与 guard：可追溯初稿与 docs/0402 辅助可保留，但审查闭环、模板/PDF 构建与 100 篇全文归档等交付约束未落地，需 quality_review 内继续最小步进。",
           "issue_kind": "service_fault",
           "followup_kind": "retry"
         },
@@ -128,17 +128,17 @@
         "executed_operator_update_id": ""
       },
       {
-        "at": "2026-04-02 19:27:49",
-        "attempt_no": 59,
-        "phase": "execute",
+        "at": "2026-04-02 21:28:36",
+        "attempt_no": 80,
+        "phase": "quality_review",
         "codex_status": "failed",
         "cursor_status": "completed",
         "decision": {
           "decision": "RETRY",
-          "next_phase": "execute",
-          "reason": "第59轮 Codex 仍以 resume 调用且报错（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout），与要求的冷 exec 不符；无有效仓库产物，execute 的 done_when 与排队修正均未达成。",
-          "next_codex_prompt": "强制 codex_mode=exec（全新会话），禁止对任何 thread/session 使用 resume。最小交付：在 flow 约定产出路径写入或更新单文件英文 KDD Section1.md，四级标题：Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵/阅读摘要/bib 的路径。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。学术英语 KDD 口吻，主张与证据表可追溯。仅 git add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
-          "completion_summary": "执行失败：resume/rollout 缺失；无增量产物；仍处于 execute，需冷 exec 落盘英文 Section1 与证据锚点/占位清单。",
+          "next_phase": "quality_review",
+          "reason": "仍处于 quality_review：guard（主题、≥100 篇可说明相关性、三类产物可追溯、审查通过）未全部结案；操作员队列项（KDD 终稿 PDF/Overleaf 合规 MD、篇幅格式、100 篇全文 PDF 与系统整理）仍为 queued；handoff 明示不可 COMPLETE；context_governor 为 repeated_service_fault，宜同阶段极小包收缩重试。",
+          "next_codex_prompt": "Execute the minimal package only: read docs/0402/fulltext_pdf_gap_and_plan.md and state in 1–2 English sentences whether full-text PDF + reference library block this node or require rollback to execute. Cross-check docs/0402/kdd_section1_overleaf.md and docs/0402/kdd_template_pdf_build.md against KDD_Section1_en.md and docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md for claim→evidence. Merge the two queued operator requirements into risks/todolist. Apply only necessary patches and evidence-mapping updates; output a short English readiness note (corrected, remaining, suggested artifact paths). No broad search or major expansion.",
+          "completion_summary": "Latest attempt leaves synthesize outputs and docs/0402 aids in place but does not close quality_review or satisfy guard/operator delivery constraints; forward step is bounded same-phase retry.",
           "issue_kind": "service_fault",
           "followup_kind": "retry"
         },
@@ -146,17 +146,17 @@
         "executed_operator_update_id": ""
       },
       {
-        "at": "2026-04-02 19:28:10",
-        "attempt_no": 60,
-        "phase": "execute",
+        "at": "2026-04-02 21:29:22",
+        "attempt_no": 81,
+        "phase": "quality_review",
         "codex_status": "failed",
         "cursor_status": "completed",
         "decision": {
           "decision": "RETRY",
-          "next_phase": "execute",
-          "reason": "第60轮 Codex 仍为 resume 且报错（thread 019d4c3a-6784-7d30-88e3-892f32126cc1 无 rollout），与要求的冷启动 exec 不符；execute 的 done_when、排队修正与英文 KDD Section1 均未达成。",
-          "next_codex_prompt": "强制 codex_mode=exec（禁止 resume/任何 thread 恢复）。最小交付：在 flow 约定产出路径更新单文件英文 KDD Section1.md，四节四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点→既有分类矩阵、阅读摘要、bib 的相对路径。文末：Overleaf 友好说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载 PDF）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试动作。",
-          "completion_summary": "本轮执行失败：无有效 codex 产出；仍未落盘英文 Section1 与证据锚点；阶段仍为 execute，需下一轮冷 exec 纠正调用并完成最小文件交付。",
+          "next_phase": "quality_review",
+          "reason": "当前处于 `quality_review`，守护条件/操作员队列的交付约束（KDD Overleaf 合规 MD + PDF 构建规范、100 篇全文 PDF 与系统性整理）仍为 queued，未达到可 COMPLETE 的“审查通过并可进入 finalize”状态。",
+          "next_codex_prompt": "Execute only the minimal package: read `docs/0402/fulltext_pdf_gap_and_plan.md` and answer in 1–2 English sentences whether full-text PDF + reference library blocks this node or requires rollback to `execute`. Then cross-check `docs/0402/kdd_section1_overleaf.md` and `docs/0402/kdd_template_pdf_build.md` against `KDD_Section1_en.md` and `docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md` for claim→evidence. Merge the two queued operator requirements into risks/todolist, apply only necessary evidence-mapping updates, and output a short English readiness note (corrected, remaining, suggested artifact paths). No broad search or major expansion.",
+          "completion_summary": "已具备 synthesize 初稿与部分 docs/0402 辅助内容，但 quality_review 的关键约束尚未闭环，不能进入 finalize。",
           "issue_kind": "service_fault",
           "followup_kind": "retry"
         },
@@ -164,17 +164,17 @@
         "executed_operator_update_id": ""
       },
       {
-        "at": "2026-04-02 19:28:29",
-        "attempt_no": 61,
-        "phase": "execute",
+        "at": "2026-04-02 21:30:11",
+        "attempt_no": 82,
+        "phase": "quality_review",
         "codex_status": "failed",
         "cursor_status": "completed",
         "decision": {
           "decision": "RETRY",
-          "next_phase": "execute",
-          "reason": "本轮 Codex 以 resume 调用失败（thread 无 rollout），无有效产出；execute 的 done_when 与排队英文 KDD Section1/证据锚点仍未满足。",
-          "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread 恢复）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径指向既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
-          "completion_summary": "第61轮执行失败：仅得 Codex resume 错误，未写入 Section1 或更新证据映射；仍停留在 execute。",
+          "next_phase": "quality_review",
+          "reason": "仍处于 quality_review；守护条件未全部满足，两条操作员指令仍为 queued，且 context_governor 报告 repeated_service_fault（streak 8），上一轮结论为 synthesize 有产出但审查/全文 PDF/正式交付包未闭环。",
+          "next_codex_prompt": "Minimal package only: read docs/0402/fulltext_pdf_gap_and_plan.md; 1–2 English sentences on whether 100 full-text PDFs + ref library blocks this node vs rollback to execute. Cross-check docs/0402/kdd_section1_overleaf.md and docs/0402/kdd_template_pdf_build.md vs KDD_Section1_en.md and docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md (claim→evidence). Merge the two queued operator requirements into risks/todo; only necessary mapping edits; short English readiness note (fixed, remaining, paths). No broad search.",
+          "completion_summary": "初稿与 0402 辅助材料存在，但质量审查未结案、操作员队列未执行、服务不稳定仍需缩小工单重试。",
           "issue_kind": "service_fault",
           "followup_kind": "retry"
         },
@@ -182,17 +182,17 @@
         "executed_operator_update_id": ""
       },
       {
-        "at": "2026-04-02 19:28:47",
-        "attempt_no": 62,
-        "phase": "execute",
+        "at": "2026-04-02 21:30:58",
+        "attempt_no": 83,
+        "phase": "quality_review",
         "codex_status": "failed",
         "cursor_status": "completed",
         "decision": {
           "decision": "RETRY",
-          "next_phase": "execute",
-          "reason": "Codex 仍以 resume 启动且 thread 无 rollout，执行器无有效产出；execute 阶段的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
-          "next_codex_prompt": "使用 codex_mode=exec 冷启动（禁止 resume/thread）。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
-          "completion_summary": "第62轮：resume 失败，无 Section1 落盘与证据映射更新；仍处 execute。",
+          "next_phase": "quality_review",
+          "reason": "仍在 quality_review；guard（主题确认、≥100 篇可追溯三件套、审查通过）与操作员两条 queued（正式 PDF/Overleaf/篇幅与 100 篇全文 PDF+系统整理）未闭环；context_governor repeated_service_fault streak 9。",
+          "next_codex_prompt": "Minimal only: read docs/0402/fulltext_pdf_gap_and_plan.md and state in 1–2 English sentences whether 100 full-text PDFs + ref library blocks exiting quality_review or requires rollback to execute. Cross-check docs/0402/kdd_section1_overleaf.md and docs/0402/kdd_template_pdf_build.md vs KDD_Section1_en.md and docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md (claim→evidence). Merge the two queued operator requirements into risks/todo; patch mapping/draft only if needed; output short English readiness note (fixed, remaining, review paths). No broad search.",
+          "completion_summary": "执行器 return 0 且 synthesize/0402 初稿与辅助材料存在，但质量审查未通过、guard 与操作员队列未满足，不宜 COMPLETE 或进入 finalize。",
           "issue_kind": "service_fault",
           "followup_kind": "retry"
         },
@@ -200,17 +200,17 @@
         "executed_operator_update_id": ""
       },
       {
-        "at": "2026-04-02 19:29:05",
-        "attempt_no": 63,
-        "phase": "execute",
+        "at": "2026-04-02 21:31:46",
+        "attempt_no": 84,
+        "phase": "quality_review",
         "codex_status": "failed",
         "cursor_status": "completed",
         "decision": {
           "decision": "RETRY",
-          "next_phase": "execute",
-          "reason": "本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
-          "next_codex_prompt": "按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
-          "completion_summary": "第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。",
+          "next_phase": "quality_review",
+          "reason": "仍处 quality_review；guard（主题/≥100 可追溯三件套/审查通过）与两条 queued 操作员要求（正式 PDF、Overleaf MD、篇幅格式、100 篇全文 PDF 与系统整理）未闭环；context_governor repeated_service_fault streak 10。",
+          "next_codex_prompt": "Minimal only: read docs/0402/fulltext_pdf_gap_and_plan.md and state in 1–2 English sentences whether 100 full-text PDFs + ref library blocks exiting quality_review or requires rollback to execute. Cross-check docs/0402/kdd_section1_overleaf.md and docs/0402/kdd_template_pdf_build.md vs KDD_Section1_en.md and docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md (claim→evidence). Merge the two queued operator requirements into risks/todo; patch mapping/draft only if needed; output short English readiness note (fixed, remaining, review paths). Shrink work package; no broad search.",
+          "completion_summary": "执行器 return 0，synthesize/0402 初稿与辅助材料存在，但质量审查未结案、guard 与操作员队列未满足，不宜 COMPLETE 或 ADVANCE 至 finalize。",
           "issue_kind": "service_fault",
           "followup_kind": "retry"
         },
@@ -224,22 +224,24 @@
       "reason": "follow pending instruction from previous judge/recovery via role=implementer",
       "confidence": 0.78,
       "next_action": "run_executor",
-      "attempt_no": 64,
-      "phase": "execute",
-      "instruction": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\nService instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\n按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+      "attempt_no": 85,
+      "phase": "quality_review",
+      "instruction": "[operator update]\nResume from the current evidence base and repair the deliverable direction before any further quality-review closeout. The final target is an English KDD-style Section 1, not a Chinese draft and not only a review report. Keep the 100-paper evidence chain intact, but rewrite and normalize the main output into polished academic English with a KDD-paper tone. The section must explicitly cover: problem definition, method evolution, limitations of prior work, and this paper's entry point. Every major claim must remain traceable to the existing evidence tables and mapping artifacts. Update the main section draft, update the evidence mapping if needed, and then output a short readiness note stating what was corrected, what remains, and which artifact paths should be reviewed next.\n\n[runtime follow-up]\nService instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\nMinimal only: read docs/0402/fulltext_pdf_gap_and_plan.md and state in 1–2 English sentences whether 100 full-text PDFs + ref library blocks exiting quality_review or requires rollback to execute. Cross-check docs/0402/kdd_section1_overleaf.md and docs/0402/kdd_template_pdf_build.md vs KDD_Section1_en.md and docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md (claim→evidence). Merge the two queued operator requirements into risks/todo; patch mapping/draft only if needed; output short English readiness note (fixed, remaining, review paths). Shrink work package; no broad search.",
       "issue_kind": "service_fault",
       "followup_kind": "retry",
       "fix_round_no": 0,
       "active_role_id": "implementer",
-      "execution_mode": "simple",
-      "session_strategy": "shared"
+      "execution_mode": "medium",
+      "session_strategy": "role_bound",
+      "session_mode": "cold",
+      "load_profile": "compact"
     },
     "latest_judge_decision": {
       "decision": "RETRY",
-      "next_phase": "execute",
-      "reason": "本轮 Codex 仍以 resume 恢复线程且报错 no rollout for thread，执行器无有效产物；execute 的 done_when 与排队指令（英文 KDD Section1、证据锚点等）均未满足。",
-      "next_codex_prompt": "按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
-      "completion_summary": "第63轮：resume 失败，无 Section1 落盘与证据链更新；仍处于 execute。",
+      "next_phase": "quality_review",
+      "reason": "仍处 quality_review；guard（主题/≥100 可追溯三件套/审查通过）与两条 queued 操作员要求（正式 PDF、Overleaf MD、篇幅格式、100 篇全文 PDF 与系统整理）未闭环；context_governor repeated_service_fault streak 10。",
+      "next_codex_prompt": "Minimal only: read docs/0402/fulltext_pdf_gap_and_plan.md and state in 1–2 English sentences whether 100 full-text PDFs + ref library blocks exiting quality_review or requires rollback to execute. Cross-check docs/0402/kdd_section1_overleaf.md and docs/0402/kdd_template_pdf_build.md vs KDD_Section1_en.md and docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md (claim→evidence). Merge the two queued operator requirements into risks/todo; patch mapping/draft only if needed; output short English readiness note (fixed, remaining, review paths). Shrink work package; no broad search.",
+      "completion_summary": "执行器 return 0，synthesize/0402 初稿与辅助材料存在，但质量审查未结案、guard 与操作员队列未满足，不宜 COMPLETE 或 ADVANCE 至 finalize。",
       "issue_kind": "service_fault",
       "followup_kind": "retry"
     },
@@ -284,10 +286,16 @@
       "result_summary": "instruction queued for the next executor turn (action_20260402191040_23c62e47)",
       "created_at": "2026-04-02 19:10:40"
     },
-    "latest_handoff_summary": {},
+    "latest_handoff_summary": {
+      "handoff_id": "handoff_2fceddc34e4a",
+      "from_role_id": "implementer",
+      "to_role_id": "planner",
+      "status": "pending",
+      "summary": "当前仍处于 quality_review；handoff 与 queued 指令显示 ACM/KDD 模板 PDF、≥100 篇全文 PDF 归档与远程 Transfer_Recovery 等 guard 项未闭合，且需先产出审查结论（含是否回退 execute）"
+    },
     "risk_level": "normal",
     "autonomy_profile": "guarded",
-    "pending_codex_prompt": "Service instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\n按 flow：禁用 resume/thread，codex_mode=exec 冷启动。最小交付：在 flow 约定路径落盘单文件英文 KDD Section1.md，四级标题 Problem definition / Method evolution / Limitations of prior work / This paper's entry point；每节末括号内写证据锚点（相对路径→既有分类矩阵、阅读摘要、参考文献库）。文末：Overleaf 用 MD 说明、LaTeX→PDF 占位；100 篇编号+bib key 与建议本地 PDF 目录树（不下载）。Git：仅 add 该文件及必要索引、单 commit 回报 SHA；失败只回报原始错误与已尝试步骤。",
+    "pending_codex_prompt": "Service instability detected. Shrink the work package, summarize only the critical delta, avoid broad retries, and verify the smallest forward step first.\n\nMinimal only: read docs/0402/fulltext_pdf_gap_and_plan.md and state in 1–2 English sentences whether 100 full-text PDFs + ref library blocks exiting quality_review or requires rollback to execute. Cross-check docs/0402/kdd_section1_overleaf.md and docs/0402/kdd_template_pdf_build.md vs KDD_Section1_en.md and docs/0402/20260402_KDD风格_研究背景与现状_v2_证据映射.md (claim→evidence). Merge the two queued operator requirements into risks/todo; patch mapping/draft only if needed; output short English readiness note (fixed, remaining, review paths). Shrink work package; no broad search.",
     "queued_operator_updates": [
       {
         "update_id": "manual_resume_fix_20260402_kdd_section1_en",
@@ -309,7 +317,7 @@
       }
     ],
     "max_runtime_seconds": 43200,
-    "runtime_elapsed_seconds": 1821,
+    "runtime_elapsed_seconds": 9182,
     "context_governor": {
       "mode": "reset",
       "reasons": [
@@ -317,9 +325,9 @@
         "repeated_service_fault"
       ],
       "input_tokens": 0,
-      "service_fault_streak": 31,
+      "service_fault_streak": 11,
       "session_epoch": 1,
-      "updated_at": "2026-04-02 19:29:06"
+      "updated_at": "2026-04-02 21:31:47"
     },
     "latest_token_usage": {},
     "source_asset_key": "",
@@ -345,6 +353,17 @@
       ],
       "manager_notes": "Keep role guidance lightweight: creator helps capability gaps, doctor helps runtime repair."
     },
+    "doctor_policy": {
+      "enabled": true,
+      "activation_rules": [
+        "repeated_service_fault",
+        "same_resume_failure",
+        "session_binding_invalid"
+      ],
+      "repair_scope": "runtime_assets_first",
+      "framework_bug_action": "pause",
+      "max_rounds_per_episode": 1
+    },
     "bundle_manifest": {
       "bundle_root": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle",
       "manager_ref": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/manager.md",
@@ -365,23 +384,12 @@
       "derived": {
         "supervisor_compiled": "/home/ocean/Desktop/SuperButler/butler_main/butler_bot_code/assets/flows/instances/flow_20260402111642_01929624/bundle/derived/supervisor_knowledge.json"
       }
-    },
-    "doctor_policy": {
-      "enabled": true,
-      "activation_rules": [
-        "repeated_service_fault",
-        "same_resume_failure",
-        "session_binding_invalid"
-      ],
-      "repair_scope": "runtime_assets_first",
-      "framework_bug_action": "pause",
-      "max_rounds_per_episode": 1
     }
   },
   "active_turn_task": {
     "turn_kind": "review",
     "task_brief": "Judge the latest executor attempt and return a structured verdict.",
-    "attempt_no": 64,
+    "attempt_no": 85,
     "phase_attempt_no": 1,
     "success_criteria": [
       "Return a bounded output that the next runtime step can consume without reinterpretation."
@@ -397,7 +405,20 @@
       "Incorporate the pending operator/judge instruction if it still applies."
     ]
   },
-  "latest_mutation": {},
+  "latest_mutation": {
+    "mutation_id": "mutation_2fe8b40540bd",
+    "flow_id": "flow_20260402111642_01929624",
+    "phase": "execute",
+    "role_id": "doctor",
+    "created_at": "2026-04-02 20:25:37",
+    "mutation_kind": "spawn_ephemeral_role",
+    "summary": "repair repeated resume/no-rollout failure via doctor",
+    "payload": {
+      "kind": "spawn_ephemeral_role",
+      "target_role_id": "doctor",
+      "summary": "repair repeated resume/no-rollout failure via doctor"
+    }
+  },
   "context_governor": {
     "mode": "reset",
     "reasons": [
@@ -405,9 +426,9 @@
       "repeated_service_fault"
     ],
     "input_tokens": 0,
-    "service_fault_streak": 31,
+    "service_fault_streak": 11,
     "session_epoch": 1,
-    "updated_at": "2026-04-02 19:29:06"
+    "updated_at": "2026-04-02 21:31:47"
   },
-  "updated_at": "2026-04-02 19:29:09"
+  "updated_at": "2026-04-02 21:32:19"
 }
