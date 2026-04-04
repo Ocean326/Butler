@@ -186,6 +186,7 @@
   - TTY 下 `new` 固定进入 setup picker；`--plain` 表示走 plain 向导，不是跳过向导
   - `workspace` / single flow 负责 instance runtime；`/manage` 只负责 `builtin + template` shared assets；`/list` 与 `/manage` 同义；`/flows` 仅是迁移提示
   - 若改 `/manage`，优先检查 `build_manage_payload()`、`manage_flow()`、`tui/app.py` 的 transcript-first shell 与 `$asset` suggester，而不是回退到 `flows-list + flows-detail` 的卡片心智
+  - 若本轮还涉及根工作区遗留脏改动吸收，优先把旧 compat 路径上的改动移植到 `butler_main/products/butler_flow/`，不要把旧物理路径重新写回 canonical tree
   - `free` 设计链路固定是“setup -> /manage template:new -> template:<id> -> launch instance”，不要再把它写回 `/flows` 设计页
   - 若涉及角色运行时，先确认 `execution_mode` 与 `session_strategy`；当前口径是 `simple=shared`、`medium=role_bound`、`complex=per_activation(预留合同)`；再确认 `role_guidance` 是否仍只是 manager/supervisor 的轻量参考，而不是硬 team contract
   - 若涉及 supervisor 治理、长流失控、repo contract、operator control action 或 manager->supervisor handoff，先看 `control_profile`；当前口径是 `packet_size / evidence_level / gate_cadence / repo_binding_policy` 属于实例级治理合同，supervisor 调整后必须回写实例态，而不是只挂在 `latest_supervisor_decision`
@@ -360,6 +361,7 @@
 - 默认检查：
   - 当前入口是否仍指向最新日期
   - 历史文档是否被错误列为现役
+  - 研究/脑暴材料是否已收敛到 `docs/每日头脑风暴/`，而不是继续写回旧 `docs/每日/`
   - 根目录说明是否与实际根目录保留项一致
   - `runtime_os/`、`tools/` 是否被错误写成可直接清理对象
   - `AGENTS.md` 是否仍把 `./tools/vibe-close` 作为 vibecoding 默认收尾动作

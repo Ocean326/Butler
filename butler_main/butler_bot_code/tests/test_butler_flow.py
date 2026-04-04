@@ -145,6 +145,17 @@ class ButlerFlowTests(unittest.TestCase):
         )
         self.assertEqual(skill, "template_select_or_create")
 
+    def test_manage_chat_skill_prefers_pending_confirmation_scope(self) -> None:
+        skill = select_manage_chat_skill(
+            manage_target="template:desktop_delivery_v1",
+            asset_kind="template",
+            instruction="继续细化一下",
+            manager_session={"confirmation_scope": "flow"},
+            current_draft={"manage_target": "template:desktop_delivery_v1", "workflow_kind": "managed_flow"},
+            pending_action={"manage_target": "new", "instruction": "create flow from approved draft"},
+        )
+        self.assertEqual(skill, "flow_spec_finalize")
+
     def test_manage_chat_result_preserves_confirmation_fields(self) -> None:
         payload = normalize_manage_chat_result(
             {
@@ -161,7 +172,7 @@ class ButlerFlowTests(unittest.TestCase):
             manage_target="template:academic_paper_review_v1",
         )
         self.assertEqual(payload["action"], "manage_flow")
-        self.assertTrue(payload["action_ready"])
+        self.assertFalse(payload["action_ready"])
         self.assertEqual(payload["manager_stage"], "template_confirm")
         self.assertEqual(payload["active_skill"], "template_select_or_create")
         self.assertEqual(payload["confirmation_scope"], "template")
@@ -220,6 +231,79 @@ class ButlerFlowTests(unittest.TestCase):
         self.assertEqual(payload["response"], "我建议先讨论模板，再决定是否创建 flow。")
         self.assertEqual(payload["raw_reply"], "我建议先讨论模板，再决定是否创建 flow。")
         self.assertEqual(payload["error_text"], "manager chat returned non-JSON output")
+
+    def test_manage_chat_result_filters_discuss_skill_draft_writes(self) -> None:
+        current = {
+            "manage_target": "template:academic_paper_review_v1",
+            "asset_kind": "template",
+            "workflow_kind": "managed_flow",
+            "goal": "preserve current goal",
+            "guard_condition": "preserve current guard",
+            "phase_plan": [{"phase_id": "plan", "title": "Plan", "objective": "plan", "done_when": "done", "retry_phase_id": "plan", "fallback_phase_id": "plan", "next_phase_id": ""}],
+        }
+        payload = normalize_manage_chat_result(
+            {
+                "response": "先讨论一下这个模板是否还适配当前目标。",
+                "active_skill": "discuss_and_scope",
+                "draft": {
+                    "goal": "mutated goal",
+                    "guard_condition": "mutated guard",
+                    "phase_plan": [{"phase_id": "imp", "title": "Implement", "objective": "imp", "done_when": "done", "retry_phase_id": "imp", "fallback_phase_id": "plan", "next_phase_id": ""}],
+                    "summary": "keep only summary",
+                },
+            },
+            manage_target="template:academic_paper_review_v1",
+            current_draft=current,
+        )
+        self.assertEqual(payload["draft"]["goal"], "preserve current goal")
+        self.assertEqual(payload["draft"]["guard_condition"], "preserve current guard")
+        self.assertEqual(payload["draft"]["phase_plan"][0]["phase_id"], "plan")
+        self.assertEqual(payload["draft"]["summary"], "keep only summary")
+
+    def test_manage_chat_result_rejects_discuss_skill_mutation(self) -> None:
+        payload = normalize_manage_chat_result(
+            {
+                "response": "先讨论，不直接执行。",
+                "active_skill": "discuss_and_scope",
+                "action": "manage_flow",
+                "action_ready": True,
+                "action_manage_target": "template:new",
+                "action_instruction": "create a template immediately",
+            },
+            manage_target="template:new",
+        )
+        self.assertEqual(payload["action"], "none")
+        self.assertFalse(payload["action_ready"])
+
+    def test_manage_chat_prompt_uses_lightweight_asset_catalog(self) -> None:
+        prompt = build_manage_chat_prompt(
+            workspace_root="/tmp/demo",
+            manage_target="template:academic_paper_review_v1",
+            asset_kind="template",
+            instruction="围绕这个模板继续讨论",
+            selected_skill="template_update",
+            manager_role_text="ROLE_PROMPT",
+            skill_prompt_text="SKILL_PROMPT",
+            asset_manager_notes="",
+            asset_rows=[
+                {
+                    "asset_key": "template:academic_paper_review_v1",
+                    "asset_kind": "template",
+                    "label": "Academic Review",
+                    "description": "A" * 400,
+                    "goal": "G" * 500,
+                    "guard_condition": "C" * 500,
+                    "workflow_kind": "managed_flow",
+                    "bundle_manifest": {"manager_ref": "/abs/path/manager.md"},
+                    "definition": {"phase_plan": [{"phase_id": "plan"}], "bundle_manifest": {"manager_ref": "/abs/path/manager.md"}},
+                    "asset_path": "/abs/path/template.json",
+                }
+            ],
+        )
+        self.assertIn('"asset_catalog"', prompt)
+        self.assertNotIn('"definition"', prompt)
+        self.assertNotIn('"/abs/path/template.json"', prompt)
+        self.assertLess(len(prompt), 12000)
 
     def test_manage_chat_resume_failure_restarts_with_fresh_codex_session(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

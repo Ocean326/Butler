@@ -208,6 +208,11 @@ instance materialization 新增以下来源字段：
    - 若 manager 返回的不是合法 JSON，系统会把原始 reply 透传给 operator，并把 `parse_status / raw_reply / error_text` 记入 manage turn，而不是回退成 `Manager chat completed.`
    - parse failed 时不清空既有 `pending_action`，避免讨论阶段把待确认草稿意外冲掉
    - 若已有 manager session 的 Codex `resume` 命中 `thread/resume failed`、`no rollout found`、`timeout waiting for child process to exit`、`Reconnecting...` 等典型故障，manager chat 会在同 provider 内自动新开一次 fresh Codex session 重试当前轮；首轮 fresh exec 失败不自动重试，也不切到 Cursor
+5. manager chat 的 prompt/runtime 继续从“规则堆砌”收口到“skill-style 机制”：
+   - `manager role` 只保留精选原则；具体职责改由代码持有的 `manager skill registry` 声明
+   - `manager_prompt_assets/references/` 承担 template fields / flow fields / supervisor design / role guidance / source bindings / builtin mutation 的按需参考，不再每轮全量注入
+   - prompt payload 改成轻量 `current_target_summary + asset_catalog + session/draft/pending_action summary`，不再把完整 asset definition / bundle manifest / catalog row 整包塞入上下文
+   - `draft` 合并前会按当前 skill 的字段 ownership 过滤；`action` 在进入 app 层前也会经过 skill contract validator，避免 discuss skill 越权准备 mutation
 
 同时补充 shared asset / instance static asset 字段：
 

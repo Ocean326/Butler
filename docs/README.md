@@ -27,6 +27,8 @@
 5. [真源矩阵](./project-map/03_truth_matrix.md)
 6. [0404 当日总纲](./daily-upgrade/0404/00_当日总纲.md)
 - 补充：`0404/00` 已回写本轮仓库级重构完成态；当前应按 canonical tree 理解三产品与 repo 导航
+- 补充：[0404 Butler Flow manager skill-contract 吸收与单 `main` worktree 收口](./daily-upgrade/0404/01_butler-flow_manager-skill-contract吸收与单main-worktree收口.md)
+- 补充：0403 脑暴/资料稿当前统一落在 `docs/每日头脑风暴/0403/`，不再继续写回旧 `docs/每日/0403/`
 7. [0403 当日总纲](./daily-upgrade/0403/00_当日总纲.md)
 - 补充：[0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](./daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
 - 补充：[0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](./daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)

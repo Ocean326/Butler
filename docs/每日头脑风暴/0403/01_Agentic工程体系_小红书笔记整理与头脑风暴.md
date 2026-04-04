@@ -213,9 +213,9 @@
 
 ## 7. 本地附件索引
 
-- 抓取 JSON：`./docs/每日/0403/_capture_xhs_46uLJcLPJtg/xiaohongshu_69ce0b290000000023025ddd.json`  
-- 抓取 MD：`./docs/每日/0403/_capture_xhs_46uLJcLPJtg/xiaohongshu_69ce0b290000000023025ddd.md`  
-- 配图：`./docs/每日/0403/_capture_xhs_46uLJcLPJtg/images/`（01–17）
+- 抓取 JSON：`./docs/每日头脑风暴/0403/_capture_xhs_46uLJcLPJtg/xiaohongshu_69ce0b290000000023025ddd.json`  
+- 抓取 MD：`./docs/每日头脑风暴/0403/_capture_xhs_46uLJcLPJtg/xiaohongshu_69ce0b290000000023025ddd.md`  
+- 配图：`./docs/每日头脑风暴/0403/_capture_xhs_46uLJcLPJtg/images/`（01–17）
 
 ---
 

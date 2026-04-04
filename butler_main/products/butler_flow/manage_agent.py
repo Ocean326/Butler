@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
@@ -76,6 +77,7 @@ MANAGE_CHAT_SKILL_IDS = (
 _MANAGER_PROMPT_ROOT = Path(__file__).resolve().with_name("manager_prompt_assets")
 _MANAGER_ROLE_PATH = _MANAGER_PROMPT_ROOT / "role.md"
 _MANAGER_SKILL_ROOT = _MANAGER_PROMPT_ROOT / "skills"
+_MANAGER_REFERENCE_ROOT = _MANAGER_PROMPT_ROOT / "references"
 
 _MANAGE_CREATE_HINTS = (
     "create",
@@ -180,6 +182,153 @@ _MANAGE_ONE_OFF_HINTS = (
 )
 
 
+@dataclass(frozen=True)
+class ManagerSkillSpec:
+    skill_id: str
+    purpose: str
+    allowed_scopes: tuple[str, ...]
+    allowed_targets: tuple[str, ...]
+    draft_fields_owned: tuple[str, ...]
+    can_prepare_action: bool
+    can_mark_ready: bool
+    reference_keys: tuple[str, ...]
+    fallback_stage: str
+    confirmation_scope: str
+
+
+_MANAGER_SKILL_REGISTRY: dict[str, ManagerSkillSpec] = {
+    "discuss_and_scope": ManagerSkillSpec(
+        skill_id="discuss_and_scope",
+        purpose="Answer, clarify scope, and decide whether the next step belongs to template or flow.",
+        allowed_scopes=("discuss",),
+        allowed_targets=("workspace", "template", "builtin", "instance"),
+        draft_fields_owned=("summary",),
+        can_prepare_action=False,
+        can_mark_ready=False,
+        reference_keys=(),
+        fallback_stage="discuss",
+        confirmation_scope="none",
+    ),
+    "template_select_or_create": ManagerSkillSpec(
+        skill_id="template_select_or_create",
+        purpose="Choose between reusing, lightly modifying, or creating a reusable template.",
+        allowed_scopes=("template",),
+        allowed_targets=("workspace", "template", "builtin"),
+        draft_fields_owned=(
+            "manage_target",
+            "asset_kind",
+            "builtin_mode",
+            "label",
+            "description",
+            "workflow_kind",
+            "goal",
+            "guard_condition",
+            "phase_plan",
+            "review_checklist",
+            "role_guidance",
+            "doctor_policy",
+            "control_profile",
+            "supervisor_profile",
+            "source_bindings",
+            "summary",
+        ),
+        can_prepare_action=True,
+        can_mark_ready=False,
+        reference_keys=("template-static-fields", "supervisor-design", "role-guidance", "source-bindings"),
+        fallback_stage="template_prepare",
+        confirmation_scope="template",
+    ),
+    "template_update": ManagerSkillSpec(
+        skill_id="template_update",
+        purpose="Update an existing template or decide builtin clone/edit behavior before any flow mutation.",
+        allowed_scopes=("template",),
+        allowed_targets=("template", "builtin"),
+        draft_fields_owned=(
+            "manage_target",
+            "asset_kind",
+            "builtin_mode",
+            "label",
+            "description",
+            "workflow_kind",
+            "goal",
+            "guard_condition",
+            "phase_plan",
+            "review_checklist",
+            "role_guidance",
+            "doctor_policy",
+            "control_profile",
+            "supervisor_profile",
+            "source_bindings",
+            "summary",
+        ),
+        can_prepare_action=True,
+        can_mark_ready=False,
+        reference_keys=("template-static-fields", "supervisor-design", "builtin-mutation", "role-guidance", "source-bindings"),
+        fallback_stage="template_prepare",
+        confirmation_scope="template",
+    ),
+    "flow_spec_finalize": ManagerSkillSpec(
+        skill_id="flow_spec_finalize",
+        purpose="Finalize the current run's flow-specific spec after the template path is settled.",
+        allowed_scopes=("flow",),
+        allowed_targets=("workspace", "template", "instance"),
+        draft_fields_owned=(
+            "manage_target",
+            "asset_kind",
+            "workflow_kind",
+            "goal",
+            "guard_condition",
+            "phase_plan",
+            "review_checklist",
+            "control_profile",
+            "supervisor_profile",
+            "run_brief",
+            "source_bindings",
+            "summary",
+        ),
+        can_prepare_action=False,
+        can_mark_ready=False,
+        reference_keys=("flow-static-fields", "supervisor-design", "source-bindings"),
+        fallback_stage="flow_prepare",
+        confirmation_scope="flow",
+    ),
+    "flow_create_or_update": ManagerSkillSpec(
+        skill_id="flow_create_or_update",
+        purpose="Turn a confirmed flow draft into a concrete create/update proposal.",
+        allowed_scopes=("flow",),
+        allowed_targets=("workspace", "template", "instance"),
+        draft_fields_owned=(
+            "manage_target",
+            "asset_kind",
+            "workflow_kind",
+            "goal",
+            "guard_condition",
+            "phase_plan",
+            "review_checklist",
+            "control_profile",
+            "supervisor_profile",
+            "run_brief",
+            "source_bindings",
+            "summary",
+        ),
+        can_prepare_action=True,
+        can_mark_ready=False,
+        reference_keys=("flow-static-fields", "supervisor-design", "source-bindings"),
+        fallback_stage="flow_confirm",
+        confirmation_scope="flow",
+    ),
+}
+
+_MANAGER_REFERENCE_FILES = {
+    "template-static-fields": _MANAGER_REFERENCE_ROOT / "template-static-fields.md",
+    "flow-static-fields": _MANAGER_REFERENCE_ROOT / "flow-static-fields.md",
+    "supervisor-design": _MANAGER_REFERENCE_ROOT / "supervisor-design.md",
+    "role-guidance": _MANAGER_REFERENCE_ROOT / "role-guidance.md",
+    "source-bindings": _MANAGER_REFERENCE_ROOT / "source-bindings.md",
+    "builtin-mutation": _MANAGER_REFERENCE_ROOT / "builtin-mutation.md",
+}
+
+
 def normalize_manage_stage(stage: str) -> str:
     token = str(stage or "").strip().lower()
     if token in MANAGE_STAGES:
@@ -232,6 +381,180 @@ def _asset_kind_from_manage_target(manage_target: str, *, fallback: str = "insta
     return "instance"
 
 
+def _manager_skill_spec(skill_id: str) -> ManagerSkillSpec:
+    token = str(skill_id or "").strip().lower()
+    return _MANAGER_SKILL_REGISTRY.get(token, _MANAGER_SKILL_REGISTRY["discuss_and_scope"])
+
+
+def _truncate_text(value: Any, *, limit: int = 160) -> str:
+    text = " ".join(str(value or "").strip().split())
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 1)].rstrip() + "…"
+
+
+def _compact_text_list(values: Any, *, limit: int = 4, item_limit: int = 72) -> list[str]:
+    rows = _dedupe_text_list(values)
+    return [_truncate_text(item, limit=item_limit) for item in rows[:limit]]
+
+
+def _manage_target_scope(manage_target: str, *, asset_kind: str = "") -> str:
+    target_kind, _ = _parse_manage_target_token(manage_target)
+    if target_kind in {"template", "builtin", "instance"}:
+        return target_kind
+    normalized_asset_kind = str(asset_kind or "").strip().lower()
+    if normalized_asset_kind in {"template", "builtin", "instance"}:
+        return normalized_asset_kind
+    return "workspace"
+
+
+def _asset_summary_from_payload(payload: dict[str, Any] | None, *, fallback_target: str = "", asset_kind: str = "") -> dict[str, Any]:
+    current = dict(payload or {})
+    summary: dict[str, Any] = {}
+    manage_target = str(
+        current.get("manage_target")
+        or current.get("asset_key")
+        or current.get("source_asset_key")
+        or fallback_target
+        or ""
+    ).strip()
+    if manage_target:
+        summary["manage_target"] = manage_target
+    resolved_asset_kind = _asset_kind_from_manage_target(
+        manage_target,
+        fallback=str(current.get("asset_kind") or asset_kind or "").strip(),
+    )
+    if resolved_asset_kind:
+        summary["asset_kind"] = resolved_asset_kind
+    for key in ("label", "workflow_kind", "updated_at", "created_at", "role_pack_id", "execution_mode", "session_strategy"):
+        value = str(current.get(key) or "").strip()
+        if value:
+            summary[key] = value
+    for key in ("description", "goal", "guard_condition", "run_brief"):
+        value = _truncate_text(current.get(key), limit=180 if key == "description" else 220)
+        if value:
+            summary[key] = value
+    control_profile = dict(current.get("control_profile") or {})
+    if control_profile:
+        summary["control_profile"] = {
+            "task_archetype": str(control_profile.get("task_archetype") or "").strip(),
+            "packet_size": str(control_profile.get("packet_size") or "").strip(),
+            "evidence_level": str(control_profile.get("evidence_level") or "").strip(),
+            "gate_cadence": str(control_profile.get("gate_cadence") or "").strip(),
+            "repo_binding_policy": str(control_profile.get("repo_binding_policy") or "").strip(),
+            "repo_contract_paths": [
+                str(item or "").strip()
+                for item in list(control_profile.get("repo_contract_paths") or [])[:3]
+                if str(item or "").strip()
+            ],
+        }
+    role_guidance = dict(current.get("role_guidance") or {})
+    if role_guidance:
+        summary["role_guidance"] = {
+            "suggested_roles": _compact_text_list(role_guidance.get("suggested_roles") or [], limit=4, item_limit=48),
+            "suggested_specialists": _compact_text_list(role_guidance.get("suggested_specialists") or [], limit=4, item_limit=48),
+        }
+    source_bindings = list(current.get("source_bindings") or [])
+    if source_bindings:
+        summary["source_bindings"] = [
+            {
+                "kind": str(item.get("kind") or "").strip(),
+                "path": _truncate_text(item.get("path"), limit=96),
+                "label": _truncate_text(item.get("label"), limit=64),
+            }
+            for item in source_bindings[:3]
+            if isinstance(item, dict)
+        ]
+    asset_state = dict(current.get("asset_state") or {})
+    if asset_state:
+        summary["asset_state"] = {
+            key: str(asset_state.get(key) or "").strip()
+            for key in ("status", "stage", "mode")
+            if str(asset_state.get(key) or "").strip()
+        }
+    lineage = dict(current.get("lineage") or {})
+    if lineage:
+        summary["lineage"] = {
+            key: _truncate_text(value, limit=96)
+            for key, value in lineage.items()
+            if _truncate_text(value, limit=96)
+        }
+    return summary
+
+
+def _compile_asset_catalog_summary(
+    asset_rows: list[dict[str, Any]] | None,
+    *,
+    manage_target: str,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    rows = list(asset_rows or [])
+    prioritized: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows:
+        asset_key = str(dict(row or {}).get("asset_key") or "").strip()
+        if asset_key == str(manage_target or "").strip():
+            prioritized.append(dict(row or {}))
+            seen.add(asset_key)
+            break
+    for row in rows:
+        asset_key = str(dict(row or {}).get("asset_key") or "").strip()
+        if asset_key in seen:
+            continue
+        prioritized.append(dict(row or {}))
+        seen.add(asset_key)
+        if len(prioritized) >= limit:
+            break
+    return [
+        _asset_summary_from_payload(row, fallback_target=str(row.get("asset_key") or "").strip())
+        for row in prioritized[:limit]
+    ]
+
+
+def _compile_manager_session_summary(manager_session: dict[str, Any] | None) -> dict[str, Any]:
+    session = dict(manager_session or {})
+    summary: dict[str, Any] = {}
+    for key in ("manager_session_id", "active_manage_target", "manager_stage", "confirmation_scope", "updated_at"):
+        value = str(session.get(key) or "").strip()
+        if value:
+            summary[key] = value
+    return summary
+
+
+def _compile_pending_action_summary(pending_action: dict[str, Any] | None) -> dict[str, Any]:
+    current = dict(pending_action or {})
+    if not current:
+        return {}
+    summary = {
+        "manage_target": str(current.get("manage_target") or "").strip(),
+        "stage": str(current.get("stage") or "").strip(),
+        "builtin_mode": str(current.get("builtin_mode") or "").strip(),
+        "preview": _truncate_text(current.get("preview") or current.get("draft_summary") or "", limit=220),
+        "instruction": _truncate_text(current.get("instruction") or "", limit=240),
+    }
+    draft = dict(current.get("draft") or {})
+    if draft:
+        summary["draft_snapshot"] = _asset_summary_from_payload(
+            draft,
+            fallback_target=str(draft.get("manage_target") or summary["manage_target"]).strip(),
+        )
+    return {key: value for key, value in summary.items() if value}
+
+
+def _compile_manager_references(skill_id: str) -> list[dict[str, str]]:
+    spec = _manager_skill_spec(skill_id)
+    references: list[dict[str, str]] = []
+    for key in spec.reference_keys:
+        path = _MANAGER_REFERENCE_FILES.get(key)
+        if not path:
+            continue
+        text = _read_prompt_asset(path)
+        if not text:
+            continue
+        references.append({"key": key, "text": text})
+    return references
+
+
 def _manage_chat_runtime_request(
     *,
     flow_state: dict[str, Any] | None,
@@ -274,6 +597,7 @@ def _payload_from_manage_chat_receipt(
     *,
     manage_target: str,
     current_draft: dict[str, Any] | None,
+    selected_skill: str = "",
     fallback_manager_session_id: str = "",
 ) -> tuple[dict[str, Any], str, str]:
     raw_reply = _receipt_text(receipt)
@@ -284,6 +608,7 @@ def _payload_from_manage_chat_receipt(
         parsed,
         manage_target=manage_target,
         current_draft=current_draft,
+        selected_skill=selected_skill,
         parse_status=parse_status,
         raw_reply=raw_reply,
         error_text=error_text,
@@ -297,9 +622,15 @@ def select_manage_chat_skill(
     manage_target: str,
     asset_kind: str,
     instruction: str,
+    manager_session: dict[str, Any] | None = None,
+    current_draft: dict[str, Any] | None = None,
+    pending_action: dict[str, Any] | None = None,
 ) -> str:
     target_kind, target_id = _parse_manage_target_token(manage_target)
     normalized_asset_kind = str(asset_kind or "").strip().lower()
+    session = dict(manager_session or {})
+    draft = dict(current_draft or {})
+    pending = dict(pending_action or {})
     text = str(instruction or "").strip()
     has_confirm = _contains_hint(text, _MANAGE_CONFIRM_HINTS)
     has_template = _contains_hint(text, _MANAGE_TEMPLATE_HINTS)
@@ -308,6 +639,19 @@ def select_manage_chat_skill(
     has_update = _contains_hint(text, _MANAGE_UPDATE_HINTS)
     has_explain = _contains_hint(text, _MANAGE_EXPLAIN_HINTS)
     one_off = _contains_hint(text, _MANAGE_ONE_OFF_HINTS)
+    confirmation_scope = str(session.get("confirmation_scope") or "").strip().lower()
+    draft_target_kind, _ = _parse_manage_target_token(str(draft.get("manage_target") or "").strip())
+    draft_workflow_kind = str(draft.get("workflow_kind") or "").strip().lower()
+
+    if pending:
+        if confirmation_scope == "template":
+            return "template_update" if target_kind in {"template", "builtin"} or draft_target_kind in {"template", "builtin"} else "template_select_or_create"
+        if confirmation_scope == "flow":
+            return "flow_create_or_update" if has_confirm else "flow_spec_finalize"
+    if confirmation_scope == "template":
+        return "template_update" if target_kind in {"template", "builtin"} or draft_target_kind in {"template", "builtin"} else "template_select_or_create"
+    if confirmation_scope == "flow":
+        return "flow_spec_finalize"
 
     if target_kind in {"builtin", "template"}:
         if has_flow and has_confirm:
@@ -325,6 +669,10 @@ def select_manage_chat_skill(
         return "flow_create_or_update" if has_confirm else "flow_spec_finalize"
     if one_off and has_flow:
         return "flow_create_or_update" if has_confirm else "flow_spec_finalize"
+    if draft_target_kind in {"template", "builtin"} and draft_workflow_kind:
+        if has_flow:
+            return "flow_create_or_update" if has_confirm else "flow_spec_finalize"
+        return "template_update"
     if has_flow:
         return "flow_create_or_update" if has_confirm else "template_select_or_create"
     if has_template or has_create or has_update or normalized_asset_kind in {"template", "builtin"}:
@@ -484,6 +832,52 @@ def normalize_manage_chat_draft_payload(
         ),
         "summary": _text("summary"),
     }
+
+
+def _filter_draft_by_skill_ownership(
+    raw_draft: Any,
+    *,
+    current_draft: dict[str, Any] | None,
+    active_skill: str,
+) -> dict[str, Any]:
+    baseline = normalize_manage_chat_draft_payload(current_draft, current=None)
+    normalized = normalize_manage_chat_draft_payload(raw_draft, current=baseline)
+    if not isinstance(raw_draft, dict):
+        return normalized
+    allowed = set(_manager_skill_spec(active_skill).draft_fields_owned)
+    for key in list(normalized.keys()):
+        if key not in allowed:
+            normalized[key] = baseline.get(key)
+    return normalized
+
+
+def _validate_manage_chat_action(
+    *,
+    action: str,
+    action_ready: bool,
+    action_manage_target: str,
+    action_instruction: str,
+    action_builtin_mode: str,
+    active_skill: str,
+) -> tuple[str, bool, str, str, str]:
+    spec = _manager_skill_spec(active_skill)
+    normalized_action = str(action or "none").strip().lower()
+    normalized_ready = bool(action_ready)
+    normalized_target = str(action_manage_target or "").strip()
+    normalized_instruction = str(action_instruction or "").strip()
+    normalized_builtin_mode = str(action_builtin_mode or "").strip().lower()
+    if normalized_action != "manage_flow" or not spec.can_prepare_action:
+        return "none", False, "", "", ""
+    target_scope = _manage_target_scope(normalized_target)
+    if target_scope not in spec.allowed_targets:
+        return "none", False, "", "", ""
+    if target_scope == "builtin" and normalized_builtin_mode not in {"clone", "edit"}:
+        normalized_ready = False
+    if not normalized_target or not normalized_instruction:
+        normalized_ready = False
+    if normalized_ready and not spec.can_mark_ready:
+        normalized_ready = False
+    return normalized_action, normalized_ready, normalized_target, normalized_instruction, normalized_builtin_mode
 
 
 def build_manage_prompt(
@@ -683,9 +1077,12 @@ def build_manage_chat_prompt(
         manage_target=manage_target,
         asset_kind=asset_kind,
         instruction=instruction,
+        manager_session=manager_session,
+        current_draft=current_draft,
+        pending_action=pending_action,
     )
-    if skill_id not in MANAGE_CHAT_SKILL_IDS:
-        skill_id = "discuss_and_scope"
+    spec = _manager_skill_spec(skill_id)
+    skill_id = spec.skill_id
     role_text = str(manager_role_text).strip() if manager_role_text is not None else _read_prompt_asset(_MANAGER_ROLE_PATH)
     skill_text = (
         str(skill_prompt_text).strip()
@@ -702,30 +1099,47 @@ def build_manage_chat_prompt(
             asset_definition=asset_definition,
         )
     )
+    current_target_summary = _asset_summary_from_payload(
+        asset_definition or flow_state or {},
+        fallback_target=manage_target,
+        asset_kind=asset_kind,
+    )
+    if not current_target_summary and manage_target:
+        current_target_summary = {
+            "manage_target": str(manage_target or "").strip(),
+            "asset_kind": _asset_kind_from_manage_target(manage_target, fallback=asset_kind),
+        }
     payload = {
         "manage_target": str(manage_target or "").strip(),
         "asset_kind": str(asset_kind or "").strip(),
         "selected_skill": skill_id,
+        "skill_contract": {
+            "purpose": spec.purpose,
+            "allowed_scopes": list(spec.allowed_scopes),
+            "allowed_targets": list(spec.allowed_targets),
+            "draft_fields_owned": list(spec.draft_fields_owned),
+            "can_prepare_action": spec.can_prepare_action,
+            "can_mark_ready": spec.can_mark_ready,
+            "fallback_stage": spec.fallback_stage,
+            "confirmation_scope": spec.confirmation_scope,
+        },
         "default_creation_path": "template_first_then_flow",
-        "current_flow_state": dict(flow_state or {}),
-        "asset_definition": dict(asset_definition or {}),
-        "asset_index": [dict(row or {}) for row in list(asset_rows or [])[:12]],
-        "manager_session": dict(manager_session or {}),
-        "current_draft": dict(current_draft or {}),
-        "pending_action": dict(pending_action or {}),
+        "current_target_summary": current_target_summary,
+        "asset_catalog": _compile_asset_catalog_summary(asset_rows, manage_target=manage_target, limit=5),
+        "manager_session": _compile_manager_session_summary(manager_session),
+        "current_draft": normalize_manage_chat_draft_payload(current_draft, current=None),
+        "pending_action": _compile_pending_action_summary(pending_action),
         "asset_manager_notes_present": bool(manager_notes_text),
         "user_instruction": str(instruction or "").strip(),
         "protocol": [
             "answer the operator's question directly",
-            "if a specific asset is targeted, ground the answer in that asset's phases, static fields, lineage, bundle, and handoff",
-            "default to template-first: discuss -> template shaping -> template confirm -> flow shaping -> flow confirm -> execute",
-            "before creating a flow, align the template, goal, and supervisor prompt direction",
-            "keep a structured draft of the current template/flow plan",
-            "if there is an existing pending action, either refine that draft or confirm it; do not silently replace it",
-            "only set action_ready=true when the operator has explicitly confirmed the current management action in this session",
-            "treat role guidance and doctor policy as lightweight defaults, not a rigid team contract",
+            "prefer template-first when the work has reuse value",
+            "keep the current draft coherent and scoped to the active skill",
+            "prepare actions only when the current skill actually owns that mutation",
+            "do not treat discussion as execution authorization",
         ],
     }
+    references = _compile_manager_references(skill_id)
     return (
         "You are the Butler Flow manager chat.\n\n"
         "This is Manage Center conversational mode.\n"
@@ -778,24 +1192,21 @@ def build_manage_chat_prompt(
             if manager_notes_text
             else ""
         )
+        + (
+            "On-demand references:\n"
+            + "".join(f"[{item['key']}]\n{item['text']}\n\n" for item in references)
+            if references
+            else ""
+        )
         + "Operational rules:\n"
-        "- 这里是 Manage Center 的 chat mode，默认先讨论、再整理管理动作。\n"
-        "- 默认新需求都先走 template-first；除非用户明确说这是 one-off，不需要沉淀 template。\n"
-        "- 在创建 flow 之前，先处理 template 选择/修改，并把 goal / guard / supervisor 方向理顺。\n"
-        "- `draft` 是当前真正在讨论的结构化草稿，尽量始终保持更新。\n"
-        "- `control_profile` 用来表达 supervisor 的控制哲学：工作包大小、证据强度、gate 节奏，以及 repo 合同是否显式绑定。\n"
-        "- `supervisor_profile` 只保留精选原则：项目风格、质量门槛、风险偏置、review 关注点与 done policy。\n"
-        "- 默认不要把仓库级 `AGENTS.md` 当作环境里天然生效的强约束；只有真的需要时，才把它放进 `control_profile.repo_contract_paths` 作为显式 repo contract。\n"
-        "- `source_bindings` 只保留对当前 template/flow 真有帮助的上下文来源，不要堆满。\n"
-        "- 用 manager_stage 明确表示你现在处在哪一步。\n"
-        "- 用 confirmation_scope 明确告诉用户你现在要确认的是 template 还是 flow。\n"
-        "- action=manage_flow 只表示“当前这个具体 mutation 已经准备好执行”。\n"
-        "- action_ready=true 只在用户已经明确确认当前 mutation 后才能出现。\n"
-        "- 首次给出 draft 时，正常也应该保持 action_ready=false；先让用户看草稿摘要和待确认动作。\n"
-        "- 处理 template 时，action_manage_target 应是 template:new、template:<id>，或带明确 clone/edit 的 builtin:<id>。\n"
-        "- 处理 flow 时，action_manage_target 通常应是 new 或具体实例 key。\n"
-        "- 如果用户是在问解释、审阅、比较、建议，先回答，不要跳过确认直接执行。\n"
-        "- 回复要自然、清楚、面向用户，不要像机器状态机。\n\n"
+        "- 这里是 Manage Center chat mode，先讨论、再整理管理动作。\n"
+        "- 默认优先 template-first；one-off 只在用户明确要求或复用价值很低时才走。\n"
+        "- 当前 skill 的职责合同由 `skill_contract` 给出；不要越权改写 draft。\n"
+        "- `draft` 是当前讨论中的结构化草稿，只维护当前 skill 真正拥有的字段。\n"
+        "- `action=manage_flow` 只表示形成了待确认 mutation 草案，不等于已经获准执行。\n"
+        "- 只有在 operator 明确确认后，代码层才会真正允许 ready/commit。\n"
+        "- 如果用户在解释、审阅、比较、提建议，先回答，不要跳过确认直接执行。\n"
+        "- 回复自然、清楚、面向用户，不要像机器状态机。\n\n"
         f"Conversation payload:\n{_compact_json(payload)}\n"
     )
 
@@ -1091,6 +1502,7 @@ def normalize_manage_chat_result(
     *,
     manage_target: str = "",
     current_draft: dict[str, Any] | None = None,
+    selected_skill: str = "",
     parse_status: str = "ok",
     raw_reply: str = "",
     error_text: str = "",
@@ -1109,27 +1521,46 @@ def normalize_manage_chat_result(
     manager_stage = str(result.get("manager_stage") or "discuss").strip().lower()
     if manager_stage not in MANAGE_CHAT_STAGES:
         manager_stage = "discuss"
-    active_skill = str(result.get("active_skill") or "").strip().lower()
-    if active_skill not in MANAGE_CHAT_SKILL_IDS:
-        active_skill = ""
+    active_skill = str(result.get("active_skill") or selected_skill or "").strip().lower()
+    active_skill = _manager_skill_spec(active_skill).skill_id
     confirmation_scope = str(result.get("confirmation_scope") or "none").strip().lower()
     if confirmation_scope not in MANAGE_CHAT_CONFIRMATION_SCOPES:
-        confirmation_scope = "none"
+        confirmation_scope = _manager_skill_spec(active_skill).confirmation_scope
     confirmation_prompt = str(result.get("confirmation_prompt") or "").strip()
     action_manage_target = str(result.get("action_manage_target") or result.get("manage_target") or manage_target or "").strip()
     action_instruction = str(result.get("action_instruction") or "").strip()
     action_stage = str(result.get("action_stage") or "").strip().lower()
     action_builtin_mode = str(result.get("action_builtin_mode") or "").strip().lower()
     action_ready = _coerce_bool(result.get("action_ready"), default=False)
-    if action == "manage_flow" and (not action_manage_target or not action_instruction):
-        action_ready = False
-    draft = normalize_manage_chat_draft_payload(result.get("draft"), current=current_draft)
+    draft = _filter_draft_by_skill_ownership(
+        result.get("draft"),
+        current_draft=current_draft,
+        active_skill=active_skill,
+    )
     if not str(draft.get("manage_target") or "").strip():
         draft["manage_target"] = action_manage_target or str(result.get("manage_target") or manage_target or "").strip()
     draft["asset_kind"] = _asset_kind_from_manage_target(
         str(draft.get("manage_target") or "").strip(),
         fallback=str(draft.get("asset_kind") or "").strip(),
     )
+    action, action_ready, action_manage_target, action_instruction, action_builtin_mode = _validate_manage_chat_action(
+        action=action,
+        action_ready=action_ready,
+        action_manage_target=action_manage_target,
+        action_instruction=action_instruction,
+        action_builtin_mode=action_builtin_mode,
+        active_skill=active_skill,
+    )
+    if manager_stage not in MANAGE_CHAT_STAGES:
+        manager_stage = _manager_skill_spec(active_skill).fallback_stage
+    if manager_stage == "discuss" and active_skill != "discuss_and_scope":
+        manager_stage = _manager_skill_spec(active_skill).fallback_stage
+    if not confirmation_prompt:
+        default_scope = _manager_skill_spec(active_skill).confirmation_scope
+        if default_scope == "template":
+            confirmation_prompt = "如果这版 template 方向正确，我就整理成待确认的 template 变更。"
+        elif default_scope == "flow":
+            confirmation_prompt = "如果这版 flow 规格正确，我就整理成待确认的 flow 变更。"
     return {
         "summary": str(result.get("summary") or response).strip(),
         "response": response,
@@ -1226,6 +1657,14 @@ def run_manage_chat_agent(
 ) -> dict[str, Any]:
     if not cli_provider_available("codex", cfg):
         raise RuntimeError("Codex CLI is unavailable for Butler Flow manage chat")
+    selected_skill = select_manage_chat_skill(
+        manage_target=manage_target,
+        asset_kind=asset_kind,
+        instruction=instruction,
+        manager_session=manager_session,
+        current_draft=current_draft,
+        pending_action=pending_action,
+    )
     prompt = build_manage_chat_prompt(
         workspace_root=workspace_root,
         manage_target=manage_target,
@@ -1237,6 +1676,7 @@ def run_manage_chat_agent(
         manager_session=manager_session,
         current_draft=current_draft,
         pending_action=pending_action,
+        selected_skill=selected_skill,
     )
     runtime_request = _manage_chat_runtime_request(
         flow_state=flow_state,
@@ -1255,6 +1695,7 @@ def run_manage_chat_agent(
         receipt,
         manage_target=manage_target,
         current_draft=current_draft,
+        selected_skill=selected_skill,
         fallback_manager_session_id=manager_session_id,
     )
     if str(manager_session_id or "").strip() and parse_status != "ok" and _is_manage_chat_resume_recoverable(receipt, raw_reply=raw_reply):
@@ -1274,6 +1715,7 @@ def run_manage_chat_agent(
             fresh_receipt,
             manage_target=manage_target,
             current_draft=current_draft,
+            selected_skill=selected_skill,
             fallback_manager_session_id="",
         )
         fresh_payload["session_recovery"] = {
