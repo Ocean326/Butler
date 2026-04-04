@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -10,6 +11,7 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from butler_main.agents_os.execution.cli_runner import cli_provider_available, run_prompt_receipt
+from butler_main.chat.pathing import resolve_butler_root
 from butler_main.chat.config_runtime import load_active_config, resolve_default_config_path
 from .constants import (
     DEFAULT_CATALOG_FLOW_ID,
@@ -159,6 +161,25 @@ class FlowApp:
             event_callback=_event_callback,
         )
         return app, display
+
+    def _bootstrap_config_path(self, default_config_path: str) -> str:
+        configured_path = Path(default_config_path).expanduser()
+        if configured_path.is_file():
+            return str(configured_path)
+        example_path = Path(f"{configured_path}.example")
+        if not example_path.is_file():
+            return str(configured_path)
+        workspace_root = resolve_butler_root(Path.cwd())
+        workspace_key = hashlib.sha1(str(workspace_root).encode("utf-8")).hexdigest()[:12]
+        bootstrap_dir = Path.home() / ".butler" / "bootstrap_configs"
+        bootstrap_path = bootstrap_dir / f"butler_flow_{workspace_key}.json"
+        loaded = json.loads(example_path.read_text(encoding="utf-8"))
+        config = dict(loaded or {})
+        config["workspace_root"] = str(workspace_root)
+        config.setdefault("_comment_bootstrap", "Auto-generated bootstrap config for butler-flow desktop launcher.")
+        bootstrap_dir.mkdir(parents=True, exist_ok=True)
+        bootstrap_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return str(bootstrap_path)
 
     @staticmethod
     def _exec_return_code_for_status(status: str) -> int:
@@ -768,7 +789,10 @@ class FlowApp:
         }
 
     def _load_config(self, raw_config: str | None) -> tuple[dict[str, Any], str, str]:
-        config_path = str(raw_config or "").strip() or resolve_default_config_path("butler_bot")
+        explicit_config = str(raw_config or "").strip()
+        config_path = explicit_config or resolve_default_config_path("butler_bot")
+        if not explicit_config:
+            config_path = self._bootstrap_config_path(config_path)
         cfg = load_active_config(config_path)
         workspace_root = str(resolve_flow_workspace_root(cfg.get("workspace_root"))).strip()
         return cfg, config_path, workspace_root

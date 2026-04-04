@@ -10,8 +10,10 @@
   - 仓库内后台 / chat / manager 统一入口
 - `butler-flow`
   - 前台 workflow shell / butler-flow CLI 入口
+- `flow-desktop`
+  - 直达 Butler Flow Desktop launcher 的仓库内入口；缺正式配置时会经 `butler-flow` 自动生成 machine-local bootstrap config
 - `install-butler-flow`
-  - 把 `butler-flow` 安装到 `~/.local/bin/butler-flow`
+  - 把 `butler-flow` / `flow-desktop` 安装到 `~/.local/bin/`
 - `vibe-close`
   - 给 vibecoding agent 用的默认收尾入口：分析改动重量、给出文档回写目标，并执行 commit / push / worktree 收口
 

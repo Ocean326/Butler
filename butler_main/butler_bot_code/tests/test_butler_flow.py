@@ -3814,6 +3814,40 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(workspace_root, str(root))
             self.assertEqual(cfg["workspace_root"], str(root))
 
+    def test_load_config_bootstraps_from_example_when_default_config_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = root / "home"
+            home.mkdir(parents=True, exist_ok=True)
+            missing_config = root / "configs" / "butler_bot.json"
+            missing_config.parent.mkdir(parents=True, exist_ok=True)
+            example_config = Path(f"{missing_config}.example")
+            example_config.write_text(
+                json.dumps(
+                    {
+                        "workspace_root": "..",
+                        "agent_model": "auto",
+                        "cli_runtime": {"active": "codex"},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            app = self._app(_ReceiptRunner([]))
+            with mock.patch.object(flow_shell, "resolve_default_config_path", return_value=str(missing_config)), \
+                mock.patch.object(flow_shell, "resolve_butler_root", return_value=root), \
+                mock.patch.dict(os.environ, {"HOME": str(home)}):
+                cfg, config_path, workspace_root = app._load_config(None)
+            self.assertEqual(workspace_root, str(root))
+            self.assertEqual(cfg["workspace_root"], str(root))
+            self.assertTrue(config_path.startswith(str(home / ".butler" / "bootstrap_configs")))
+            self.assertTrue(Path(config_path).exists())
+            generated = json.loads(Path(config_path).read_text(encoding="utf-8"))
+            self.assertEqual(generated["workspace_root"], str(root))
+            self.assertEqual(generated["cli_runtime"]["active"], "codex")
+
     def test_manage_flow_new_creates_definition_sidecar(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
