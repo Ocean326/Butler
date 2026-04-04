@@ -1,7 +1,14 @@
 import type {
+  AgentFocusDTO,
   DesktopActionPayload,
   ManageCenterDTO,
+  ManagerMessagePayload,
+  ManagerMessageResult,
+  ManagerThreadDTO,
   SingleFlowPayload,
+  SupervisorThreadDTO,
+  TemplateTeamDTO,
+  ThreadHomeDTO,
   WorkspacePayload
 } from "./dto";
 
@@ -11,6 +18,18 @@ export interface DesktopRequestOptions {
 
 export interface DesktopFlowRequest extends DesktopRequestOptions {
   flowId: string;
+}
+
+export interface ManagerThreadRequest extends DesktopRequestOptions {
+  managerSessionId?: string;
+}
+
+export interface AgentFocusRequest extends DesktopFlowRequest {
+  roleId: string;
+}
+
+export interface TemplateTeamRequest extends DesktopRequestOptions {
+  assetId?: string;
 }
 
 export interface DesktopArtifactOpenRequest {
@@ -28,6 +47,12 @@ export interface ButlerDesktopApi {
   getDetail(options: DesktopFlowRequest): Promise<Record<string, unknown>>;
   getManageCenter(options?: DesktopRequestOptions): Promise<ManageCenterDTO>;
   getPreflight(options?: DesktopRequestOptions): Promise<Record<string, unknown>>;
+  getThreadHome(options?: DesktopRequestOptions): Promise<ThreadHomeDTO>;
+  getManagerThread(options?: ManagerThreadRequest): Promise<ManagerThreadDTO>;
+  getSupervisorThread(options: DesktopFlowRequest): Promise<SupervisorThreadDTO>;
+  getAgentFocus(options: AgentFocusRequest): Promise<AgentFocusDTO>;
+  getTemplateTeam(options?: TemplateTeamRequest): Promise<TemplateTeamDTO>;
+  sendManagerMessage(payload: ManagerMessagePayload): Promise<ManagerMessageResult>;
   performAction(payload: DesktopActionPayload): Promise<Record<string, unknown>>;
   chooseConfigPath(): Promise<DesktopChooseConfigResult>;
   openArtifact(request: DesktopArtifactOpenRequest): Promise<{ opened: boolean; reason?: string }>;

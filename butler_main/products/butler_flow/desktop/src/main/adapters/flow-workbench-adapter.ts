@@ -2,9 +2,16 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
 import type {
+  AgentFocusDTO,
   DesktopActionPayload,
   ManageCenterDTO,
+  ManagerMessagePayload,
+  ManagerMessageResult,
+  ManagerThreadDTO,
   SingleFlowPayload,
+  SupervisorThreadDTO,
+  TemplateTeamDTO,
+  ThreadHomeDTO,
   WorkspacePayload
 } from "../../shared/dto";
 import { MockFlowWorkbenchAdapter } from "./mock-flow-workbench-adapter";
@@ -111,6 +118,80 @@ export class FlowWorkbenchAdapter {
       return this.mockAdapter.getPreflight();
     }
     return this.invokeBridge<Record<string, unknown>>([...this.withConfig(configPath), "preflight"]);
+  }
+
+  async getThreadHome(configPath?: string): Promise<ThreadHomeDTO> {
+    if (this.useMock()) {
+      return this.mockAdapter.getThreadHome();
+    }
+    return this.invokeBridge<ThreadHomeDTO>([...this.withConfig(configPath), "thread-home"]);
+  }
+
+  async getManagerThread(configPath: string | undefined, managerSessionId?: string): Promise<ManagerThreadDTO> {
+    if (this.useMock()) {
+      return this.mockAdapter.getManagerThread(managerSessionId);
+    }
+    const args = [...this.withConfig(configPath), "manager-thread"];
+    if (managerSessionId) {
+      args.push("--manager-session-id", managerSessionId);
+    }
+    return this.invokeBridge<ManagerThreadDTO>(args);
+  }
+
+  async getSupervisorThread(configPath: string | undefined, flowId: string): Promise<SupervisorThreadDTO> {
+    if (this.useMock()) {
+      return this.mockAdapter.getSupervisorThread(flowId);
+    }
+    return this.invokeBridge<SupervisorThreadDTO>([
+      ...this.withConfig(configPath),
+      "supervisor-thread",
+      "--flow-id",
+      flowId
+    ]);
+  }
+
+  async getAgentFocus(configPath: string | undefined, flowId: string, roleId: string): Promise<AgentFocusDTO> {
+    if (this.useMock()) {
+      return this.mockAdapter.getAgentFocus(flowId, roleId);
+    }
+    return this.invokeBridge<AgentFocusDTO>([
+      ...this.withConfig(configPath),
+      "agent-focus",
+      "--flow-id",
+      flowId,
+      "--role-id",
+      roleId
+    ]);
+  }
+
+  async getTemplateTeam(configPath?: string, assetId?: string): Promise<TemplateTeamDTO> {
+    if (this.useMock()) {
+      return this.mockAdapter.getTemplateTeam(assetId);
+    }
+    const args = [...this.withConfig(configPath), "template-team"];
+    if (assetId) {
+      args.push("--asset-id", assetId);
+    }
+    return this.invokeBridge<TemplateTeamDTO>(args);
+  }
+
+  async sendManagerMessage(payload: ManagerMessagePayload): Promise<ManagerMessageResult> {
+    if (this.useMock()) {
+      return this.mockAdapter.sendManagerMessage(payload);
+    }
+    const args = [
+      ...this.withConfig(payload.configPath),
+      "manager-message",
+      "--instruction",
+      payload.instruction
+    ];
+    if (payload.manageTarget) {
+      args.push("--manage", payload.manageTarget);
+    }
+    if (payload.managerSessionId) {
+      args.push("--manager-session-id", payload.managerSessionId);
+    }
+    return this.invokeBridge<ManagerMessageResult>(args);
   }
 
   async performAction(payload: DesktopActionPayload): Promise<Record<string, unknown>> {

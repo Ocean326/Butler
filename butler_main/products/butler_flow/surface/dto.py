@@ -154,3 +154,118 @@ class ManageCenterDTO:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadBlockDTO:
+    block_id: str = ""
+    kind: str = ""
+    title: str = ""
+    summary: str = ""
+    created_at: str = ""
+    status: str = ""
+    expanded_by_default: bool = False
+    payload: dict[str, Any] = field(default_factory=dict)
+    role_id: str = ""
+    phase: str = ""
+    action_label: str = ""
+    action_target: str = ""
+    tags: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadSummaryDTO:
+    thread_id: str = ""
+    thread_kind: str = ""
+    title: str = ""
+    subtitle: str = ""
+    status: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    manager_session_id: str = ""
+    flow_id: str = ""
+    active_role_id: str = ""
+    current_phase: str = ""
+    badge: str = ""
+    tags: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadHomeDTO:
+    preflight: dict[str, Any] = field(default_factory=dict)
+    manager_entry: dict[str, Any] = field(default_factory=dict)
+    history: list[dict[str, Any]] = field(default_factory=list)
+    templates: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class ManagerThreadDTO:
+    thread: ThreadSummaryDTO | dict[str, Any] = field(default_factory=ThreadSummaryDTO)
+    manager_session_id: str = ""
+    manage_target: str = ""
+    active_manage_target: str = ""
+    manager_stage: str = ""
+    confirmation_scope: str = ""
+    blocks: list[dict[str, Any]] = field(default_factory=list)
+    draft: dict[str, Any] = field(default_factory=dict)
+    pending_action: dict[str, Any] = field(default_factory=dict)
+    latest_response: str = ""
+    linked_flow_id: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class SupervisorThreadDTO:
+    thread: ThreadSummaryDTO | dict[str, Any] = field(default_factory=ThreadSummaryDTO)
+    flow_id: str = ""
+    summary: FlowSummaryDTO | dict[str, Any] = field(default_factory=FlowSummaryDTO)
+    blocks: list[dict[str, Any]] = field(default_factory=list)
+    role_strip: RoleRuntimeDTO | dict[str, Any] = field(default_factory=RoleRuntimeDTO)
+    operator_rail: dict[str, Any] = field(default_factory=dict)
+    latest_handoff: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class AgentFocusDTO:
+    thread: ThreadSummaryDTO | dict[str, Any] = field(default_factory=ThreadSummaryDTO)
+    flow_id: str = ""
+    role_id: str = ""
+    title: str = ""
+    summary: FlowSummaryDTO | dict[str, Any] = field(default_factory=FlowSummaryDTO)
+    blocks: list[dict[str, Any]] = field(default_factory=list)
+    role: dict[str, Any] = field(default_factory=dict)
+    related_handoffs: list[dict[str, Any]] = field(default_factory=list)
+    artifacts: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class TemplateTeamDTO:
+    thread: ThreadSummaryDTO | dict[str, Any] = field(default_factory=ThreadSummaryDTO)
+    asset_id: str = ""
+    blocks: list[dict[str, Any]] = field(default_factory=list)
+    assets: list[dict[str, Any]] = field(default_factory=list)
+    selected_asset: dict[str, Any] = field(default_factory=dict)
+    role_guidance: dict[str, Any] = field(default_factory=dict)
+    review_checklist: list[str] = field(default_factory=list)
+    bundle_manifest: dict[str, Any] = field(default_factory=dict)
+    manager_notes: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

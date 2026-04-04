@@ -2,6 +2,7 @@ export type FlowStatus = "running" | "paused" | "completed" | "failed" | "draft"
 
 export interface FlowSummaryDTO {
   flow_id: string;
+  label: string;
   workflow_kind: string;
   effective_status: FlowStatus;
   effective_phase: string;
@@ -43,16 +44,18 @@ export interface TimelineEvent {
   payload?: Record<string, unknown>;
 }
 
-export interface FlowDetailDTO {
-  summary: FlowSummaryDTO;
-  step_history: Array<Record<string, unknown>>;
-  timeline: TimelineEvent[];
-  turns: Array<Record<string, unknown>>;
-  actions: Array<Record<string, unknown>>;
-  artifacts: Array<Record<string, unknown>>;
-  handoffs: Array<Record<string, unknown>>;
-  flow_definition: Record<string, unknown>;
-  runtime_snapshot: Record<string, unknown>;
+export interface RoleRuntimeDTO {
+  active_role_id: string;
+  role_sessions: Record<string, unknown>;
+  pending_handoffs: Array<Record<string, unknown>>;
+  recent_handoffs: Array<Record<string, unknown>>;
+  latest_handoff_summary: Record<string, unknown>;
+  latest_role_handoffs: Record<string, unknown>;
+  role_chips: Array<Record<string, unknown>>;
+  roles: Array<Record<string, unknown>>;
+  execution_mode: string;
+  session_strategy: string;
+  role_pack_id: string;
 }
 
 export interface SupervisorViewDTO {
@@ -71,20 +74,6 @@ export interface WorkflowViewDTO {
   events: TimelineEvent[];
   runtime_summary: Record<string, unknown>;
   artifact_refs: string[];
-}
-
-export interface RoleRuntimeDTO {
-  active_role_id: string;
-  role_sessions: Record<string, unknown>;
-  pending_handoffs: Array<Record<string, unknown>>;
-  recent_handoffs: Array<Record<string, unknown>>;
-  latest_handoff_summary: Record<string, unknown>;
-  latest_role_handoffs: Record<string, unknown>;
-  role_chips: Array<Record<string, unknown>>;
-  roles: Array<Record<string, unknown>>;
-  execution_mode: string;
-  session_strategy: string;
-  role_pack_id: string;
 }
 
 export interface ManageCenterDTO {
@@ -108,17 +97,124 @@ export interface WorkspacePayload {
   };
 }
 
-export interface SingleFlowPayload extends FlowDetailDTO {
+export interface SingleFlowPayload {
   flow_id: string;
   status: Record<string, unknown>;
+  summary: FlowSummaryDTO;
+  step_history: Array<Record<string, unknown>>;
+  timeline: TimelineEvent[];
+  turns: Array<Record<string, unknown>>;
+  actions: Array<Record<string, unknown>>;
+  artifacts: Array<Record<string, unknown>>;
+  handoffs: Array<Record<string, unknown>>;
+  flow_definition: Record<string, unknown>;
+  runtime_snapshot: Record<string, unknown>;
   navigator_summary: FlowSummaryDTO;
   supervisor_view: SupervisorViewDTO;
   workflow_view: WorkflowViewDTO;
   inspector: Record<string, unknown>;
   role_strip: RoleRuntimeDTO;
   operator_rail: Record<string, unknown>;
-  flow_console: Record<string, unknown>;
+  flow_console: {
+    step_history: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+  };
   surface: Record<string, unknown>;
+}
+
+export interface ThreadBlockDTO {
+  block_id: string;
+  kind: string;
+  title: string;
+  summary: string;
+  created_at: string;
+  status: string;
+  expanded_by_default: boolean;
+  payload: Record<string, unknown>;
+  role_id?: string;
+  phase?: string;
+  action_label?: string;
+  action_target?: string;
+  tags?: string[];
+}
+
+export interface ThreadSummaryDTO {
+  thread_id: string;
+  thread_kind: string;
+  title: string;
+  subtitle: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  manager_session_id: string;
+  flow_id: string;
+  active_role_id: string;
+  current_phase: string;
+  badge: string;
+  tags: string[];
+}
+
+export interface ThreadHomeDTO {
+  preflight: Record<string, unknown>;
+  manager_entry: {
+    default_manager_session_id: string;
+    draft_summary: string;
+    status: string;
+    title: string;
+    total_sessions: number;
+    active_flow_id: string;
+    active_thread_id: string;
+  };
+  history: ThreadSummaryDTO[];
+  templates: ThreadSummaryDTO[];
+}
+
+export interface ManagerThreadDTO {
+  thread: ThreadSummaryDTO;
+  manager_session_id: string;
+  manage_target: string;
+  active_manage_target: string;
+  manager_stage: string;
+  confirmation_scope: string;
+  blocks: ThreadBlockDTO[];
+  draft: Record<string, unknown>;
+  pending_action: Record<string, unknown>;
+  latest_response: string;
+  linked_flow_id: string;
+}
+
+export interface SupervisorThreadDTO {
+  thread: ThreadSummaryDTO;
+  flow_id: string;
+  summary: FlowSummaryDTO;
+  blocks: ThreadBlockDTO[];
+  role_strip: RoleRuntimeDTO;
+  operator_rail: Record<string, unknown>;
+  latest_handoff: Record<string, unknown>;
+}
+
+export interface AgentFocusDTO {
+  thread: ThreadSummaryDTO;
+  flow_id: string;
+  role_id: string;
+  title: string;
+  summary: FlowSummaryDTO;
+  blocks: ThreadBlockDTO[];
+  role: Record<string, unknown>;
+  related_handoffs: Array<Record<string, unknown>>;
+  artifacts: Array<Record<string, unknown>>;
+}
+
+export interface TemplateTeamDTO {
+  thread: ThreadSummaryDTO;
+  asset_id: string;
+  blocks: ThreadBlockDTO[];
+  assets: Array<Record<string, unknown>>;
+  selected_asset: Record<string, unknown>;
+  role_guidance: Record<string, unknown>;
+  review_checklist: string[];
+  bundle_manifest: Record<string, unknown>;
+  manager_notes: string;
 }
 
 export interface DesktopActionPayload {
@@ -127,6 +223,21 @@ export interface DesktopActionPayload {
   type: string;
   instruction?: string;
   repoContractPath?: string;
+}
+
+export interface ManagerMessagePayload {
+  configPath?: string;
+  instruction: string;
+  managerSessionId?: string;
+  manageTarget?: string;
+}
+
+export interface ManagerMessageResult {
+  ok: boolean;
+  manager_session_id: string;
+  message: Record<string, unknown>;
+  thread: ManagerThreadDTO;
+  launched_flow: Record<string, unknown>;
 }
 
 export interface DesktopBridgeResult {

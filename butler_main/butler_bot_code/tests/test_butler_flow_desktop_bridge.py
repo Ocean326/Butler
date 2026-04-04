@@ -9,10 +9,14 @@ from pathlib import Path
 
 from butler_main.butler_flow.desktop_bridge import main
 from butler_main.butler_flow.state import (
+    append_manage_turn,
     flow_artifacts_path,
     flow_dir,
     flow_state_path,
     new_flow_state,
+    write_manage_draft,
+    write_manage_pending_action,
+    write_manage_session,
     write_json_atomic,
 )
 
@@ -54,6 +58,60 @@ def _seed_flow(root: Path, *, flow_id: str) -> None:
     )
 
 
+def _seed_manager_session(root: Path, *, manager_session_id: str) -> None:
+    write_manage_session(
+        root,
+        manager_session_id,
+        {
+            "manager_session_id": manager_session_id,
+            "active_manage_target": "new",
+            "manager_stage": "requirements",
+            "confirmation_scope": "flow_create",
+            "updated_at": "2026-04-05 12:40:00",
+        },
+    )
+    write_manage_draft(
+        root,
+        manager_session_id,
+        {
+            "manage_target": "new",
+            "asset_kind": "instance",
+            "label": "Desktop 线程工作台",
+            "workflow_kind": "managed_flow",
+            "goal": "重构 desktop shell",
+        },
+    )
+    write_manage_pending_action(
+        root,
+        manager_session_id,
+        {
+            "manage_target": "new",
+            "preview": "Create Team + Supervisor",
+        },
+    )
+    append_manage_turn(
+        root,
+        manager_session_id,
+        {
+            "created_at": "2026-04-05 12:20:00",
+            "manage_target": "new",
+            "instruction": "先把想法收敛",
+            "response": "Manager 已整理出 thread-first IA。",
+            "parse_status": "ok",
+            "raw_reply": "",
+            "error_text": "",
+            "session_recovery": {},
+            "manager_stage": "idea",
+            "draft": {
+                "label": "Desktop 线程工作台",
+                "goal": "重构 desktop shell",
+            },
+            "pending_action": {},
+            "action_ready": False,
+        },
+    )
+
+
 class ButlerFlowDesktopBridgeTests(unittest.TestCase):
     def test_home_command_emits_workspace_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -83,6 +141,40 @@ class ButlerFlowDesktopBridgeTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload["flow_id"], "flow_desktop_bridge")
             self.assertEqual(payload["workflow_view"]["artifact_refs"], ["artifact://desktop/workbench"])
+
+    def test_thread_commands_emit_thread_first_payloads(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            _seed_flow(root, flow_id="flow_desktop_bridge")
+            _seed_manager_session(root, manager_session_id="manager_session_bridge")
+
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                exit_code = main(["--config", config, "thread-home"])
+
+            home = json.loads(buffer.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(home["manager_entry"]["default_manager_session_id"], "manager_session_bridge")
+
+            manager_buffer = io.StringIO()
+            with redirect_stdout(manager_buffer):
+                exit_code = main(
+                    ["--config", config, "manager-thread", "--manager-session-id", "manager_session_bridge"]
+                )
+
+            manager = json.loads(manager_buffer.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(manager["thread"]["thread_kind"], "manager")
+            self.assertEqual(manager["blocks"][0]["kind"], "idea")
+
+            supervisor_buffer = io.StringIO()
+            with redirect_stdout(supervisor_buffer):
+                exit_code = main(["--config", config, "supervisor-thread", "--flow-id", "flow_desktop_bridge"])
+
+            supervisor = json.loads(supervisor_buffer.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(supervisor["thread"]["thread_kind"], "supervisor")
 
 
 if __name__ == "__main__":

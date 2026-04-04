@@ -1,11 +1,397 @@
 import type {
+  AgentFocusDTO,
   DesktopActionPayload,
   ManageCenterDTO,
+  ManagerMessagePayload,
+  ManagerMessageResult,
+  ManagerThreadDTO,
   SingleFlowPayload,
+  SupervisorThreadDTO,
+  TemplateTeamDTO,
+  ThreadHomeDTO,
   WorkspacePayload
 } from "../../shared/dto";
 
-const now = "2026-04-03T14:00:00Z";
+const now = "2026-04-05 14:00:00";
+const flowId = "flow_mock_desktop";
+const managerSessionId = "manager_session_mock_01";
+
+function flowSummary() {
+  return {
+    flow_id: flowId,
+    label: "Butler Flow Desktop",
+    workflow_kind: "managed_flow",
+    effective_status: "running",
+    effective_phase: "implement",
+    attempt_count: 2,
+    max_attempts: 8,
+    max_phase_attempts: 4,
+    max_runtime_seconds: 1800,
+    runtime_elapsed_seconds: 312,
+    goal: "重构 Butler 桌面端为线程化单流工作台",
+    guard_condition: "Desktop shell, thread bridge, and tests are verified",
+    approval_state: "operator_required",
+    execution_mode: "medium",
+    session_strategy: "role_bound",
+    active_role_id: "implementer",
+    role_pack_id: "coding_flow",
+    last_judge: "ADVANCE",
+    latest_judge_decision: { decision: "ADVANCE" },
+    last_operator_action: "append_instruction",
+    latest_operator_action: { action_type: "append_instruction" },
+    queued_operator_updates: [],
+    latest_token_usage: { input_tokens: 2221, output_tokens: 861 },
+    context_governor: { mode: "balanced" },
+    latest_handoff_summary: {
+      handoff_id: "handoff-7",
+      from_role_id: "planner",
+      to_role_id: "implementer",
+      summary: "桌面线程壳已经可以开始实现"
+    },
+    updated_at: now
+  };
+}
+
+function managerThread(): ManagerThreadDTO {
+  return {
+    thread: {
+      thread_id: `manager:${managerSessionId}`,
+      thread_kind: "manager",
+      title: "Desktop 线程工作台",
+      subtitle: "先由 Manager 统一对齐 idea / requirements / delivery / test。",
+      status: "active",
+      created_at: "2026-04-05 13:20:00",
+      updated_at: now,
+      manager_session_id: managerSessionId,
+      flow_id: flowId,
+      active_role_id: "",
+      current_phase: "team_draft",
+      badge: "flow_create",
+      tags: ["managed_flow", "team_draft"]
+    },
+    manager_session_id: managerSessionId,
+    manage_target: `instance:${flowId}`,
+    active_manage_target: `instance:${flowId}`,
+    manager_stage: "launch",
+    confirmation_scope: "",
+    blocks: [
+      {
+        block_id: "manager:1",
+        kind: "idea",
+        title: "Idea 草案",
+        summary: "把桌面端改成中文优先、核心 English 保留的线程化工作台。",
+        created_at: "2026-04-05 13:21:00",
+        status: "active",
+        expanded_by_default: true,
+        payload: {
+          instruction: "butler 前端要改成线程化、中文优先",
+          response: "我会先聚焦 Manager 入口和 Supervisor 单流布局。"
+        },
+        tags: ["brainstorm"]
+      },
+      {
+        block_id: "manager:2",
+        kind: "requirements",
+        title: "Requirements 细化",
+        summary: "左侧保留 Manager / History / New Flow / Templates，右侧主区全部单流展示。",
+        created_at: "2026-04-05 13:31:00",
+        status: "active",
+        expanded_by_default: true,
+        payload: {
+          draft: {
+            workflow_kind: "managed_flow",
+            goal: "重构 Butler 桌面端为线程化单流工作台"
+          }
+        },
+        tags: ["requirements"]
+      },
+      {
+        block_id: "manager:3",
+        kind: "team_draft",
+        title: "Team / Supervisor 草案",
+        summary: "创建 Team + Supervisor 后，默认直接切到 Supervisor 流式工作，再按 agent 打开 focus 页。",
+        created_at: "2026-04-05 13:43:00",
+        status: "ready",
+        expanded_by_default: true,
+        payload: {
+          role_guidance: {
+            planner: "负责拆解和边界收敛",
+            implementer: "负责 desktop renderer 和 bridge 接线",
+            reviewer: "负责回归和验收"
+          }
+        },
+        tags: ["team"]
+      },
+      {
+        block_id: "manager:4",
+        kind: "launch",
+        title: "Supervisor 已接管",
+        summary: "Flow 已创建，继续在 Supervisor 流里看团队推进。",
+        created_at: now,
+        status: "launched",
+        expanded_by_default: true,
+        payload: { flow_id: flowId },
+        action_label: "Open Supervisor",
+        action_target: `flow:${flowId}`,
+        tags: ["launched"]
+      }
+    ],
+    draft: {
+      label: "Desktop 线程工作台",
+      workflow_kind: "managed_flow",
+      goal: "重构 Butler 桌面端为线程化单流工作台",
+      guard_condition: "桌面端线程 IA、日夜主题、bridge 和测试都完成"
+    },
+    pending_action: {},
+    latest_response: "Flow 已创建，切到 Supervisor 继续。",
+    linked_flow_id: flowId
+  };
+}
+
+function supervisorThread(): SupervisorThreadDTO {
+  const summary = flowSummary();
+  return {
+    thread: {
+      thread_id: `flow:${flowId}`,
+      thread_kind: "supervisor",
+      title: "Butler Flow Desktop",
+      subtitle: "Supervisor 正在推进 renderer、bridge 和 tests。",
+      status: "running",
+      created_at: "2026-04-05 13:50:00",
+      updated_at: now,
+      manager_session_id: managerSessionId,
+      flow_id: flowId,
+      active_role_id: "implementer",
+      current_phase: "implement",
+      badge: "operator_required",
+      tags: ["managed_flow", "medium", "role_bound"]
+    },
+    flow_id: flowId,
+    summary,
+    blocks: [
+      {
+        block_id: "supervisor:start",
+        kind: "start",
+        title: "Supervisor 启动",
+        summary: "已接管 Desktop 线程工作台 flow，先实现 thread surface 和 renderer。",
+        created_at: "2026-04-05 13:50:00",
+        status: "running",
+        expanded_by_default: true,
+        payload: { summary },
+        tags: ["implement", "implementer"]
+      },
+      {
+        block_id: "supervisor:decision:1",
+        kind: "decision",
+        title: "实现 thread-home / manager-thread / supervisor-thread",
+        summary: "先把桌面端 bridge 切到 thread-first API，再整体替换旧 UI。",
+        created_at: "2026-04-05 13:54:00",
+        status: "decision",
+        expanded_by_default: true,
+        payload: {
+          role_id: "implementer",
+          next_action: "rewrite_renderer"
+        },
+        role_id: "implementer",
+        phase: "implement",
+        action_label: "Open Agent",
+        action_target: "role:implementer",
+        tags: ["supervisor", "decision"]
+      },
+      {
+        block_id: "supervisor:artifact:1",
+        kind: "artifact",
+        title: "Desktop mock shell snapshot",
+        summary: "artifact://desktop/workbench",
+        created_at: "2026-04-05 13:58:00",
+        status: "artifact",
+        expanded_by_default: false,
+        payload: {
+          artifact_ref: "artifact://desktop/workbench"
+        },
+        tags: ["workflow", "artifact"]
+      }
+    ],
+    role_strip: {
+      active_role_id: "implementer",
+      role_sessions: {
+        planner: { session_id: "sess-1" },
+        implementer: { session_id: "sess-2" },
+        reviewer: { session_id: "sess-3" }
+      },
+      pending_handoffs: [{ handoff_id: "handoff-8", to_role_id: "reviewer", summary: "等待回归" }],
+      recent_handoffs: [
+        { handoff_id: "handoff-7", from_role_id: "planner", to_role_id: "implementer", summary: "开始实现" }
+      ],
+      latest_handoff_summary: {
+        handoff_id: "handoff-8",
+        to_role_id: "reviewer",
+        summary: "等待回归"
+      },
+      latest_role_handoffs: {},
+      role_chips: [
+        { role_id: "planner", state: "idle", is_active: false, session_id: "sess-1" },
+        { role_id: "implementer", state: "active", is_active: true, session_id: "sess-2" },
+        { role_id: "reviewer", state: "receiving_handoff", is_active: false, session_id: "sess-3" }
+      ],
+      roles: [
+        { role_id: "planner", state: "idle", session_id: "sess-1" },
+        { role_id: "implementer", state: "active", session_id: "sess-2" },
+        { role_id: "reviewer", state: "receiving_handoff", session_id: "sess-3" }
+      ],
+      execution_mode: "medium",
+      session_strategy: "role_bound",
+      role_pack_id: "coding_flow"
+    },
+    operator_rail: {
+      approval_state: "operator_required",
+      latest_supervisor_decision: { decision: "continue" },
+      latest_operator_action: { action_type: "append_instruction" },
+      latest_judge_decision: { decision: "ADVANCE" }
+    },
+    latest_handoff: {
+      handoff_id: "handoff-8",
+      to_role_id: "reviewer",
+      summary: "等待回归"
+    }
+  };
+}
+
+function agentFocus(roleId: string): AgentFocusDTO {
+  const summary = flowSummary();
+  return {
+    thread: {
+      thread_id: `agent:${flowId}:${roleId}`,
+      thread_kind: "agent",
+      title: roleId,
+      subtitle: "Agent focus stream",
+      status: "running",
+      created_at: "2026-04-05 13:56:00",
+      updated_at: now,
+      manager_session_id: managerSessionId,
+      flow_id: flowId,
+      active_role_id: roleId,
+      current_phase: "implement",
+      badge: roleId === "implementer" ? "active" : "idle",
+      tags: ["managed_flow"]
+    },
+    flow_id: flowId,
+    role_id: roleId,
+    title: `${roleId} · focus`,
+    summary,
+    blocks: [
+      {
+        block_id: `agent:${roleId}:brief`,
+        kind: "role_brief",
+        title: `Agent · ${roleId}`,
+        summary: roleId === "implementer" ? "正在实现 renderer 和 IPC。" : "准备接收 handoff 并做验证。",
+        created_at: "2026-04-05 13:56:00",
+        status: roleId === "implementer" ? "active" : "idle",
+        expanded_by_default: true,
+        payload: {
+          role_id: roleId
+        },
+        role_id: roleId
+      },
+      {
+        block_id: `agent:${roleId}:progress`,
+        kind: "progress",
+        title: "Progress 更新",
+        summary: roleId === "implementer" ? "thread API 已接线，准备重写单流页面。" : "等待实现完成后接手回归。",
+        created_at: now,
+        status: "progress",
+        expanded_by_default: true,
+        payload: {
+          role_id: roleId
+        },
+        role_id: roleId,
+        phase: "implement"
+      }
+    ],
+    role: {
+      role_id: roleId,
+      state: roleId === "implementer" ? "active" : "receiving_handoff",
+      session_id: roleId === "implementer" ? "sess-2" : "sess-3"
+    },
+    related_handoffs: [
+      roleId === "reviewer"
+        ? { handoff_id: "handoff-8", to_role_id: "reviewer", summary: "等待回归" }
+        : { handoff_id: "handoff-7", to_role_id: "implementer", summary: "开始实现" }
+    ],
+    artifacts: [{ artifact_ref: "artifact://desktop/workbench", title: "Desktop shell" }]
+  };
+}
+
+function templateTeam(assetId = "desktop-template"): TemplateTeamDTO {
+  return {
+    thread: {
+      thread_id: `template:${assetId}`,
+      thread_kind: "template",
+      title: "Desktop Shell Template",
+      subtitle: "Template + agent team management",
+      status: "active",
+      created_at: "2026-04-05 12:10:00",
+      updated_at: now,
+      manager_session_id: "",
+      flow_id: "",
+      active_role_id: "",
+      current_phase: "",
+      badge: "template",
+      tags: ["managed_flow", "coding_flow"]
+    },
+    asset_id: assetId,
+    blocks: [
+      {
+        block_id: "template:overview",
+        kind: "overview",
+        title: "Templates / Team",
+        summary: "管理可复用模板，以及默认 agent team / supervisor 标准。",
+        created_at: now,
+        status: "active",
+        expanded_by_default: true,
+        payload: {}
+      },
+      {
+        block_id: "template:team",
+        kind: "team",
+        title: "Default Team",
+        summary: "planner / implementer / reviewer 三角色默认协作。",
+        created_at: now,
+        status: "configured",
+        expanded_by_default: true,
+        payload: {
+          planner: "负责需求收敛",
+          implementer: "负责实现",
+          reviewer: "负责验收"
+        }
+      }
+    ],
+    assets: [
+      {
+        asset_id: assetId,
+        label: "Desktop Shell Template",
+        asset_kind: "template",
+        workflow_kind: "managed_flow",
+        goal: "线程化 desktop shell"
+      }
+    ],
+    selected_asset: {
+      asset_id: assetId,
+      label: "Desktop Shell Template",
+      description: "Electron + React thread workbench shell"
+    },
+    role_guidance: {
+      planner: "先对齐 thread-first 信息架构",
+      implementer: "保留 Python bridge 作为真源",
+      reviewer: "验证 renderer + bridge + tests"
+    },
+    review_checklist: ["Manager 先于 Supervisor", "单流布局", "日夜主题可切换"],
+    bundle_manifest: {
+      bundle_id: "desktop-thread-template"
+    },
+    manager_notes: "先固定 thread contract，再写 UI。"
+  };
+}
 
 export class MockFlowWorkbenchAdapter {
   async getHome(): Promise<WorkspacePayload> {
@@ -15,65 +401,18 @@ export class MockFlowWorkbenchAdapter {
         config_path: "/tmp/butler-demo/config.json"
       },
       flows: {
-        items: [
-          {
-            flow_id: "flow_mock_desktop",
-            workflow_kind: "managed_flow",
-            effective_status: "running",
-            effective_phase: "build",
-            goal: "Ship Butler Desktop",
-            approval_state: "operator_required",
-            active_role_id: "implementer",
-            execution_mode: "medium",
-            session_strategy: "role_bound",
-            updated_at: now
-          }
-        ]
+        items: [flowSummary()]
       }
     };
   }
 
   async getFlow(): Promise<SingleFlowPayload> {
-    const summary = {
-      flow_id: "flow_mock_desktop",
-      workflow_kind: "managed_flow",
-      effective_status: "running",
-      effective_phase: "build",
-      attempt_count: 2,
-      max_attempts: 8,
-      max_phase_attempts: 4,
-      max_runtime_seconds: 1800,
-      runtime_elapsed_seconds: 312,
-      goal: "Ship Butler Desktop",
-      guard_condition: "desktop launch verified",
-      approval_state: "operator_required",
-      execution_mode: "medium",
-      session_strategy: "role_bound",
-      active_role_id: "implementer",
-      role_pack_id: "coding_flow",
-      last_judge: "ADVANCE",
-      latest_judge_decision: { decision: "ADVANCE" },
-      last_operator_action: "append_instruction",
-      latest_operator_action: { action_type: "append_instruction" },
-      queued_operator_updates: [],
-      latest_token_usage: { input_tokens: 2221, output_tokens: 861 },
-      context_governor: { mode: "balanced" },
-      latest_handoff_summary: {
-        handoff_id: "handoff-7",
-        from_role_id: "planner",
-        to_role_id: "implementer",
-        summary: "UI shell ready for implementation"
-      },
-      updated_at: now
-    };
+    const summary = flowSummary();
     return {
-      flow_id: "flow_mock_desktop",
-      status: { flow_id: "flow_mock_desktop" },
+      flow_id: flowId,
+      status: { flow_id: flowId },
       summary,
-      step_history: [
-        { step_id: "plan-1", phase: "plan", decision: "ADVANCE", summary: "layout locked", created_at: now },
-        { step_id: "build-2", phase: "build", decision: "RUNNING", summary: "renderer shell active", created_at: now }
-      ],
+      step_history: [],
       timeline: [],
       turns: [],
       actions: [],
@@ -83,116 +422,36 @@ export class MockFlowWorkbenchAdapter {
       runtime_snapshot: {},
       navigator_summary: summary,
       supervisor_view: {
-        header: {
-          flow_id: "flow_mock_desktop",
-          status: "running",
-          phase: "build",
-          active_role_id: "implementer",
-          approval_state: "operator_required"
-        },
-        events: [
-          {
-            event_id: "evt-supervisor-1",
-            kind: "supervisor_output",
-            flow_id: "flow_mock_desktop",
-            phase: "build",
-            attempt_no: 2,
-            created_at: now,
-            message: "Implement desktop shell and bridge next.",
-            lane: "supervisor",
-            family: "output",
-            title: "Implement desktop shell and bridge next.",
-            raw_text: ""
-          }
-        ],
-        latest_supervisor_decision: { decision: "continue", next_action: "implement" },
-        latest_judge_decision: { decision: "ADVANCE" },
-        latest_operator_action: { action_type: "append_instruction" },
-        latest_handoff_summary: summary.latest_handoff_summary,
-        context_governor: { mode: "balanced" },
-        latest_token_usage: { input_tokens: 2221, output_tokens: 861 },
-        pointers: {
-          approval_state: "operator_required",
-          runtime_elapsed_seconds: 312,
-          max_runtime_seconds: 1800,
-          latest_handoff_summary: summary.latest_handoff_summary
-        }
+        header: {},
+        events: [],
+        latest_supervisor_decision: {},
+        latest_judge_decision: {},
+        latest_operator_action: {},
+        latest_handoff_summary: {},
+        context_governor: {},
+        latest_token_usage: {},
+        pointers: {}
       },
       workflow_view: {
-        events: [
-          {
-            event_id: "evt-workflow-1",
-            kind: "artifact_registered",
-            flow_id: "flow_mock_desktop",
-            phase: "build",
-            attempt_no: 2,
-            created_at: now,
-            message: "artifact://desktop/workbench",
-            lane: "workflow",
-            family: "artifact",
-            title: "artifact://desktop/workbench",
-            raw_text: ""
-          }
-        ],
-        runtime_summary: { process_state: "running" },
+        events: [],
+        runtime_summary: {},
         artifact_refs: ["artifact://desktop/workbench"]
       },
-      inspector: {
-        runtime: {
-          runtime_plan: {
-            plan_stage: "implementation",
-            summary: "Desktop shell and bridge are in progress."
-          }
-        }
-      },
-      role_strip: {
-        active_role_id: "implementer",
-        role_sessions: {
-          planner: { session_id: "sess-1" },
-          implementer: { session_id: "sess-2" }
-        },
-        pending_handoffs: [],
-        recent_handoffs: [],
-        latest_handoff_summary: summary.latest_handoff_summary,
-        latest_role_handoffs: {},
-        role_chips: [
-          { role_id: "planner", state: "idle", is_active: false },
-          { role_id: "implementer", state: "active", is_active: true }
-        ],
-        roles: [
-          { role_id: "planner", session_id: "sess-1", state: "idle", is_active: false },
-          { role_id: "implementer", session_id: "sess-2", state: "active", is_active: true }
-        ],
-        execution_mode: "medium",
-        session_strategy: "role_bound",
-        role_pack_id: "coding_flow"
-      },
-      operator_rail: {
-        approval_state: "operator_required",
-        latest_supervisor_decision: { decision: "continue" },
-        latest_operator_action: { action_type: "append_instruction" },
-        latest_judge_decision: { decision: "ADVANCE" },
-        promoted_events: []
-      },
+      inspector: {},
+      role_strip: supervisorThread().role_strip,
+      operator_rail: supervisorThread().operator_rail,
       flow_console: {
-        flow_id: "flow_mock_desktop",
-        summary,
-        recent_steps: [{ phase: "build", summary: "renderer shell active" }],
-        step_history: [
-          { phase: "plan", summary: "layout locked" },
-          { phase: "build", summary: "renderer shell active" }
-        ]
+        step_history: []
       },
       surface: {}
     };
   }
 
   async getDetail(): Promise<Record<string, unknown>> {
-    const flow = await this.getFlow();
     return {
-      flow_id: flow.flow_id,
+      flow_id: flowId,
       plan: { flow_definition: {} },
-      artifacts: flow.artifacts
+      artifacts: [{ artifact_ref: "artifact://desktop/workbench" }]
     };
   }
 
@@ -200,28 +459,13 @@ export class MockFlowWorkbenchAdapter {
     return {
       preflight: { config_path: "/tmp/butler-demo/config.json" },
       assets: {
-        items: [
-          {
-            asset_id: "desktop-shell",
-            title: "Desktop Shell V1",
-            status: "active"
-          }
-        ]
+        items: templateTeam().assets
       },
-      selected_asset: {
-        asset_id: "desktop-shell",
-        title: "Desktop Shell V1",
-        synopsis: "Electron + React workbench shell"
-      },
-      role_guidance: {
-        planner: "Keep the workbench flow-first.",
-        implementer: "Preserve Python bridge as source of truth."
-      },
-      review_checklist: ["Shell launches", "Bridge responds", "Details drawer reads artifacts"],
-      bundle_manifest: {
-        bundle_id: "desktop-v1"
-      },
-      manager_notes: "Promote the shell only after bridge and real payloads render cleanly."
+      selected_asset: templateTeam().selected_asset,
+      role_guidance: templateTeam().role_guidance,
+      review_checklist: templateTeam().review_checklist,
+      bundle_manifest: templateTeam().bundle_manifest,
+      manager_notes: templateTeam().manager_notes
     };
   }
 
@@ -230,6 +474,84 @@ export class MockFlowWorkbenchAdapter {
       workspace_root: "/tmp/butler-demo",
       config_path: "/tmp/butler-demo/config.json",
       provider_state: "mock"
+    };
+  }
+
+  async getThreadHome(): Promise<ThreadHomeDTO> {
+    return {
+      preflight: {
+        workspace_root: "/tmp/butler-demo",
+        config_path: "/tmp/butler-demo/config.json"
+      },
+      manager_entry: {
+        default_manager_session_id: managerSessionId,
+        draft_summary: "先用 Manager 对齐需求，再切到 Supervisor。",
+        status: "active",
+        title: "Manager 管理台",
+        total_sessions: 1,
+        active_flow_id: flowId,
+        active_thread_id: `manager:${managerSessionId}`
+      },
+      history: [managerThread().thread, supervisorThread().thread],
+      templates: [templateTeam().thread]
+    };
+  }
+
+  async getManagerThread(sessionId?: string): Promise<ManagerThreadDTO> {
+    if (sessionId === "") {
+      return {
+        ...managerThread(),
+        manager_session_id: "",
+        thread: {
+          ...managerThread().thread,
+          thread_id: "manager:draft",
+          manager_session_id: "",
+          flow_id: "",
+          title: "Manager 管理台",
+          subtitle: "从这里开始一个新的 flow。",
+          status: "draft"
+        },
+        linked_flow_id: "",
+        blocks: [
+          {
+            block_id: "starter:1",
+            kind: "opening",
+            title: "Manager 入口",
+            summary: "描述你的 idea，我们会先对齐 brainstorm，再沉淀 requirements 和 standards。",
+            created_at: now,
+            status: "idle",
+            expanded_by_default: true,
+            payload: {}
+          }
+        ]
+      };
+    }
+    return managerThread();
+  }
+
+  async getSupervisorThread(_flowId?: string): Promise<SupervisorThreadDTO> {
+    return supervisorThread();
+  }
+
+  async getAgentFocus(_flowId: string, roleId: string): Promise<AgentFocusDTO> {
+    return agentFocus(roleId);
+  }
+
+  async getTemplateTeam(assetId?: string): Promise<TemplateTeamDTO> {
+    return templateTeam(assetId);
+  }
+
+  async sendManagerMessage(payload: ManagerMessagePayload): Promise<ManagerMessageResult> {
+    const shouldLaunch = payload.instruction.includes("创建") || payload.instruction.toLowerCase().includes("create");
+    return {
+      ok: true,
+      manager_session_id: managerSessionId,
+      message: {
+        response: shouldLaunch ? "Flow 已创建，切到 Supervisor。" : "已更新 Manager 草案，继续细化。",
+        manager_session_id: managerSessionId
+      },
+      thread: managerThread(),
+      launched_flow: shouldLaunch ? { flow_id: flowId, summary: "Flow created." } : {}
     };
   }
 

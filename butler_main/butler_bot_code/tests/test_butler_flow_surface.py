@@ -15,12 +15,17 @@ if str(BUTLER_MAIN_DIR) not in sys.path:
     sys.path.insert(0, str(BUTLER_MAIN_DIR))
 
 from butler_main.butler_flow.state import (  # noqa: E402
+    append_manage_turn,
     flow_artifacts_path,
     flow_dir,
     flow_events_path,
     flow_state_path,
     handoffs_path,
+    read_manage_turns,
     new_flow_state,
+    write_manage_draft,
+    write_manage_pending_action,
+    write_manage_session,
     write_json_atomic,
 )
 from butler_main.butler_flow.surface import (  # noqa: E402
@@ -60,6 +65,88 @@ def _append_jsonl(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     text = "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
     path.write_text(text, encoding="utf-8")
+
+
+def _seed_manager_session(root: Path, *, manager_session_id: str, flow_id: str = "") -> None:
+    active_target = f"instance:{flow_id}" if flow_id else "new"
+    write_manage_session(
+        root,
+        manager_session_id,
+        {
+            "manager_session_id": manager_session_id,
+            "active_manage_target": active_target,
+            "manager_stage": "requirements",
+            "confirmation_scope": "flow_create",
+            "updated_at": "2026-04-05 12:40:00",
+        },
+    )
+    write_manage_draft(
+        root,
+        manager_session_id,
+        {
+            "manage_target": active_target,
+            "asset_kind": "instance",
+            "label": "Desktop 线程工作台",
+            "workflow_kind": "managed_flow",
+            "goal": "重构 Butler desktop 为线程化工作台",
+            "guard_condition": "desktop shell + thread bridge + tests are verified",
+            "summary": "先由 Manager 完成对齐，再启动 Supervisor",
+            "phase_plan": [{"phase_id": "design"}, {"phase_id": "implement"}, {"phase_id": "verify"}],
+            "review_checklist": ["single-stream layout", "day/night theme", "manager to supervisor bridge"],
+        },
+    )
+    write_manage_pending_action(
+        root,
+        manager_session_id,
+        {
+            "manage_target": active_target,
+            "preview": "Create Team + Supervisor",
+            "draft_summary": "launch ready",
+        },
+    )
+    append_manage_turn(
+        root,
+        manager_session_id,
+        {
+            "created_at": "2026-04-05 12:20:00",
+            "manage_target": active_target,
+            "instruction": "请先把 IA 对齐",
+            "response": "先确定 Manager 默认入口和 thread-first 布局。",
+            "parse_status": "ok",
+            "raw_reply": "",
+            "error_text": "",
+            "session_recovery": {},
+            "manager_stage": "idea",
+            "draft": {
+                "label": "Desktop 线程工作台",
+                "goal": "重构 Butler desktop 为线程化工作台",
+            },
+            "pending_action": {},
+            "action_ready": False,
+        },
+    )
+    append_manage_turn(
+        root,
+        manager_session_id,
+        {
+            "created_at": "2026-04-05 12:36:00",
+            "manage_target": active_target,
+            "instruction": "继续把 team 和交付标准准备好",
+            "response": "可以创建 flow 并交给 Supervisor。",
+            "parse_status": "ok",
+            "raw_reply": "",
+            "error_text": "",
+            "session_recovery": {},
+            "manager_stage": "team_draft",
+            "draft": {
+                "label": "Desktop 线程工作台",
+                "goal": "重构 Butler desktop 为线程化工作台",
+                "workflow_kind": "managed_flow",
+            },
+            "pending_action": {"manage_target": active_target, "preview": "Create Team + Supervisor"},
+            "action_ready": True,
+        },
+    )
 
 
 class ButlerFlowSurfaceTests(unittest.TestCase):
@@ -333,3 +420,96 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
             self.assertEqual(dict(row.get("latest_handoff_summary") or {}).get("handoff_id"), "handoff-2")
             self.assertEqual(dict(row.get("latest_judge_decision") or {}).get("decision"), "RETRY")
             self.assertEqual(dict(row.get("latest_operator_action") or {}).get("action_type"), "pause")
+
+    def test_thread_home_and_manager_thread_payloads_project_manager_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            _seed_manager_session(root, manager_session_id="manager_session_1")
+
+            home = flow_surface.thread_home_payload(config=config)
+            manager = flow_surface.manager_thread_payload(config=config, manager_session_id="manager_session_1")
+
+            self.assertEqual(home["manager_entry"]["default_manager_session_id"], "manager_session_1")
+            self.assertEqual(home["history"][0]["thread_kind"], "manager")
+            self.assertEqual(manager["thread"]["title"], "Desktop 线程工作台")
+            self.assertEqual(manager["blocks"][0]["kind"], "idea")
+            self.assertEqual(manager["blocks"][-1]["kind"], "launch")
+            self.assertEqual(manager["pending_action"]["preview"], "Create Team + Supervisor")
+            self.assertEqual(len(read_manage_turns(root, "manager_session_1")), 2)
+
+    def test_supervisor_thread_and_agent_focus_payloads_wrap_single_flow(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            path = _write_flow_state(root, flow_id="flow_thread_surface", status="running")
+            state = json.loads(flow_state_path(path).read_text(encoding="utf-8"))
+            state["approval_state"] = "operator_required"
+            state["execution_mode"] = "medium"
+            state["session_strategy"] = "role_bound"
+            state["active_role_id"] = "implementer"
+            state["role_sessions"] = {
+                "planner": {"role_id": "planner", "session_id": "sess-1"},
+                "implementer": {"role_id": "implementer", "session_id": "sess-2"},
+            }
+            write_json_atomic(flow_state_path(path), state)
+            _append_jsonl(
+                flow_events_path(path),
+                [
+                    {
+                        "event_id": "evt-supervisor-thread",
+                        "kind": "supervisor_output",
+                        "lane": "supervisor",
+                        "family": "output",
+                        "flow_id": "flow_thread_surface",
+                        "phase": "implement",
+                        "attempt_no": 1,
+                        "created_at": "2026-04-05 12:50:00",
+                        "message": "先实现 thread-first shell",
+                        "payload": {"role_id": "implementer"},
+                    }
+                ],
+            )
+            _append_jsonl(
+                handoffs_path(path),
+                [
+                    {
+                        "handoff_id": "handoff-thread-1",
+                        "flow_id": "flow_thread_surface",
+                        "from_role_id": "planner",
+                        "to_role_id": "implementer",
+                        "status": "pending",
+                        "summary": "开始实现桌面线程壳",
+                        "created_at": "2026-04-05 12:45:00",
+                    }
+                ],
+            )
+            flow_artifacts_path(path).write_text(
+                json.dumps(
+                    {
+                        "flow_id": "flow_thread_surface",
+                        "items": [
+                            {
+                                "artifact_ref": "artifact://desktop/thread-shell",
+                                "phase": "implement",
+                                "attempt_no": 1,
+                                "created_at": "2026-04-05 12:55:00",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            supervisor = flow_surface.supervisor_thread_payload(config=config, flow_id="flow_thread_surface")
+            agent = flow_surface.agent_focus_payload(config=config, flow_id="flow_thread_surface", role_id="implementer")
+
+            self.assertEqual(supervisor["thread"]["thread_kind"], "supervisor")
+            self.assertEqual(supervisor["blocks"][0]["kind"], "start")
+            self.assertEqual(supervisor["blocks"][1]["action_target"], "role:implementer")
+            self.assertEqual(agent["role_id"], "implementer")
+            self.assertEqual(agent["blocks"][0]["kind"], "role_brief")
+            self.assertTrue(any(block["kind"] == "artifact" for block in agent["blocks"]))

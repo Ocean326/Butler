@@ -230,6 +230,23 @@ def read_json(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        text = str(line or "").strip()
+        if not text:
+            continue
+        try:
+            payload = json.loads(text)
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            rows.append(payload)
+    return rows
+
+
 def flow_asset_root(workspace: str | Path) -> Path:
     return resolve_flow_workspace_root(workspace) / FLOW_ASSET_HOME_REL
 
@@ -500,6 +517,54 @@ def clear_manage_pending_action(workspace: str | Path, manager_session_id: str) 
         path.unlink()
     except Exception:
         pass
+
+
+def read_manage_turns(workspace: str | Path, manager_session_id: str) -> list[dict[str, Any]]:
+    path = manage_turns_file(workspace, manager_session_id)
+    return read_jsonl(path) if path != Path("") else []
+
+
+def list_manage_sessions(workspace: str | Path, *, limit: int = 20) -> list[dict[str, Any]]:
+    root = manage_session_root(workspace)
+    if not root.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for session_dir in sorted(root.iterdir(), key=lambda item: item.name, reverse=True):
+        if not session_dir.is_dir():
+            continue
+        manager_session_id = str(session_dir.name or "").strip()
+        if not manager_session_id:
+            continue
+        session = read_manage_session(workspace, manager_session_id)
+        draft = read_manage_draft(workspace, manager_session_id)
+        pending_action = read_manage_pending_action(workspace, manager_session_id)
+        turns = read_manage_turns(workspace, manager_session_id)
+        last_turn = dict(turns[-1] or {}) if turns else {}
+        updated_at = str(
+            session.get("updated_at")
+            or last_turn.get("created_at")
+            or draft.get("updated_at")
+            or ""
+        ).strip()
+        rows.append(
+            {
+                "manager_session_id": manager_session_id,
+                "session": session,
+                "draft": draft,
+                "pending_action": pending_action,
+                "turn_count": len(turns),
+                "last_turn": last_turn,
+                "updated_at": updated_at,
+            }
+        )
+    rows.sort(
+        key=lambda item: (
+            str(item.get("updated_at") or ""),
+            str(item.get("manager_session_id") or ""),
+        ),
+        reverse=True,
+    )
+    return rows[: max(1, int(limit or 20))]
 
 
 def _dedupe_text_list(items: Any) -> list[str]:
@@ -1296,9 +1361,11 @@ __all__ = [
     "normalize_source_items",
     "normalize_supervisor_profile_payload",
     "prompt_packets_path",
+    "read_jsonl",
     "read_manage_draft",
     "read_manage_pending_action",
     "read_manage_session",
+    "read_manage_turns",
     "runtime_plan_path",
     "strategy_trace_path",
     "template_bundle_root",
@@ -1316,6 +1383,7 @@ __all__ = [
     "resolve_flow_workspace_root",
     "safe_int",
     "system_codex_home",
+    "list_manage_sessions",
     "write_bundle_sources",
     "write_compiled_supervisor_knowledge",
     "write_manage_draft",

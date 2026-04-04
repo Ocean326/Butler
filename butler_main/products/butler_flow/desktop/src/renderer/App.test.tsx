@@ -7,55 +7,13 @@ import { renderDesktopApp } from "../test/render-app";
 
 const CONFIG_PATH = "/tmp/butler/butler_bot.json";
 
-function mockDesktopApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDesktopApi {
+function buildApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDesktopApi {
   return {
-    getHome: vi.fn().mockResolvedValue({
-      preflight: {
-        workspace_root: "/tmp/butler",
-        launch_mode: "shared"
-      },
-      flows: {
-        items: [
-          {
-            flow_id: "flow_mock_desktop",
-            goal: "Ship Butler Desktop",
-            effective_status: "running",
-            effective_phase: "build",
-            active_role_id: "implementer"
-          }
-        ]
-      }
-    }),
+    getHome: vi.fn().mockResolvedValue({ preflight: {}, flows: { items: [] } }),
     getFlow: vi.fn().mockResolvedValue({
       flow_id: "flow_mock_desktop",
       status: {},
-      summary: {
-        flow_id: "flow_mock_desktop",
-        workflow_kind: "managed_flow",
-        effective_status: "running",
-        effective_phase: "build",
-        attempt_count: 2,
-        max_attempts: 8,
-        max_phase_attempts: 4,
-        max_runtime_seconds: 1800,
-        runtime_elapsed_seconds: 312,
-        goal: "Ship Butler Desktop",
-        guard_condition: "desktop launch verified",
-        approval_state: "operator_required",
-        execution_mode: "medium",
-        session_strategy: "role_bound",
-        active_role_id: "implementer",
-        role_pack_id: "coding_flow",
-        last_judge: "ADVANCE",
-        latest_judge_decision: { decision: "ADVANCE" },
-        last_operator_action: "append_instruction",
-        latest_operator_action: { action_type: "append_instruction" },
-        queued_operator_updates: [],
-        latest_token_usage: {},
-        context_governor: {},
-        latest_handoff_summary: {},
-        updated_at: "2026-04-03T14:00:00Z"
-      },
+      summary: {},
       step_history: [],
       timeline: [],
       turns: [],
@@ -64,69 +22,12 @@ function mockDesktopApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDeskto
       handoffs: [],
       flow_definition: {},
       runtime_snapshot: {},
-      navigator_summary: {
-        flow_id: "flow_mock_desktop",
-        workflow_kind: "managed_flow",
-        effective_status: "running",
-        effective_phase: "build",
-        attempt_count: 2,
-        max_attempts: 8,
-        max_phase_attempts: 4,
-        max_runtime_seconds: 1800,
-        runtime_elapsed_seconds: 312,
-        goal: "Ship Butler Desktop",
-        guard_condition: "desktop launch verified",
-        approval_state: "operator_required",
-        execution_mode: "medium",
-        session_strategy: "role_bound",
-        active_role_id: "implementer",
-        role_pack_id: "coding_flow",
-        last_judge: "ADVANCE",
-        latest_judge_decision: { decision: "ADVANCE" },
-        last_operator_action: "append_instruction",
-        latest_operator_action: { action_type: "append_instruction" },
-        queued_operator_updates: [],
-        latest_token_usage: {},
-        context_governor: {},
-        latest_handoff_summary: {},
-        updated_at: "2026-04-03T14:00:00Z"
-      },
-      supervisor_view: {
-        header: {
-          flow_id: "flow_mock_desktop",
-          status: "running",
-          phase: "build",
-          active_role_id: "implementer",
-          approval_state: "operator_required",
-          goal: "Ship Butler Desktop"
-        },
-        events: [],
-        latest_supervisor_decision: {},
-        latest_judge_decision: {},
-        latest_operator_action: {},
-        latest_handoff_summary: {},
-        context_governor: {},
-        latest_token_usage: {},
-        pointers: {
-          runtime_elapsed_seconds: 312,
-          max_runtime_seconds: 1800
-        }
-      },
-      workflow_view: {
-        events: [],
-        runtime_summary: {},
-        artifact_refs: []
-      },
-      inspector: {
-        runtime: {
-          runtime_plan: {
-            plan_stage: "implementation",
-            summary: "Desktop shell and bridge are in progress."
-          }
-        }
-      },
+      navigator_summary: {},
+      supervisor_view: {},
+      workflow_view: {},
+      inspector: {},
       role_strip: {
-        active_role_id: "implementer",
+        active_role_id: "",
         role_sessions: {},
         pending_handoffs: [],
         recent_handoffs: [],
@@ -134,52 +35,344 @@ function mockDesktopApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDeskto
         latest_role_handoffs: {},
         role_chips: [],
         roles: [],
-        execution_mode: "medium",
-        session_strategy: "role_bound",
-        role_pack_id: "coding_flow"
+        execution_mode: "",
+        session_strategy: "",
+        role_pack_id: ""
       },
-      operator_rail: {
-        approval_state: "operator_required",
-        latest_supervisor_decision: {},
-        latest_operator_action: {},
-        latest_judge_decision: {},
-        promoted_events: []
-      },
-      flow_console: {
-        flow_id: "flow_mock_desktop",
-        summary: {},
-        recent_steps: [],
-        step_history: []
-      },
+      operator_rail: {},
+      flow_console: {},
       surface: {}
     }),
     getDetail: vi.fn().mockResolvedValue({}),
     getManageCenter: vi.fn().mockResolvedValue({
       preflight: {},
-      assets: {
-        items: [
-          {
-            asset_id: "desktop-shell",
-            title: "Desktop Shell V1",
-            status: "active",
-            summary: "Electron + React workbench shell"
-          }
-        ]
-      },
-      selected_asset: {
-        asset_id: "desktop-shell",
-        title: "Desktop Shell V1"
-      },
-      role_guidance: {
-        implementer: "Keep the shell flow-first."
-      },
-      review_checklist: ["Shell launches"],
-      bundle_manifest: {
-        bundle_id: "desktop-v1"
-      },
-      manager_notes: "Promote the shell only after bridge and payload rendering are verified."
+      assets: { items: [] },
+      selected_asset: {},
+      role_guidance: {},
+      review_checklist: [],
+      bundle_manifest: {},
+      manager_notes: ""
     }),
     getPreflight: vi.fn().mockResolvedValue({}),
+    getThreadHome: vi.fn().mockResolvedValue({
+      preflight: {
+        workspace_root: "/tmp/butler",
+        config_path: CONFIG_PATH
+      },
+      manager_entry: {
+        default_manager_session_id: "manager-session-1",
+        draft_summary: "先由 Manager 对齐需求",
+        status: "active",
+        title: "Manager 管理台",
+        total_sessions: 1,
+        active_flow_id: "flow_mock_desktop",
+        active_thread_id: "manager:manager-session-1"
+      },
+      history: [
+        {
+          thread_id: "manager:manager-session-1",
+          thread_kind: "manager",
+          title: "Desktop 线程工作台",
+          subtitle: "Manager 默认入口",
+          status: "active",
+          created_at: "2026-04-05 13:00:00",
+          updated_at: "2026-04-05 14:00:00",
+          manager_session_id: "manager-session-1",
+          flow_id: "",
+          active_role_id: "",
+          current_phase: "requirements",
+          badge: "flow_create",
+          tags: ["managed_flow"]
+        },
+        {
+          thread_id: "flow:flow_mock_desktop",
+          thread_kind: "supervisor",
+          title: "Butler Flow Desktop",
+          subtitle: "Supervisor 正在推进 renderer",
+          status: "running",
+          created_at: "2026-04-05 13:30:00",
+          updated_at: "2026-04-05 14:00:00",
+          manager_session_id: "manager-session-1",
+          flow_id: "flow_mock_desktop",
+          active_role_id: "implementer",
+          current_phase: "implement",
+          badge: "operator_required",
+          tags: ["managed_flow"]
+        }
+      ],
+      templates: [
+        {
+          thread_id: "template:desktop-template",
+          thread_kind: "template",
+          title: "Desktop Shell Template",
+          subtitle: "Template + agent team",
+          status: "active",
+          created_at: "",
+          updated_at: "2026-04-05 11:00:00",
+          manager_session_id: "",
+          flow_id: "",
+          active_role_id: "",
+          current_phase: "",
+          badge: "template",
+          tags: ["managed_flow"]
+        }
+      ]
+    }),
+    getManagerThread: vi.fn().mockResolvedValue({
+      thread: {
+        thread_id: "manager:manager-session-1",
+        thread_kind: "manager",
+        title: "Desktop 线程工作台",
+        subtitle: "先对齐 idea，再进入 Supervisor。",
+        status: "active",
+        created_at: "2026-04-05 13:00:00",
+        updated_at: "2026-04-05 14:00:00",
+        manager_session_id: "manager-session-1",
+        flow_id: "",
+        active_role_id: "",
+        current_phase: "requirements",
+        badge: "flow_create",
+        tags: ["managed_flow"]
+      },
+      manager_session_id: "manager-session-1",
+      manage_target: "new",
+      active_manage_target: "new",
+      manager_stage: "requirements",
+      confirmation_scope: "",
+      blocks: [
+        {
+          block_id: "manager-idea",
+          kind: "idea",
+          title: "Idea 草案",
+          summary: "线程化单流 Desktop shell。",
+          created_at: "2026-04-05 13:12:00",
+          status: "active",
+          expanded_by_default: true,
+          payload: {
+            response: "先做 thread-first IA。"
+          }
+        }
+      ],
+      draft: {},
+      pending_action: {},
+      latest_response: "先做 thread-first IA。",
+      linked_flow_id: ""
+    }),
+    getSupervisorThread: vi.fn().mockResolvedValue({
+      thread: {
+        thread_id: "flow:flow_mock_desktop",
+        thread_kind: "supervisor",
+        title: "Butler Flow Desktop",
+        subtitle: "Supervisor 正在推进 renderer",
+        status: "running",
+        created_at: "2026-04-05 13:30:00",
+        updated_at: "2026-04-05 14:00:00",
+        manager_session_id: "manager-session-1",
+        flow_id: "flow_mock_desktop",
+        active_role_id: "implementer",
+        current_phase: "implement",
+        badge: "operator_required",
+        tags: ["managed_flow"]
+      },
+      flow_id: "flow_mock_desktop",
+      summary: {
+        flow_id: "flow_mock_desktop",
+        label: "Butler Flow Desktop",
+        workflow_kind: "managed_flow",
+        effective_status: "running",
+        effective_phase: "implement",
+        attempt_count: 1,
+        max_attempts: 8,
+        max_phase_attempts: 4,
+        max_runtime_seconds: 1800,
+        runtime_elapsed_seconds: 120,
+        goal: "Ship thread-first desktop",
+        guard_condition: "verified",
+        approval_state: "operator_required",
+        execution_mode: "medium",
+        session_strategy: "role_bound",
+        active_role_id: "implementer",
+        role_pack_id: "coding_flow",
+        last_judge: "ADVANCE",
+        latest_judge_decision: {},
+        last_operator_action: "",
+        latest_operator_action: {},
+        queued_operator_updates: [],
+        latest_token_usage: {},
+        context_governor: {},
+        latest_handoff_summary: {},
+        updated_at: "2026-04-05 14:00:00"
+      },
+      blocks: [
+        {
+          block_id: "supervisor-decision",
+          kind: "decision",
+          title: "实现 thread-first renderer",
+          summary: "先改 shared surface，再换 UI。",
+          created_at: "2026-04-05 13:40:00",
+          status: "decision",
+          expanded_by_default: true,
+          payload: {},
+          role_id: "implementer",
+          action_label: "Open Agent",
+          action_target: "role:implementer",
+          tags: ["supervisor"]
+        }
+      ],
+      role_strip: {
+        active_role_id: "implementer",
+        role_sessions: {},
+        pending_handoffs: [],
+        recent_handoffs: [],
+        latest_handoff_summary: {},
+        latest_role_handoffs: {},
+        role_chips: [
+          { role_id: "implementer", state: "active", is_active: true },
+          { role_id: "reviewer", state: "receiving_handoff", is_active: false }
+        ],
+        roles: [],
+        execution_mode: "medium",
+        session_strategy: "role_bound",
+        role_pack_id: "coding_flow"
+      },
+      operator_rail: {},
+      latest_handoff: {}
+    }),
+    getAgentFocus: vi.fn().mockResolvedValue({
+      thread: {
+        thread_id: "agent:flow_mock_desktop:implementer",
+        thread_kind: "agent",
+        title: "implementer",
+        subtitle: "Agent focus stream",
+        status: "running",
+        created_at: "2026-04-05 13:45:00",
+        updated_at: "2026-04-05 14:00:00",
+        manager_session_id: "manager-session-1",
+        flow_id: "flow_mock_desktop",
+        active_role_id: "implementer",
+        current_phase: "implement",
+        badge: "active",
+        tags: ["managed_flow"]
+      },
+      flow_id: "flow_mock_desktop",
+      role_id: "implementer",
+      title: "implementer · focus",
+      summary: {
+        flow_id: "flow_mock_desktop",
+        label: "Butler Flow Desktop",
+        workflow_kind: "managed_flow",
+        effective_status: "running",
+        effective_phase: "implement",
+        attempt_count: 1,
+        max_attempts: 8,
+        max_phase_attempts: 4,
+        max_runtime_seconds: 1800,
+        runtime_elapsed_seconds: 120,
+        goal: "Ship thread-first desktop",
+        guard_condition: "verified",
+        approval_state: "operator_required",
+        execution_mode: "medium",
+        session_strategy: "role_bound",
+        active_role_id: "implementer",
+        role_pack_id: "coding_flow",
+        last_judge: "ADVANCE",
+        latest_judge_decision: {},
+        last_operator_action: "",
+        latest_operator_action: {},
+        queued_operator_updates: [],
+        latest_token_usage: {},
+        context_governor: {},
+        latest_handoff_summary: {},
+        updated_at: "2026-04-05 14:00:00"
+      },
+      blocks: [
+        {
+          block_id: "agent-progress",
+          kind: "progress",
+          title: "Progress 更新",
+          summary: "thread API 已接线。",
+          created_at: "2026-04-05 13:50:00",
+          status: "progress",
+          expanded_by_default: true,
+          payload: {}
+        }
+      ],
+      role: {
+        role_id: "implementer",
+        state: "active"
+      },
+      related_handoffs: [],
+      artifacts: []
+    }),
+    getTemplateTeam: vi.fn().mockResolvedValue({
+      thread: {
+        thread_id: "template:desktop-template",
+        thread_kind: "template",
+        title: "Desktop Shell Template",
+        subtitle: "Template + agent team",
+        status: "active",
+        created_at: "2026-04-05 11:00:00",
+        updated_at: "2026-04-05 14:00:00",
+        manager_session_id: "",
+        flow_id: "",
+        active_role_id: "",
+        current_phase: "",
+        badge: "template",
+        tags: ["managed_flow"]
+      },
+      asset_id: "desktop-template",
+      blocks: [
+        {
+          block_id: "template-overview",
+          kind: "overview",
+          title: "Templates / Team",
+          summary: "管理模板与默认 team。",
+          created_at: "2026-04-05 11:00:00",
+          status: "active",
+          expanded_by_default: true,
+          payload: {}
+        }
+      ],
+      assets: [{ asset_id: "desktop-template", label: "Desktop Shell Template" }],
+      selected_asset: { asset_id: "desktop-template", label: "Desktop Shell Template" },
+      role_guidance: {},
+      review_checklist: ["single-stream"],
+      bundle_manifest: {},
+      manager_notes: "先固定 thread contract。"
+    }),
+    sendManagerMessage: vi.fn().mockResolvedValue({
+      ok: true,
+      manager_session_id: "manager-session-1",
+      message: { response: "Flow 已创建，切到 Supervisor。" },
+      thread: {
+        thread: {
+          thread_id: "manager:manager-session-1",
+          thread_kind: "manager",
+          title: "Desktop 线程工作台",
+          subtitle: "Manager 默认入口",
+          status: "active",
+          created_at: "2026-04-05 13:00:00",
+          updated_at: "2026-04-05 14:00:00",
+          manager_session_id: "manager-session-1",
+          flow_id: "",
+          active_role_id: "",
+          current_phase: "launch",
+          badge: "flow_create",
+          tags: ["managed_flow"]
+        },
+        manager_session_id: "manager-session-1",
+        manage_target: "instance:flow_mock_desktop",
+        active_manage_target: "instance:flow_mock_desktop",
+        manager_stage: "launch",
+        confirmation_scope: "",
+        blocks: [],
+        draft: {},
+        pending_action: {},
+        latest_response: "Flow 已创建，切到 Supervisor。",
+        linked_flow_id: "flow_mock_desktop"
+      },
+      launched_flow: { flow_id: "flow_mock_desktop" }
+    }),
     performAction: vi.fn().mockResolvedValue({
       ok: true,
       action_type: "pause"
@@ -197,64 +390,83 @@ function mockDesktopApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDeskto
 
 describe("Desktop App", () => {
   it("invokes the native config picker from the empty state", async () => {
-    const api = mockDesktopApi({
+    const api = buildApi({
       chooseConfigPath: vi.fn().mockResolvedValue({ canceled: true })
     });
     window.butlerDesktop = api;
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: "Select Butler Config" }));
+    await user.click(screen.getByRole("button", { name: /select config/i }));
 
     expect(api.chooseConfigPath).toHaveBeenCalledTimes(1);
   });
 
-  it("attaches a config path manually and loads workspace flows", async () => {
-    window.butlerDesktop = mockDesktopApi();
+  it("attaches a config path manually and renders manager as the default page", async () => {
+    const api = buildApi();
+    window.butlerDesktop = api;
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
     await user.type(screen.getByLabelText("Config Path Fallback"), CONFIG_PATH);
-    await user.click(screen.getByRole("button", { name: "Attach Path" }));
+    await user.click(screen.getByRole("button", { name: "Attach" }));
 
     await waitFor(() => {
-      expect(window.butlerDesktop.getHome).toHaveBeenCalledWith({ configPath: CONFIG_PATH });
+      expect(api.getThreadHome).toHaveBeenCalledWith({ configPath: CONFIG_PATH });
     });
-    expect(await screen.findByRole("button", { name: /flow_mock_desktop/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Desktop 线程工作台" })).toBeInTheDocument();
     expect(screen.getByText(`Config attached: ${CONFIG_PATH}`)).toBeInTheDocument();
   });
 
-  it("triggers pause from the workbench", async () => {
-    const api = mockDesktopApi();
+  it("sends a manager message and jumps into supervisor when flow is launched", async () => {
+    const api = buildApi();
     window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
     window.butlerDesktop = api;
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
+    await user.type(
+      await screen.findByLabelText("Continue with Manager"),
+      "请把当前方案创建成 flow，并启动 supervisor"
+    );
+    await user.click(screen.getByRole("button", { name: /send to manager/i }));
 
-    const flowButton = await screen.findByRole("button", { name: /flow_mock_desktop/i });
-    await user.click(flowButton);
-    await user.click(await screen.findByRole("button", { name: "Pause" }));
-
-    expect(api.performAction).toHaveBeenCalledWith({
-      configPath: CONFIG_PATH,
-      flowId: "flow_mock_desktop",
-      type: "pause",
-      instruction: undefined
+    await waitFor(() => {
+      expect(api.sendManagerMessage).toHaveBeenCalledWith({
+        configPath: CONFIG_PATH,
+        instruction: "请把当前方案创建成 flow，并启动 supervisor",
+        managerSessionId: "manager-session-1",
+        manageTarget: undefined
+      });
     });
+    expect(await screen.findByRole("heading", { name: "Butler Flow Desktop" })).toBeInTheDocument();
   });
 
-  it("renders the manage page and selected asset details", async () => {
-    const api = mockDesktopApi();
+  it("opens templates from the rail", async () => {
+    const api = buildApi();
     window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
     window.butlerDesktop = api;
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: "Manage" }));
+    await user.click(screen.getByRole("button", { name: /templates 模板/i }));
 
-    expect(await screen.findByRole("heading", { name: "Assets and execution guidance" })).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: /Desktop Shell V1/i })).toBeInTheDocument();
-    expect(screen.getByText(/Promote the shell only after bridge/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Desktop Shell Template" })).toBeInTheDocument();
+    expect(screen.getByText("管理模板与默认 team。")).toBeInTheDocument();
+  });
+
+  it("enters agent focus from supervisor role chips", async () => {
+    const api = buildApi();
+    window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
+    window.butlerDesktop = api;
+    const user = userEvent.setup();
+
+    renderDesktopApp(<App />);
+    await user.click(await screen.findByRole("button", { name: /Butler Flow Desktop/i }));
+    const implementerButtons = await screen.findAllByRole("button", { name: /implementer/i });
+    await user.click(implementerButtons[implementerButtons.length - 1]);
+
+    expect(await screen.findByRole("heading", { name: "implementer · focus" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /back to supervisor/i })).toBeInTheDocument();
   });
 });

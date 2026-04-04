@@ -1,6 +1,6 @@
 # 改前读包
 
-更新时间：2026-04-04
+更新时间：2026-04-05
 状态：现役
 用途：把常见改动压成固定最小读包，避免 agent 自由扩散式读库
 
@@ -10,7 +10,7 @@
 
 1. 仓库根 `README.md`
 2. [docs/README.md](../README.md)
-3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0404/00_当日总纲.md`）
+3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0405/00_当日总纲.md`）
 
 ## `frontdoor`
 
@@ -116,6 +116,8 @@
   - [分层地图](./01_layer_map.md)
   - [功能地图](./02_feature_map.md)
   - [真源矩阵](./03_truth_matrix.md)
+  - [0405 当日总纲](../daily-upgrade/0405/00_当日总纲.md)
+  - [0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](../daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)
   - [0403 当日总纲](../daily-upgrade/0403/00_当日总纲.md)
   - [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](../daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
   - [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](../daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
@@ -159,6 +161,7 @@
   - `test_butler_flow_tui_app.py`
   - `test_butler_flow_surface.py`
   - `test_butler_flow_desktop_bridge.py`
+  - `butler_flow_desktop_thread_workbench_test_cases.md`
 - TUI 信息架构附加检查：
   - 先确认当前实现是否已是 `workspace + single flow single-column dual-stream console + /manage + /settings`，并注意 `/history` `/flows` 都已经退成兼容语义，不要再把它们写成产品级主入口
 - 再看 `butler_main/products/butler_flow/tui/controller.py` 的 payload 是否已抽象成 `workspace / single_flow.navigator_summary / single_flow.supervisor_view / single_flow.workflow_view / single_flow.inspector` 这些现役投影；`operator_rail_payload / role_strip_payload` 只应作为兼容层
@@ -214,6 +217,7 @@
   - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
 - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/products/butler_flow/desktop/ + butler_main/products/butler_flow/desktop_bridge.py + butler_main/products/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars；远程/无头环境下优先走手填 `Config Path Fallback`，不要把原生 file dialog 当唯一验证入口
   - 若排查 Desktop 是否“已完成”，把验证拆成四层记录：Python bridge 回归、desktop `typecheck/build`、renderer `vitest`、Electron `Playwright` 点击回归；不要把源码编译通过误记成运行时已验证
+- 若目标是当前 thread-first Desktop、`Manager -> Supervisor -> Agent focus` 串联、`History` project threads、`Templates` 单流 team 管理、或 `day/night theme`，先补读 [0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](../daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)；当前 renderer 已不再以旧 `workspace/manage/detail drawer` 为主心智
 - 若跑 Desktop e2e，优先直接用 `cd butler_main/products/butler_flow/desktop && npm run test:e2e`；当前脚本会先 `build`，再优先使用现有 `DISPLAY`，无图形时自动尝试 `xvfb-run`
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
   - 最后补跑 `tools/butler-flow ... --help`、`butler-flow --help` 与 `python -m butler_main --help`
