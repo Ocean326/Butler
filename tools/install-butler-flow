@@ -11,7 +11,9 @@ SCRIPT_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BIN_DIR="${HOME}/.local/bin"
 TARGET_PATH="${BIN_DIR}/butler-flow"
+DESKTOP_TARGET_PATH="${BIN_DIR}/flow-desktop"
 SOURCE_CLI="${ROOT_DIR}/tools/butler-flow"
+SOURCE_DESKTOP="${ROOT_DIR}/tools/flow-desktop"
 FORCE_INSTALL=0
 
 for ARG in "$@"; do
@@ -29,22 +31,32 @@ done
 
 mkdir -p "$BIN_DIR"
 
-if [[ -L "$TARGET_PATH" ]]; then
-  CURRENT_TARGET="$(readlink "$TARGET_PATH" || true)"
-  if [[ "$CURRENT_TARGET" == "$SOURCE_CLI" ]]; then
-    echo "butler-flow already installed at ${TARGET_PATH}"
-    exit 0
-  fi
-fi
+install_link() {
+  local target_path="$1"
+  local source_path="$2"
+  local label="$3"
 
-if [[ -e "$TARGET_PATH" || -L "$TARGET_PATH" ]]; then
-  if [[ "$FORCE_INSTALL" -ne 1 ]]; then
-    echo "target already exists: ${TARGET_PATH}" >&2
-    echo "rerun with --force to replace it" >&2
-    exit 1
+  if [[ -L "$target_path" ]]; then
+    local current_target
+    current_target="$(readlink "$target_path" || true)"
+    if [[ "$current_target" == "$source_path" ]]; then
+      echo "${label} already installed at ${target_path}"
+      return 0
+    fi
   fi
-  rm -f "$TARGET_PATH"
-fi
 
-ln -s "$SOURCE_CLI" "$TARGET_PATH"
-echo "installed butler-flow -> ${TARGET_PATH}"
+  if [[ -e "$target_path" || -L "$target_path" ]]; then
+    if [[ "$FORCE_INSTALL" -ne 1 ]]; then
+      echo "target already exists: ${target_path}" >&2
+      echo "rerun with --force to replace it" >&2
+      exit 1
+    fi
+    rm -f "$target_path"
+  fi
+
+  ln -s "$source_path" "$target_path"
+  echo "installed ${label} -> ${target_path}"
+}
+
+install_link "$TARGET_PATH" "$SOURCE_CLI" "butler-flow"
+install_link "$DESKTOP_TARGET_PATH" "$SOURCE_DESKTOP" "flow-desktop"
