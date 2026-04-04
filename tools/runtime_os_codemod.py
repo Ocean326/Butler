@@ -278,10 +278,7 @@ def _remaining_legacy_imports(source: str) -> int:
 
 
 def _display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(REPO_ROOT))
-    except ValueError:
-        return str(path)
+    return str(path.resolve())
 
 
 def scan_paths(paths: list[str], *, write: bool = False) -> ScanSummary:

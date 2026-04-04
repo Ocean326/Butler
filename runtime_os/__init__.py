@@ -19,13 +19,13 @@ __all__ = list(_SUBMODULES)
 
 
 def _load_submodule(name: str):
-    module = globals().get(name)
-    if module is not None:
-        return module
-    module = import_module(f"butler_main.runtime_os.{name}")
+    module = sys.modules.get(f"{__name__}.{name}")
+    if module is None:
+        module = globals().get(name)
+    if module is None:
+        module = import_module(f"{__name__}.{name}")
     globals()[name] = module
     sys.modules.setdefault(f"{__name__}.{name}", module)
-    sys.modules.setdefault(f"butler_main.runtime_os.{name}", module)
     return module
 
 

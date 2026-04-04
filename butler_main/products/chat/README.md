@@ -17,10 +17,11 @@
 
 - `butler_bot_code/` 继续承载 runtime/body 实现
 - `butler_main/products/chat/` 作为产品层、app 层与入口层真源
+- `butler_main/chat/` 保留 compat shell 与旧导入面，不再作为默认主树
 - `chat` 先独立 bootstrap，再逐步把运行事实从 body 中抽出
 - `chat` 前门只保留 `chat` / `mission_ingress` 两类入口，不再保留旧后台入口语义
 - 新 channel 先按 `chat/<channel>/` 并列开接口层，再决定是否接入真实 transport
-- `chat` 前台入口统一收敛到 `.venv\Scripts\python.exe -m butler_main.chat` / `butler_main/products/chat/engine.py`
+- `chat` 前台入口统一收敛到 `./.venv/bin/python -m butler_main.chat` / `butler_main/products/chat/engine.py`
 
 当前渠道能力真源：
 

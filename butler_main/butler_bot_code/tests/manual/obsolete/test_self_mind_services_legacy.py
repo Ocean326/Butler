@@ -4,14 +4,16 @@ import sys
 import unittest
 
 
-MODULE_DIR = Path(__file__).resolve().parents[1] / "butler_bot"
+MODULE_DIR = Path(__file__).resolve().parents[2] / "butler_bot"
 if str(MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(MODULE_DIR))
 
 from memory_manager import MemoryManager  # noqa: E402
 
 
-class SelfMindServicesTests(unittest.TestCase):
+class SelfMindServicesLegacyTests(unittest.TestCase):
+    """Legacy MemoryManager self_mind coverage kept for historical reference only."""
+
     def test_self_mind_state_service_resolves_paths_and_targets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)

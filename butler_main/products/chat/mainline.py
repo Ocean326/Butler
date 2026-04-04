@@ -570,7 +570,7 @@ class ChatMainlineService:
     def _explicit_frontdoor_mode_id(*, slash_command, mode_state) -> str:
         if slash_command is not None:
             mode_id = str(slash_command.mode_id or "").strip().lower()
-            if mode_id in {"status", "govern", "bg", "delivery", "research"}:
+            if mode_id in {"status", "govern", "bg", "plan", "delivery", "research"}:
                 return mode_id
         if canonical_main_mode(mode_state.main_mode) == BACKGROUND_MAIN_MODE:
             return "bg"

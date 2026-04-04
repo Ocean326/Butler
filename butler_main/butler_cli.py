@@ -37,7 +37,7 @@ FLOW_DEPRECATED = {"workflow", "-workflow", "--workflow", "codex-guard"}
 FLOW_MIGRATION_HINT = (
     "foreground flow has moved to the dedicated butler-flow CLI.\n"
     "use: butler-flow <command>\n"
-    "example: butler-flow run --kind project_loop --goal \"Close the feature gap\"\n"
+    "example: butler-flow new --mode flow --level medium --flow project_loop --goal \"Close the feature gap\"\n"
 )
 
 

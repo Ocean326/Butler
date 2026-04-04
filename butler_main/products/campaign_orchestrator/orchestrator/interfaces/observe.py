@@ -18,7 +18,8 @@ from .query_service import OrchestratorQueryService
 
 
 def _print_json(payload: object) -> None:
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    sys.stdout.write(json.dumps(payload, ensure_ascii=False, indent=2))
+    sys.stdout.write("\n")
 
 
 def build_parser() -> argparse.ArgumentParser:

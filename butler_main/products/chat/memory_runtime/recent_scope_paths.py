@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from butler_main.chat.pathing import RECENT_MEMORY_DIR_REL, ensure_chat_data_layout
+from butler_main.repo_layout import LEGACY_CHAT_REL
 from butler_main.runtime_os.fs_retention import DEFAULT_RETENTION_DAYS, prune_path_children
 
 
@@ -17,6 +18,14 @@ def resolve_recent_scope_dir(workspace: str, session_scope_id: str = "") -> Path
     root = ensure_chat_data_layout(workspace)
     base_dir = root / RECENT_MEMORY_DIR_REL
     base_dir.mkdir(parents=True, exist_ok=True)
+    legacy_scopes_root = root / LEGACY_CHAT_REL / "data" / "hot" / "recent_memory" / SCOPES_DIR_NAME
+    if legacy_scopes_root != base_dir / SCOPES_DIR_NAME:
+        prune_path_children(
+            legacy_scopes_root,
+            retention_days=DEFAULT_RETENTION_DAYS,
+            include_files=False,
+            include_dirs=True,
+        )
     scope_id = str(session_scope_id or "").strip()
     if not scope_id:
         return base_dir

@@ -31,7 +31,7 @@
 
 ## 常用命令
 
-在 `butler_main/console/webapp/` 下执行：
+在 `butler_main/products/campaign_orchestrator/console/webapp/` 下执行：
 
 ```bash
 npm install
@@ -40,6 +40,8 @@ npm run build
 npm run test
 npm run typecheck
 ```
+
+`butler_main/console/` 仅保留 compat shell；前端源码和 package workspace 当前都以这里为准。
 
 ## 维护约束
 

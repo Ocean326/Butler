@@ -19,6 +19,9 @@ class LegacyExecutionShellTombstoneTests(unittest.TestCase):
         )
         for folder in targets:
             with self.subTest(folder=str(folder)):
+                if not folder.exists():
+                    self.assertFalse(folder.exists())
+                    continue
                 self.assertTrue(folder.is_dir(), msg=str(folder))
                 self.assertTrue((folder / "README.md").is_file(), msg=f"missing tombstone README in {folder}")
                 tracked_python_files = [

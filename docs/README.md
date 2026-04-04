@@ -28,6 +28,7 @@
 6. [0404 当日总纲](./daily-upgrade/0404/00_当日总纲.md)
 - 补充：`0404/00` 已回写本轮仓库级重构完成态；当前应按 canonical tree 理解三产品与 repo 导航
 - 补充：[0404 Butler Flow manager skill-contract 吸收与单 `main` worktree 收口](./daily-upgrade/0404/01_butler-flow_manager-skill-contract吸收与单main-worktree收口.md)
+- 补充：[0404 仓库迁移后说明收口、回归修复与全量体检](./daily-upgrade/0404/02_仓库迁移后说明收口_回归修复与全量体检.md)
 - 补充：0403 脑暴/资料稿当前统一落在 `docs/每日头脑风暴/0403/`，不再继续写回旧 `docs/每日/0403/`
 7. [0403 当日总纲](./daily-upgrade/0403/00_当日总纲.md)
 - 补充：[0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](./daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
@@ -112,6 +113,12 @@
 - 补充：若目标是前台 `butler-flow` 长流恢复、实例级静态资产修复、`doctor` 临时角色或 `resume/no-rollout` 自愈链路，补读 [0402 Butler Flow Doctor 恢复角色与实例级静态资产修复](./daily-upgrade/0402/12_butler-flow_doctor恢复角色与实例级静态资产修复.md)
 14. 只有需要长期背景时，再进入 [`concepts/`](./concepts/README.md)
 16. 需要追溯旧语义时，最后才进入 `concepts/history/` 或 `daily-upgrade/history/`
+
+## 当前目录口径
+
+- 当前代码导航默认从 `butler_main/products/`、`butler_main/platform/`、`butler_main/incubation/` 开始，不再把 `chat/console/orchestrator/domains` 旧物理路径当主树。
+- `butler_main/chat/`、`butler_main/console/`、`butler_main/orchestrator/`、`butler_main/domains/campaign/` 仍保留 compat shell / 导入面，但默认只在排查兼容层或旧引用时进入。
+- `butler_main/platform/skills/` 是 skills 现役真源；`butler_main/sources/skills/` 仅保留兼容命名空间。
 
 ## 维护规则
 

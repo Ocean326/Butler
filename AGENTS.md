@@ -1,11 +1,11 @@
 # Repository Guidelines
 
 ## 项目结构与模块组织
-`butler_main/` 是主代码区。优先从 `runtime_os/` 理解当前运行时命名空间；`agents_os/`、`multi_agents_os/` 仍是迁移期核心目录；`orchestrator/` 负责控制面；`butler_bot_code/` 承载 Butler 运行体，包括 `butler_bot/`、`configs/`、`run/`、`logs/`、`tests/`。`docs/` 是唯一正式文档入口；其中 `docs/project-map/` 是当前给人和 agent 共用的导航层。`BrainStorm/` 用于研究、记忆和工作稿，不是正式架构真源。临时工作放 `工作区/`，工具脚本放 `tools/`，历史资产放 `过时/`。
+`butler_main/` 是主代码区。当前现役主树优先按 `products/ -> platform/ -> incubation/` 理解：`butler_main/products/chat/`、`butler_main/products/butler_flow/`、`butler_main/products/campaign_orchestrator/` 是三条产品主线，`butler_main/platform/skills/` 与 `butler_main/platform/runtime/` 承接共享平台面，`butler_main/incubation/research/` 承接研究孵化。`runtime_os/` 仍是当前运行时命名空间；`agents_os/`、`multi_agents_os/`、`chat/`、`console/`、`orchestrator/`、`domains/campaign/` 是迁移期 compat shell。`butler_bot_code/` 承载 Butler 运行体，包括 `assets/`、`configs/`、`run/`、`logs/`、`tests/`。`docs/` 是唯一正式文档入口；其中 `docs/project-map/` 是当前给人和 agent 共用的导航层。`BrainStorm/` 用于研究、记忆和工作稿，不是正式架构真源。临时工作放 `工作区/`，工具脚本放 `tools/`，历史资产放 `过时/`。
 
 ## 架构入口
 当前按 `3 -> 2 -> 1` 理解系统：
-- `3`：`orchestrator` control plane
+- `3`：`products/campaign_orchestrator/orchestrator` control plane
 - `2`：`runtime_os / process runtime`
 - `1`：`runtime_os / agent runtime`
 
@@ -50,14 +50,16 @@
 `docs/concepts/history/` 和历史快照桩文件只用于追溯，不直接作为当前设计依据。
 
 ## 构建、测试与开发命令
-仓库未提供独立 build 流程，默认使用虚拟环境和现有管理脚本：
+仓库当前以 Python 回归、现役 CLI 和产品侧前端脚本为主：
 
-```powershell
-.venv\Scripts\python.exe -m pytest
-.venv\Scripts\python.exe -m pytest butler_main\butler_bot_code\tests\test_chat_cli_runner.py -q
-.\butler_main\butler_bot_code\manager.ps1 status
-.\butler_main\butler_bot_code\manager.ps1 restart butler_bot
-.\butler_main\butler_bot_code\watch_stack.ps1
+```bash
+./.venv/bin/python -m pytest
+./.venv/bin/python -m pytest butler_main/butler_bot_code/tests/test_chat_cli_runner.py -q
+python -m butler_main.butler_bot_code.manager status
+./tools/butler status
+./tools/butler restart butler_bot
+cd butler_main/products/campaign_orchestrator/console/webapp && npm run typecheck
+cd butler_main/products/butler_flow/desktop && npm run test:renderer
 git status --short
 ```
 

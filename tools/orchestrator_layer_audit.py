@@ -9,7 +9,7 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ORCHESTRATOR_ROOT = REPO_ROOT / "butler_main" / "orchestrator"
+ORCHESTRATOR_ROOT = REPO_ROOT / "butler_main" / "products" / "campaign_orchestrator" / "orchestrator"
 APPLICATION_ROOT = ORCHESTRATOR_ROOT / "application"
 INTERFACES_ROOT = ORCHESTRATOR_ROOT / "interfaces"
 
@@ -26,16 +26,16 @@ FOURTH_LAYER_TARGETS = {
 }
 
 FORBIDDEN_INTERFACE_IMPORT_PREFIXES = (
-    "butler_main.orchestrator.service",
-    "butler_main.orchestrator.workflow_vm",
-    "butler_main.orchestrator.workflow_ir",
-    "butler_main.orchestrator.runtime_bridge.workflow_session_bridge",
+    "butler_main.products.campaign_orchestrator.orchestrator.service",
+    "butler_main.products.campaign_orchestrator.orchestrator.workflow_vm",
+    "butler_main.products.campaign_orchestrator.orchestrator.workflow_ir",
+    "butler_main.products.campaign_orchestrator.orchestrator.runtime_bridge.workflow_session_bridge",
     "butler_main.agents_os.process_runtime.session",
     "butler_main.agents_os.process_runtime.factory",
     "butler_main.multi_agents_os",
 )
 TEMPORARY_ALLOWED_INTERFACE_IMPORTS = {
-    "butler_main.orchestrator.interfaces.runner:butler_main.orchestrator.workflow_vm",
+    "butler_main.products.campaign_orchestrator.orchestrator.interfaces.runner:butler_main.products.campaign_orchestrator.orchestrator.workflow_vm",
 }
 
 

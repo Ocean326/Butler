@@ -134,7 +134,20 @@ _REPLY_SERVICE = FeishuReplyService(
 
 def _candidate_config_paths(default_config_name: str) -> list[str]:
     config_name = f"{default_config_name}.json"
-    root = resolve_butler_root(__file__)
+    transport_file = Path(__file__).resolve()
+    root = resolve_butler_root(transport_file)
+    for candidate in (transport_file.parent, *transport_file.parents):
+        if (candidate / "butler_main").is_dir():
+            root = resolve_butler_root(candidate)
+            break
+        if (candidate / "chat" / "configs").is_dir() or (candidate / "butler_bot_code" / "configs").is_dir():
+            root = candidate
+            break
+    if not (root / "butler_main").is_dir():
+        return [
+            str((root / "chat" / "configs" / config_name).resolve()),
+            str((root / "butler_bot_code" / "configs" / config_name).resolve()),
+        ]
     chat_root = resolve_repo_path(
         root,
         canonical_rel=PRODUCT_CHAT_REL,
@@ -1257,7 +1270,7 @@ def run_feishu_bot(
     """
     global CONFIG, _config_path_for_reload
 
-    parser = argparse.ArgumentParser(description=f"飞书 {bot_name} 机器人")
+    parser = argparse.ArgumentParser(description=f"Butler chat service ({bot_name}; Feishu by default)")
     parser.add_argument("--config", "-c", help="配置文件路径")
     parser.add_argument("--prompt", "-p", help="本地测试：提示词")
     parser.add_argument("--stdin", action="store_true", help="本地测试：从 stdin 读取")

@@ -167,6 +167,22 @@ _STARTED_FEEDBACK_HINTS = (
     "吸收",
     "并进",
 )
+_STATUS_QUERY_HINTS = (
+    "任务进度",
+    "任务进展",
+    "后台任务进度",
+    "后台任务进展",
+    "campaign progress",
+    "campaign status",
+    "progress",
+    "status",
+    "进度",
+    "进展",
+    "状态",
+    "做到哪",
+    "到哪了",
+    "怎么样了",
+)
 _NEGOTIATION_RESTART_HINTS = (
     "新任务",
     "全新任务",
@@ -403,8 +419,10 @@ class CampaignNegotiationService:
         explicit_mode: str = "",
     ) -> CampaignNegotiationResult | None:
         intake_map = dict(intake_decision or {})
+        explicit_mode_id = str(explicit_mode or "").strip().lower()
         draft = self._store.load(workspace=workspace, session_id=session_id)
-        if draft is None and not (force_open or self._should_open_negotiation(user_text)):
+        should_handle = force_open or explicit_mode_id in {"plan", "delivery", "research"} or self._should_open_negotiation(user_text)
+        if draft is None and not should_handle:
             return None
         if draft is not None and draft.started_campaign_id:
             if self._is_confirmation(user_text):
@@ -438,13 +456,17 @@ class CampaignNegotiationService:
                 session_id=session_id,
             )
         draft = self._update_draft(draft, user_text)
-        explicit_mode_id = str(explicit_mode or "").strip().lower()
         if explicit_mode_id in {"plan", "delivery", "research"}:
             draft.frontdoor_mode_id = explicit_mode_id
         if force_open:
-            draft.task_mode = "background_entry"
-            if not draft.background_reason:
-                draft.background_reason = self._infer_background_reason(user_text)
+            background_candidate = self._looks_like_background_task_candidate(user_text)
+            campaign_like = self._looks_like_campaign(user_text)
+            if background_candidate or not campaign_like:
+                draft.task_mode = "background_entry"
+                if not draft.background_reason:
+                    draft.background_reason = self._infer_background_reason(user_text)
+            elif not draft.task_mode:
+                draft.task_mode = "campaign"
         if bool(intake_map.get("external_execution_risk")):
             draft.task_mode = "background_entry"
             if "ssh_reachable" not in draft.minimal_correctness_checks:
@@ -753,6 +775,29 @@ class CampaignNegotiationService:
         intake_map = dict(intake_decision or {})
         if str(intake_map.get("mode") or "").strip() == "status_query":
             return False
+        if self._looks_like_followup_feedback(user_text):
+            return True
+        return False
+
+    @staticmethod
+    def _looks_like_followup_feedback(user_text: str) -> bool:
+        lowered = str(user_text or "").strip().lower()
+        if not lowered:
+            return False
+        if len(lowered) > 48:
+            return False
+        if any(re.search(pattern, lowered) for pattern in _DEFER_START_PATTERNS):
+            return False
+        if any(re.search(pattern, lowered) for pattern in _BACKEND_NEGATION_PATTERNS):
+            return False
+        if any(keyword in lowered for keyword in _STATUS_QUERY_HINTS):
+            return False
+        if any(keyword in lowered for keyword in _EXPLICIT_BACKEND_HINTS):
+            return False
+        if any(keyword in lowered for keyword in ("campaign_", "mission_id", "/mission", "/campaign")):
+            return False
+        if any(keyword in lowered for keyword in ("顺便", "另外", "补充", "加上", "也列", "也补", "别忘了", "同时")):
+            return True
         return False
 
     @staticmethod
@@ -1163,15 +1208,27 @@ class CampaignNegotiationService:
         except Exception:
             payload = {}
         mission_id = str(payload.get("mission_id") or "").strip()
-        if not mission_id:
-            return None
-        append_result = self._query_service.append_user_feedback(workspace, mission_id, feedback)
-        event_id = str(append_result.get("event_id") or "").strip()
+        event_id = ""
+        if mission_id:
+            append_result = self._query_service.append_user_feedback(workspace, mission_id, feedback)
+            event_id = str(append_result.get("event_id") or "").strip()
+        else:
+            try:
+                campaign_payload = self._campaign_service.append_campaign_feedback(workspace, campaign_id, feedback)
+            except Exception:
+                return None
+            feedback_items = list(
+                (campaign_payload.get("user_feedback") or {}).get("items")
+                or (campaign_payload.get("metadata") or {}).get("user_feedback_items")
+                or []
+            )
+            if feedback_items:
+                event_id = str((feedback_items[-1] or {}).get("event_id") or "").strip()
         text = "\n".join(
             [
                 "campaign feedback appended",
                 f"campaign_id: {campaign_id}",
-                f"mission_id: {mission_id}",
+                f"mission_id: {mission_id or '-'}",
                 f"feedback: {str(feedback or '').strip()[:160]}",
             ]
         )

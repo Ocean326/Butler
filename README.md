@@ -26,8 +26,12 @@ Butler 当前主工程收口在 `butler_main/`，正式文档统一收口在 `do
 当前目录职责速览：
 
 - `butler_main/`：主代码区
+- `butler_main/products/`：现役三产品主树，包含 `chat`、`butler_flow`、`campaign_orchestrator`
+- `butler_main/platform/`：共享 runtime / skills / host runtime
+- `butler_main/incubation/`：研究与孵化中的现役目录
 - `docs/`：唯一正式文档入口
 - `runtime_os/`：repo-root 兼容命名空间
+- `butler_main/chat/`、`butler_main/console/`、`butler_main/orchestrator/`、`butler_main/domains/campaign/`：迁移期 compat shell
 - `tools/`：现役工具与 CLI 入口
 - `工作区/`：活跃中的工作材料
 - `过时/`：历史归档
@@ -329,7 +333,7 @@ Butler 当前主工程收口在 `butler_main/`，正式文档统一收口在 `do
 3. 自 `0322` 起，日更目录默认维护 `1+N` 文档：`00_当日总纲.md` + `01_...md` / `02_...md`
 4. 同一二级主题的计划、落实、再计划持续更新在同一份 `01_...md` / `02_...md` 文档里，文档前几行先写主线，后面再追加细节
 5. 新增日更文档时，先建日期目录，再落文件，不再直接写到 `docs/` 根目录
-6. Skills 相关放 `butler_main/sources/skills/`
+6. Skills 相关当前真源放 `butler_main/platform/skills/`；`butler_main/sources/skills/` 仅保留兼容命名空间
 
 ## 当前运行约定
 
@@ -341,7 +345,7 @@ Butler 当前主工程收口在 `butler_main/`，正式文档统一收口在 `do
 
 ## 维护边界
 
-1. 当前真实代码入口在 `butler_main/butler_bot_code/`
+1. 当前真实代码入口以 `butler_main/products/`、`butler_main/platform/`、`butler_main/incubation/` 为主；`butler_main/butler_bot_code/` 承载 runtime body、资产、配置与测试
 2. 当前真实文档入口在 `docs/README.md`
 3. 根目录若产生新的缓存、临时目录或误放文档，应优先迁移到对应子目录或加入忽略规则
 

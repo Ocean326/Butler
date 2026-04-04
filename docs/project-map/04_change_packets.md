@@ -12,6 +12,10 @@
 2. [docs/README.md](../README.md)
 3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0404/00_当日总纲.md`）
 
+若目标涉及仓库迁移后的目录说明、compat shell 判定、README/help 收口、或一次性全仓回归体检，再补读：
+
+- [0404 仓库迁移后说明收口、回归修复与全量体检](../daily-upgrade/0404/02_仓库迁移后说明收口_回归修复与全量体检.md)
+
 ## `frontdoor`
 
 - 额外必读：
@@ -94,15 +98,15 @@
   - [0329 Codex 主备默认自动切换](../daily-upgrade/0329/01_Codex主备默认自动切换.md)
   - [0331 前台 Workflow Shell 收口](../daily-upgrade/0331/02_前台WorkflowShell收口.md)
 - 默认代码目录：
-  - `butler_main/platform/runtime/`（canonical alias）
-  - `butler_main/compat/agents_os/`（canonical alias）
-  - `butler_main/compat/multi_agents_os/`（canonical alias）
+  - `butler_main/platform/runtime/`（canonical package entry）
+  - `butler_main/compat/agents_os/`（compat package entry）
+  - `butler_main/compat/multi_agents_os/`（compat package entry）
   - `butler_main/runtime_os/process_runtime/`
   - `butler_main/runtime_os/durability_substrate/`
   - `butler_main/runtime_os/multi_agent_protocols/`
   - `butler_main/runtime_os/multi_agent_runtime/`
-  - `butler_main/orchestrator/runtime_bridge/`
-  - `butler_main/orchestrator/workflow_ir.py`
+  - `butler_main/products/campaign_orchestrator/orchestrator/runtime_bridge/`
+  - `butler_main/products/campaign_orchestrator/orchestrator/workflow_ir.py`
 - 默认测试：
   - `test_orchestrator_core.py`
   - `test_orchestrator_workflow_ir.py`
@@ -145,7 +149,7 @@
   - `butler_main/products/butler_flow/role_packs/`
   - `butler_main/butler_flow/`（compat shell）
   - `butler_main/__main__.py`
-  - `butler_main/platform/runtime/`（canonical alias）
+  - `butler_main/platform/runtime/`（canonical package entry）
   - `butler_main/runtime_os/agent_runtime/`
   - `tools/butler-flow`
   - `tools/install-butler-flow`
@@ -231,12 +235,12 @@
   - [Workflow IR 正式口径](../runtime/WORKFLOW_IR.md)
   - [0327 Butler 系统分层与事件契约收口](../daily-upgrade/0327/03_Butler系统分层与事件契约收口.md)
 - 默认代码目录：
-  - `butler_main/platform/runtime/`（canonical alias）
-  - `butler_main/compat/multi_agents_os/`（canonical alias）
-  - `butler_main/products/campaign_orchestrator/orchestrator/`（canonical alias）
+  - `butler_main/platform/runtime/`（canonical package entry）
+  - `butler_main/compat/multi_agents_os/`（compat package entry）
+  - `butler_main/products/campaign_orchestrator/orchestrator/`（canonical physical）
   - `butler_main/runtime_os/`
   - `butler_main/multi_agents_os/`
-  - `butler_main/orchestrator/`
+  - `butler_main/orchestrator/`（compat shell）
 - 默认测试：
   - `test_runtime_os_namespace.py`
   - `test_runtime_os_root_package.py`
@@ -252,8 +256,10 @@
   - [0326 当日总纲](../daily-upgrade/0326/00_当日总纲.md)
   - [0326 Harness 全系统稳定态运行梳理](../daily-upgrade/0326/03_Harness全系统稳定态运行梳理.md)
 - 默认代码目录：
-  - `butler_main/orchestrator/feedback_notifier.py`
-  - `butler_main/chat/`
+  - `butler_main/products/campaign_orchestrator/orchestrator/feedback_notifier.py`
+  - `butler_main/products/chat/`
+  - `butler_main/orchestrator/`（compat shell）
+  - `butler_main/chat/`（compat shell）
 - 默认测试：
   - `test_orchestrator_feedback_notifier.py`
   - `test_chat_feishu_interaction.py`
@@ -272,9 +278,11 @@
   - [0327 Skill Exposure Plane 与 Codex 消费边界](../daily-upgrade/0327/02_SkillExposurePlane与Codex消费边界.md)
   - [Visual Console API Contract v1](../runtime/Visual_Console_API_Contract_v1.md)
 - 默认代码目录：
-  - `butler_main/console/`
-  - `butler_main/domains/campaign/`
-  - `butler_main/orchestrator/interfaces/`
+  - `butler_main/products/campaign_orchestrator/console/`
+  - `butler_main/products/campaign_orchestrator/campaign/`
+  - `butler_main/products/campaign_orchestrator/orchestrator/interfaces/`
+  - `butler_main/console/`（compat shell）
+  - `butler_main/domains/campaign/`（compat shell）
 - 默认测试：
   - `test_console_services.py`
   - `test_console_server.py`
@@ -299,8 +307,8 @@
   - [Workflow IR 正式口径](../runtime/WORKFLOW_IR.md)
   - [0326 稳定 Harness 之后的下一阶段主线](../daily-upgrade/0326/04_稳定Harness之后的下一阶段主线_Anthropic长运行Harness吸收版.md)
 - 默认代码目录：
-  - `butler_main/orchestrator/workflow_ir.py`
-  - `butler_main/orchestrator/workflow_vm.py`
+  - `butler_main/products/campaign_orchestrator/orchestrator/workflow_ir.py`
+  - `butler_main/products/campaign_orchestrator/orchestrator/workflow_vm.py`
   - `butler_main/runtime_os/process_runtime/workflow/`
 - 默认测试：
   - `test_orchestrator_workflow_ir.py`
@@ -326,12 +334,14 @@
   - [系统分层与事件契约](../runtime/System_Layering_and_Event_Contracts.md)
   - [Workflow IR 正式口径](../runtime/WORKFLOW_IR.md)
 - 默认代码目录：
-  - `butler_main/orchestrator/framework_*`
+  - `butler_main/products/campaign_orchestrator/orchestrator/framework_*`
   - `butler_main/runtime_os/`
   - `butler_main/agents_os/`
   - `butler_main/multi_agents_os/`
-  - `butler_main/console/`
-  - `butler_main/chat/`
+  - `butler_main/products/campaign_orchestrator/console/`
+  - `butler_main/products/chat/`
+  - `butler_main/console/`（compat shell）
+  - `butler_main/chat/`（compat shell）
 - 默认测试：
   - `test_orchestrator_framework_catalog.py`
   - `test_orchestrator_framework_mapping.py`
@@ -385,11 +395,13 @@
   - [0326 长任务主线系统审计与并行升级执行方案](../daily-upgrade/0326/05_长任务主线系统审计与并行升级执行方案.md)
   - [0329 后台任务双状态与前门弱化重构](../daily-upgrade/0329/03_后台任务双状态与前门弱化重构.md)
 - 默认代码目录：
-  - `butler_main/chat/`
-  - `butler_main/orchestrator/`
+  - `butler_main/products/chat/`
+  - `butler_main/products/campaign_orchestrator/orchestrator/`
   - `butler_main/runtime_os/process_runtime/`
   - `butler_main/butler_bot_code/run/orchestrator/`
-  - `butler_main/chat/data/hot/recent_memory/`
+  - `butler_main/products/chat/data/hot/recent_memory/`
+  - `butler_main/chat/`（compat shell）
+  - `butler_main/orchestrator/`（compat shell）
 - 默认测试：
   - `test_chat_campaign_negotiation.py`
   - `test_chat_long_task_frontdoor_regression.py`

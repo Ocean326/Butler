@@ -24,16 +24,22 @@ for _alias in _ALIASES:
 
 
 def _load_submodule(name: str):
-    module = globals().get(name)
-    if module is not None:
-        return module
-    module = import_module(f"{__name__}.{name}")
-    globals()[name] = module
     sibling_names = {
         alias + f".{name}"
         for alias in _ALIASES
         if alias != __name__
     }
+    module = sys.modules.get(f"{__name__}.{name}")
+    if module is None:
+        for sibling_name in sibling_names:
+            module = sys.modules.get(sibling_name)
+            if module is not None:
+                break
+    if module is None:
+        module = globals().get(name)
+    if module is None:
+        module = import_module(f"{__name__}.{name}")
+    globals()[name] = module
     for sibling_name in sibling_names:
         sys.modules.setdefault(sibling_name, module)
     return module

@@ -34,7 +34,8 @@ class RuntimeModuleLayoutTests(unittest.TestCase):
                 importlib.import_module(module_name)
 
     def test_interfaces_package_does_not_eagerly_import_runner(self) -> None:
-        init_path = BUTLER_MAIN_DIR / "orchestrator" / "interfaces" / "__init__.py"
+        module = importlib.import_module("butler_main.products.campaign_orchestrator.orchestrator.interfaces")
+        init_path = Path(str(module.__file__ or ""))
         content = init_path.read_text(encoding="utf-8")
 
         self.assertNotIn("from .runner import", content)

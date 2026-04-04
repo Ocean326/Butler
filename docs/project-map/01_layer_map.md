@@ -7,8 +7,9 @@
 ## Product Surface（产品表面层）
 
 - 职责：用户入口、查询、反馈、展示 projection、触发受控动作
-- 主目录：`butler_main/chat/`、`butler_main/console/`
-- 典型入口：`chat/mainline.py`、`chat/task_query.py`、`console/api/`
+- 主目录：`butler_main/products/chat/`、`butler_main/products/campaign_orchestrator/console/`
+- 兼容目录：`butler_main/chat/`、`butler_main/console/`
+- 典型入口：`products/chat/mainline.py`、`products/chat/task_query.py`、`products/campaign_orchestrator/console/server.py`
 - 必读文档：
   - [当前系统基线](./00_current_baseline.md)
   - [系统分层与事件契约](../runtime/System_Layering_and_Event_Contracts.md)
@@ -23,8 +24,9 @@
 ## Domain & Control Plane（领域与控制平面）
 
 - 职责：mission、campaign、orchestrator、template selection、verdict commit、projection assembly
-- 主目录：`butler_main/orchestrator/`、`butler_main/domains/campaign/`
-- 典型入口：`mission_orchestrator.py`、`campaign_service.py`、`query_service.py`、`runner.py`
+- 主目录：`butler_main/products/campaign_orchestrator/orchestrator/`、`butler_main/products/campaign_orchestrator/campaign/`
+- 兼容目录：`butler_main/orchestrator/`、`butler_main/domains/campaign/`
+- 典型入口：`mission_orchestrator.py`、`campaign_service.py`、`interfaces/query_service.py`、`runner.py`
 - 必读文档：
   - [当前系统基线](./00_current_baseline.md)
   - [0327 Butler 系统分层与事件契约收口](../daily-upgrade/0327/03_Butler系统分层与事件契约收口.md)
@@ -97,7 +99,8 @@
 
 ## 兼容期说明
 
-- `agents_os/`、`multi_agents_os/` 仍是兼容期核心目录
+- `chat/`、`console/`、`orchestrator/`、`domains/campaign/`、`agents_os/`、`multi_agents_os/` 仍是兼容期核心目录
 - 新改动优先按 `runtime_os.agent_runtime / durability_substrate / multi_agent_protocols / multi_agent_runtime` 定位
+- 产品面与控制面新改动优先按 `products/chat/`、`products/butler_flow/`、`products/campaign_orchestrator/` 定位
 - `runtime_os.process_runtime` 保留聚合别名，只用于兼容迁移
 - 如果任务描述出现旧术语，先去 [功能地图](./02_feature_map.md) 做映射，再读代码

@@ -19,8 +19,7 @@ from agents_os.contracts import DeliverySession, Invocation
 from agents_os.runtime import RouteProjection, RuntimeRequest
 from butler_main.butler_bot_code.tests._tmpdir import test_workdir
 from butler_main.chat import ChatRouter
-from butler_main.orchestrator import build_orchestrator_service_for_workspace
-from orchestrators import ButlerMissionOrchestrator
+from butler_main.orchestrator import ButlerMissionOrchestrator, build_orchestrator_service_for_workspace
 
 
 class TalkRouterAndMissionOrchestratorTests(unittest.TestCase):
@@ -72,7 +71,8 @@ class TalkRouterAndMissionOrchestratorTests(unittest.TestCase):
             receipt = orchestrator.orchestrate(request)
 
             self.assertEqual(receipt.workflow_kind, "mission")
-            self.assertEqual(receipt.status, "ready")
+            self.assertEqual(receipt.status, "pending")
+            self.assertEqual(receipt.projection.status, "ready")
             self.assertTrue(receipt.workflow_id.startswith("mission_"))
             self.assertIsNotNone(receipt.output_bundle)
             assert receipt.output_bundle is not None
@@ -117,7 +117,8 @@ class TalkRouterAndMissionOrchestratorTests(unittest.TestCase):
             )
 
             self.assertEqual(status_receipt.workflow_id, mission_id)
-            self.assertEqual(status_receipt.status, "ready")
+            self.assertEqual(status_receipt.status, "pending")
+            self.assertEqual(status_receipt.projection.status, "ready")
             self.assertIsNotNone(status_receipt.output_bundle)
             assert status_receipt.output_bundle is not None
             self.assertIn(mission_id, status_receipt.output_bundle.text_blocks[0].text)
@@ -207,7 +208,8 @@ class TalkRouterAndMissionOrchestratorTests(unittest.TestCase):
             )
 
             self.assertEqual(feedback_receipt.workflow_id, mission_id)
-            self.assertEqual(feedback_receipt.status, "ready")
+            self.assertEqual(feedback_receipt.status, "pending")
+            self.assertEqual(feedback_receipt.projection.status, "ready")
             service = build_orchestrator_service_for_workspace(str(root))
             event_types = {str(item.get("event_type") or "") for item in service.list_delivery_events(mission_id)}
             self.assertIn("user_feedback_appended", event_types)

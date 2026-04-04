@@ -67,10 +67,26 @@ class RuntimeOsNamespaceTests(unittest.TestCase):
         self.assertIs(agent_runtime.cli_runner, legacy_cli_runner)
         self.assertIs(process_runtime.ExecutionRuntime, LegacyExecutionRuntime)
         self.assertIs(runtime_os.agent_runtime, agent_runtime)
-        self.assertIs(runtime_os.multi_agent_protocols, multi_agent_protocols)
-        self.assertIs(runtime_os.multi_agent_runtime, multi_agent_runtime)
-        self.assertIs(runtime_os.durability_substrate, durability_substrate)
-        self.assertIs(runtime_os.process_runtime, process_runtime)
+        self.assertIs(runtime_os.multi_agent_protocols.WorkflowTemplate, multi_agent_protocols.WorkflowTemplate)
+        self.assertEqual(
+            Path(runtime_os.multi_agent_protocols.__file__).resolve(),
+            Path(multi_agent_protocols.__file__).resolve(),
+        )
+        self.assertIs(runtime_os.multi_agent_runtime.WorkflowSession, multi_agent_runtime.WorkflowSession)
+        self.assertEqual(
+            Path(runtime_os.multi_agent_runtime.__file__).resolve(),
+            Path(multi_agent_runtime.__file__).resolve(),
+        )
+        self.assertIs(runtime_os.durability_substrate.RuntimeSessionCheckpoint, durability_substrate.RuntimeSessionCheckpoint)
+        self.assertEqual(
+            Path(runtime_os.durability_substrate.__file__).resolve(),
+            Path(durability_substrate.__file__).resolve(),
+        )
+        self.assertIs(runtime_os.process_runtime.ExecutionRuntime, process_runtime.ExecutionRuntime)
+        self.assertEqual(
+            Path(runtime_os.process_runtime.__file__).resolve(),
+            Path(process_runtime.__file__).resolve(),
+        )
 
     def test_process_runtime_direct_submodule_imports_resolve_to_curated_targets(self) -> None:
         self.assertIs(RuntimeWorkflowFactory, WorkflowFactory)

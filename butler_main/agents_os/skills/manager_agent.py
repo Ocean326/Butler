@@ -11,7 +11,7 @@ from butler_main.agents_os.factory import AgentCapabilities, AgentProfile, Agent
 from .pathing import resolve_butler_root
 
 
-SKILL_MANAGER_AGENT_ROOT_REL = Path("butler_main") / "sources" / "skills" / "agent" / "skill_manager_agent"
+SKILL_MANAGER_AGENT_ROOT_REL = Path("butler_main") / "platform" / "skills" / "agent" / "skill_manager_agent"
 SKILL_MANAGER_MANIFEST_REL = SKILL_MANAGER_AGENT_ROOT_REL / "agent_manifest.json"
 
 
