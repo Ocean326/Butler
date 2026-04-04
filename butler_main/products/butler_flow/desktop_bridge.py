@@ -67,6 +67,17 @@ def _invoke_app_json(method_name: str, *, args: argparse.Namespace) -> dict[str,
     return decoded if isinstance(decoded, dict) else {}
 
 
+def _workspace_root_from_config(*, config: str | None) -> str:
+    app = FlowApp(
+        run_prompt_receipt_fn=lambda *a, **k: None,
+        input_fn=lambda prompt: "",
+        stdout=io.StringIO(),
+        stderr=io.StringIO(),
+    )
+    preflight = app.build_preflight_payload(argparse.Namespace(config=config, json=False))
+    return str(dict(preflight or {}).get("workspace_root") or "").strip()
+
+
 def _sync_manager_session_after_launch(
     *,
     config: str | None,
@@ -77,7 +88,7 @@ def _sync_manager_session_after_launch(
     flow_id = str(launched_flow.get("flow_id") or "").strip()
     if not manager_session_id or not flow_id:
         return
-    workspace_root = str(dict(thread_home_payload(config=config, limit=1).get("preflight") or {}).get("workspace_root") or "").strip()
+    workspace_root = _workspace_root_from_config(config=config)
     if not workspace_root:
         return
     next_target = f"instance:{flow_id}"
@@ -207,12 +218,16 @@ def _command_manager_message(args: argparse.Namespace) -> dict[str, Any]:
                 draft_payload=dict(chat_payload.get("action_draft") or {}),
             ),
         )
-        _sync_manager_session_after_launch(
-            config=args.config,
-            manager_session_id=str(chat_payload.get("manager_session_id") or "").strip(),
-            chat_payload=chat_payload,
-            launched_flow=launched_flow,
-        )
+        try:
+            # Launch already succeeded; best-effort manager-session sync should not mask that result.
+            _sync_manager_session_after_launch(
+                config=args.config,
+                manager_session_id=str(chat_payload.get("manager_session_id") or "").strip(),
+                chat_payload=chat_payload,
+                launched_flow=launched_flow,
+            )
+        except Exception:
+            pass
     manager_session_id = str(chat_payload.get("manager_session_id") or args.manager_session_id).strip()
     thread = manager_thread_payload(config=args.config, manager_session_id=manager_session_id)
     return {

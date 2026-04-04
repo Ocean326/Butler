@@ -358,6 +358,7 @@ def thread_home_payload(*, config: str | None, limit: int = 20) -> dict[str, Any
     workspace_root = str(preflight.get("workspace_root") or "").strip()
     session_rows = list_manage_sessions(workspace_root, limit=max(1, int(limit or 20))) if workspace_root else []
     history: list[dict[str, Any]] = []
+    manager_history: list[dict[str, Any]] = []
     linked_flow_ids: set[str] = set()
     for row in session_rows:
         manager_session_id = str(row.get("manager_session_id") or "").strip()
@@ -369,6 +370,7 @@ def thread_home_payload(*, config: str | None, limit: int = 20) -> dict[str, Any
         flow_id = str(summary.get("flow_id") or "").strip()
         if flow_id:
             linked_flow_ids.add(flow_id)
+        manager_history.append(summary)
         history.append(summary)
 
     flows = list((workspace_payload(config=config, limit=limit).get("flows") or {}).get("items") or [])
@@ -402,20 +404,23 @@ def thread_home_payload(*, config: str | None, limit: int = 20) -> dict[str, Any
             )
         )
 
+    latest_manager_summary = dict(manager_history[0] or {}) if manager_history else {}
     manager_entry = {
-        "default_manager_session_id": str((history[0] or {}).get("manager_session_id") or "").strip()
-        if history
-        else "",
+        "default_manager_session_id": str(latest_manager_summary.get("manager_session_id") or "").strip(),
         "draft_summary": _compact_text(
             dict(session_rows[0].get("draft") or {}).get("summary")
             if session_rows
-            else "Start a new flow with Manager."
+            else latest_manager_summary.get("subtitle") or "Start a new flow with Manager."
         ),
-        "status": str((history[0] or {}).get("status") or "draft").strip() if history else "draft",
-        "title": str((history[0] or {}).get("title") or "Manager 管理台").strip() if history else "Manager 管理台",
+        "status": str(latest_manager_summary.get("status") or "draft").strip() if latest_manager_summary else "draft",
+        "title": str(latest_manager_summary.get("title") or "Manager 管理台").strip()
+        if latest_manager_summary
+        else "Manager 管理台",
         "total_sessions": len(session_rows),
-        "active_flow_id": str((history[0] or {}).get("flow_id") or "").strip() if history else "",
-        "active_thread_id": str((history[0] or {}).get("thread_id") or "").strip() if history else "",
+        "active_flow_id": str(latest_manager_summary.get("flow_id") or "").strip() if latest_manager_summary else "",
+        "active_thread_id": str(latest_manager_summary.get("thread_id") or "").strip()
+        if latest_manager_summary
+        else "",
     }
     return ThreadHomeDTO(
         preflight=preflight,

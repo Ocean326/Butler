@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 from butler_main.butler_flow.desktop_bridge import main
 from butler_main.butler_flow.state import (
@@ -175,6 +176,63 @@ class ButlerFlowDesktopBridgeTests(unittest.TestCase):
             supervisor = json.loads(supervisor_buffer.getvalue())
             self.assertEqual(exit_code, 0)
             self.assertEqual(supervisor["thread"]["thread_kind"], "supervisor")
+
+    def test_manager_message_launch_does_not_depend_on_thread_home_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            _seed_manager_session(root, manager_session_id="manager_session_bridge")
+            chat_payload = {
+                "manager_session_id": "manager_session_bridge",
+                "action": "manage_flow",
+                "action_ready": True,
+                "action_manage_target": "new",
+                "action_goal": "ship desktop shell",
+                "action_guard_condition": "verified",
+                "action_instruction": "launch now",
+                "action_stage": "launch",
+                "action_builtin_mode": "greenfield",
+                "action_draft": {"label": "Desktop 线程工作台"},
+                "response": "准备创建 flow。",
+            }
+            launched_flow = {
+                "flow_id": "flow_created_from_manager",
+                "summary": "Flow created and handed off to Supervisor: flow_created_from_manager",
+            }
+
+            with (
+                patch(
+                    "butler_main.butler_flow.desktop_bridge._invoke_app_json",
+                    side_effect=[chat_payload, launched_flow],
+                ),
+                patch(
+                    "butler_main.butler_flow.desktop_bridge.thread_home_payload",
+                    side_effect=AssertionError("thread_home_payload should not be called"),
+                ),
+                patch(
+                    "butler_main.butler_flow.desktop_bridge.manager_thread_payload",
+                    return_value={"thread": {"thread_kind": "manager"}, "blocks": []},
+                ),
+            ):
+                buffer = io.StringIO()
+                with redirect_stdout(buffer):
+                    exit_code = main(
+                        [
+                            "--config",
+                            config,
+                            "manager-message",
+                            "--instruction",
+                            "launch now",
+                            "--manager-session-id",
+                            "manager_session_bridge",
+                        ]
+                    )
+
+            payload = json.loads(buffer.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["launched_flow"]["flow_id"], "flow_created_from_manager")
+            self.assertEqual(payload["thread"]["thread"]["thread_kind"], "manager")
 
 
 if __name__ == "__main__":

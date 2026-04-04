@@ -438,6 +438,26 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
             self.assertEqual(manager["pending_action"]["preview"], "Create Team + Supervisor")
             self.assertEqual(len(read_manage_turns(root, "manager_session_1")), 2)
 
+    def test_thread_home_manager_entry_stays_on_latest_manager_session_when_flow_is_newer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            _seed_manager_session(root, manager_session_id="manager_session_1")
+            path = _write_flow_state(root, flow_id="flow_newer_than_manager", status="running", kind="managed_flow")
+            state = json.loads(flow_state_path(path).read_text(encoding="utf-8"))
+            state["updated_at"] = "2026-04-05 13:10:00"
+            state["goal"] = "newer supervisor flow"
+            write_json_atomic(flow_state_path(path), state)
+
+            home = flow_surface.thread_home_payload(config=config)
+
+            self.assertEqual(home["history"][0]["thread_kind"], "supervisor")
+            self.assertEqual(home["manager_entry"]["default_manager_session_id"], "manager_session_1")
+            self.assertEqual(home["manager_entry"]["title"], "Desktop 线程工作台")
+            self.assertEqual(home["manager_entry"]["status"], "ready")
+            self.assertEqual(home["manager_entry"]["active_flow_id"], "")
+            self.assertEqual(home["manager_entry"]["active_thread_id"], "manager:manager_session_1")
+
     def test_supervisor_thread_and_agent_focus_payloads_wrap_single_flow(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
