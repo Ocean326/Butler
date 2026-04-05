@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, ReactNode, useEffect, useState } from "react";
+import { FormEvent, KeyboardEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -17,7 +17,7 @@ import {
   SunMedium
 } from "lucide-react";
 import type { ThreadBlockDTO, ThreadSummaryDTO } from "../shared/dto";
-import { electronApi } from "./lib/electron-api";
+import { electronApi, isDesktopBridgeAvailable } from "./lib/electron-api";
 import {
   useAgentFocus,
   useManagerThread,
@@ -64,6 +64,33 @@ function blockMeta(block: ThreadBlockDTO): string[] {
   return [block.kind, block.phase || "", ...(block.tags || [])].filter(Boolean);
 }
 
+function shortTime(value: string): string {
+  const token = String(value || "").trim();
+  if (!token) {
+    return "刚刚";
+  }
+  return token.slice(5, 16).replace(" ", " · ");
+}
+
+function isManagerSummary(summary: ThreadSummaryDTO): boolean {
+  return String(summary.thread_kind || "").trim() === "manager";
+}
+
+function isSupervisorSummary(summary: ThreadSummaryDTO): boolean {
+  return String(summary.thread_kind || "").trim() === "supervisor" && Boolean(summary.flow_id);
+}
+
+function autoResizeTextarea(node: HTMLTextAreaElement | null): void {
+  if (!node || typeof window === "undefined") {
+    return;
+  }
+  const maxHeight = Math.floor(window.innerHeight / 3);
+  node.style.height = "0px";
+  const nextHeight = Math.max(76, Math.min(node.scrollHeight, maxHeight));
+  node.style.height = `${nextHeight}px`;
+  node.style.overflowY = node.scrollHeight > maxHeight ? "auto" : "hidden";
+}
+
 function RailButton({
   active,
   icon,
@@ -99,10 +126,14 @@ function ThreadShortcut({
 }) {
   return (
     <button className={`thread-shortcut ${active ? "is-active" : ""}`} onClick={onClick} type="button">
+      <div className="thread-shortcut-topline">
+        <span className="thread-shortcut-kicker">{summary.thread_kind}</span>
+        <span className="thread-shortcut-time">{shortTime(summary.updated_at || summary.created_at)}</span>
+      </div>
       <span className="thread-shortcut-title">{summary.title}</span>
       <span className="thread-shortcut-subtitle">{summary.subtitle || summary.status}</span>
       <span className="thread-shortcut-meta">
-        {[summary.thread_kind, summary.current_phase, summary.active_role_id].filter(Boolean).join(" · ") || summary.status}
+        {[summary.current_phase, summary.active_role_id, summary.badge].filter(Boolean).join(" · ") || summary.status}
       </span>
     </button>
   );
@@ -136,7 +167,7 @@ function StreamBlock({
       </div>
 
       <div className="stream-card-header">
-        <div>
+        <div className="stream-card-copy">
           <h3>{block.title}</h3>
           <p>{block.summary}</p>
         </div>
@@ -155,7 +186,7 @@ function StreamBlock({
       </div>
 
       <div className="stream-card-footer">
-        <span>{block.created_at || "Now"}</span>
+        <span>{shortTime(block.created_at)}</span>
         {block.role_id ? <span>{`Agent ${block.role_id}`}</span> : null}
       </div>
 
@@ -165,6 +196,15 @@ function StreamBlock({
         </div>
       ) : null}
     </article>
+  );
+}
+
+function ComposerPill({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="composer-pill">
+      <strong>{label}</strong>
+      <span>{value}</span>
+    </span>
   );
 }
 
@@ -184,19 +224,22 @@ function EmptyAttachState({
   return (
     <section className="empty-state-shell">
       <div className="empty-state-card">
-        <AlertCircle size={32} />
+        <div className="empty-state-badge">
+          <Sparkles size={16} />
+          <span>Butler Flow Desktop</span>
+        </div>
         <h2>先连接 Butler config</h2>
-        <p>Desktop workbench 会通过 Python bridge 读取 live workspace、manager thread、supervisor stream 和 templates。</p>
+        <p>连接 config 后，Desktop 会读取 live threads、manager session、supervisor stream 和 template team。</p>
         <div className="empty-state-actions">
           <button className="ui-button ui-button-primary" onClick={onChooseConfig} type="button">
             <FolderSearch size={16} />
-            Select Config
+            选择 Config
           </button>
         </div>
 
         <div className="composer-shell compact">
           <label htmlFor="manual-config-path">Config Path Fallback</label>
-          <div className="composer-row">
+          <div className="composer-row compact">
             <input
               id="manual-config-path"
               className="composer-input"
@@ -206,7 +249,7 @@ function EmptyAttachState({
               onKeyDown={onManualConfigKeyDown}
             />
             <button className="ui-button ui-button-secondary" disabled={!manualConfigPath.trim()} onClick={onAttachPath} type="button">
-              Attach
+              Attach Path
             </button>
           </div>
         </div>
@@ -215,11 +258,28 @@ function EmptyAttachState({
   );
 }
 
+function BridgeMissingState() {
+  return (
+    <section className="empty-state-shell">
+      <div className="empty-state-card">
+        <div className="empty-state-badge">
+          <AlertCircle size={16} />
+          <span>Bridge Required</span>
+        </div>
+        <h2>Desktop bridge 未连接</h2>
+        <p>当前页面没有注入 `window.butlerDesktop`，所以无法读取 Manager thread、Supervisor stream 或发送 manager message。</p>
+        <p>请从 Electron Butler Desktop 窗口打开；如果你现在看到的是纯浏览器 / Vite 页面，这属于预期。</p>
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
   const queryClient = useQueryClient();
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const [manualConfigPath, setManualConfigPath] = useState("");
   const [configPath, setConfigPath] = useState("");
-  const [theme, setTheme] = useState<"day" | "night">("day");
+  const [theme, setTheme] = useState<"day" | "night">("night");
   const [railSection, setRailSection] = useState<RailSection>("manager");
   const [view, setView] = useState<ViewState>({ kind: "manager" });
   const [managerSessionId, setManagerSessionId] = useState("");
@@ -228,6 +288,7 @@ export default function App() {
   const [statusMessage, setStatusMessage] = useState("");
   const [sendingManagerMessage, setSendingManagerMessage] = useState(false);
   const [expandedBlocks, setExpandedBlocks] = useState<Record<string, boolean>>({});
+  const bridgeAvailable = isDesktopBridgeAvailable();
 
   useEffect(() => {
     const savedConfig = window.localStorage.getItem(CONFIG_STORAGE_KEY) || "";
@@ -241,18 +302,30 @@ export default function App() {
     }
   }, []);
 
-  const homeQuery = useThreadHome(configPath);
+  useEffect(() => {
+    autoResizeTextarea(composerRef.current);
+  }, [messageDraft, view.kind]);
+
+  const homeQuery = useThreadHome(configPath, bridgeAvailable);
   const activeManagerSessionId = view.kind === "new-flow" ? "" : managerSessionId;
-  const managerQuery = useManagerThread(configPath, activeManagerSessionId, view.kind === "manager" || view.kind === "new-flow");
+  const managerQuery = useManagerThread(
+    configPath,
+    activeManagerSessionId,
+    bridgeAvailable && (view.kind === "manager" || view.kind === "new-flow")
+  );
   const activeFlowId = view.kind === "supervisor" || view.kind === "agent" ? view.flowId : "";
-  const supervisorQuery = useSupervisorThread(configPath, activeFlowId, view.kind === "supervisor" || view.kind === "agent");
+  const supervisorQuery = useSupervisorThread(
+    configPath,
+    activeFlowId,
+    bridgeAvailable && (view.kind === "supervisor" || view.kind === "agent")
+  );
   const agentQuery = useAgentFocus(
     configPath,
     view.kind === "agent" ? view.flowId : "",
     view.kind === "agent" ? view.roleId : "",
-    view.kind === "agent"
+    bridgeAvailable && view.kind === "agent"
   );
-  const templateQuery = useTemplateTeam(configPath, templateAssetId, view.kind === "templates");
+  const templateQuery = useTemplateTeam(configPath, templateAssetId, bridgeAvailable && view.kind === "templates");
 
   useEffect(() => {
     if (!managerSessionId) {
@@ -285,6 +358,10 @@ export default function App() {
   }
 
   async function chooseConfig(): Promise<void> {
+    if (!bridgeAvailable) {
+      setStatusMessage("Desktop bridge unavailable. Launch this workbench from Electron.");
+      return;
+    }
     try {
       const result = await electronApi.chooseConfigPath();
       if (result.canceled || !result.configPath) {
@@ -324,10 +401,18 @@ export default function App() {
   }
 
   async function refreshAll(): Promise<void> {
+    if (!bridgeAvailable) {
+      setStatusMessage("Desktop bridge unavailable. Refresh is disabled in browser-only mode.");
+      return;
+    }
     await queryClient.invalidateQueries({ queryKey: ["desktop"] });
   }
 
   async function performFlowAction(type: string): Promise<void> {
+    if (!bridgeAvailable) {
+      setStatusMessage("Desktop bridge unavailable. Flow actions require Electron.");
+      return;
+    }
     if (!activeFlowId) {
       return;
     }
@@ -341,6 +426,10 @@ export default function App() {
   }
 
   async function openArtifact(target: string): Promise<void> {
+    if (!bridgeAvailable) {
+      setStatusMessage("Desktop bridge unavailable. Artifact open requires Electron.");
+      return;
+    }
     const result = await electronApi.openArtifact({ target });
     if (!result.opened) {
       setStatusMessage(`Artifact open failed: ${result.reason || "unknown"}`);
@@ -348,12 +437,15 @@ export default function App() {
   }
 
   function openThread(summary: ThreadSummaryDTO): void {
-    if (summary.flow_id) {
+    if (isSupervisorSummary(summary)) {
+      if (summary.manager_session_id) {
+        setManagerSessionId(summary.manager_session_id);
+      }
       setView({ kind: "supervisor", flowId: summary.flow_id });
       setRailSection(summary.manager_session_id ? "manager" : "history");
       return;
     }
-    if (summary.manager_session_id) {
+    if (isManagerSummary(summary) && summary.manager_session_id) {
       setManagerSessionId(summary.manager_session_id);
       setView({ kind: "manager" });
       setRailSection("manager");
@@ -395,6 +487,10 @@ export default function App() {
   async function sendManagerMessage(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const instruction = messageDraft.trim();
+    if (!bridgeAvailable) {
+      setStatusMessage("Desktop bridge unavailable. Manager message can only be sent from Electron.");
+      return;
+    }
     if (!instruction || !configPath) {
       return;
     }
@@ -437,56 +533,91 @@ export default function App() {
 
   function renderManagerStream() {
     const payload = managerQuery.data;
+    const blocks = payload?.blocks || [];
+    const modeLabel = view.kind === "new-flow" ? "New Flow" : "Manager Thread";
+
     return (
-      <section className="page-shell">
-        <header className="page-hero">
-          <div>
-            <p className="page-kicker">Manager 管理台</p>
-            <h1>{payload?.thread.title || "Manager 管理台"}</h1>
-            <p>{payload?.thread.subtitle || "先对齐 idea，再落 requirements / delivery / test standards。"}</p>
+      <section className="thread-page thread-page-manager">
+        <header className="thread-header">
+          <div className="thread-heading">
+            <p className="page-kicker">Butler Manager</p>
+            <h1>{view.kind === "new-flow" ? "新建 Flow" : payload?.thread.title || "Manager 管理台"}</h1>
+            <p>
+              {view.kind === "new-flow"
+                ? "从一个空白的 manager thread 开始，先把 idea、requirements 和 delivery 对齐。"
+                : payload?.thread.subtitle || "先对齐 idea，再落 requirements / delivery / test standards。"}
+            </p>
           </div>
-          <div className="hero-pills">
+          <div className="thread-hero-pills">
             <span className="hero-pill">{payload?.thread.status || "draft"}</span>
             <span className="hero-pill">{payload?.manager_stage || "opening"}</span>
             {payload?.linked_flow_id ? <span className="hero-pill">{`Flow ${payload.linked_flow_id}`}</span> : null}
           </div>
         </header>
 
-        <div className="stream-list">
-          {(payload?.blocks || []).map((block) => (
-            <StreamBlock
-              block={block}
-              expanded={currentBlockExpanded(block)}
-              key={block.block_id}
-              onActionTarget={handleActionTarget}
-              onToggle={() => toggleBlock(block.block_id)}
-            />
-          ))}
-        </div>
+        <section className="thread-surface single-column manager-surface">
+          <div className="thread-stream-panel">
+            <div className="thread-stream-header">
+              <strong>Current Thread</strong>
+              <span>{blocks.length} blocks</span>
+            </div>
 
-        <form className="composer-shell" onSubmit={(event) => void sendManagerMessage(event)}>
-          <label htmlFor="manager-composer">
-            {view.kind === "new-flow" ? "New Flow prompt" : "Continue with Manager"}
-          </label>
-          <div className="composer-row">
-            <textarea
-              id="manager-composer"
-              className="composer-textarea"
-              placeholder="比如：先头脑风暴一下 Butler 新前台的线程化交互，然后把需求、交付标准和测试标准对齐。"
-              value={messageDraft}
-              onChange={(event) => setMessageDraft(event.target.value)}
-            />
+            {view.kind === "new-flow" ? (
+              <div className="thread-intro-card">
+                <span className="thread-intro-kicker">Start from Butler</span>
+                <h2>先把团队要做什么说清楚，再创建 Supervisor</h2>
+                <p>这里保留 Butler 的 Manager 语义，但阅读面和输入区会更像 Codex 的桌面工作台。</p>
+              </div>
+            ) : null}
+
+            <div className="stream-list thread-stream-list">
+              {blocks.map((block) => (
+                <StreamBlock
+                  block={block}
+                  expanded={currentBlockExpanded(block)}
+                  key={block.block_id}
+                  onActionTarget={handleActionTarget}
+                  onToggle={() => toggleBlock(block.block_id)}
+                />
+              ))}
+            </div>
           </div>
-          <div className="composer-actions">
-            <span className="composer-hint">
-              Manager 会先收敛 brainstorm / requirements，再在准备好后自动 Create Team + Supervisor。
-            </span>
-            <button className="ui-button ui-button-primary" disabled={!messageDraft.trim() || sendingManagerMessage} type="submit">
-              <Send size={16} />
-              {sendingManagerMessage ? "Sending..." : "Send to Manager"}
-            </button>
-          </div>
-        </form>
+
+          <form className="thread-dock composer-shell manager-dock" onSubmit={(event) => void sendManagerMessage(event)}>
+            <div className="composer-topline">
+              <ComposerPill label="Surface" value={modeLabel} />
+              <ComposerPill label="Target" value={view.kind === "new-flow" ? "Blank manager thread" : "Continue with Manager"} />
+              <ComposerPill label="Theme" value={theme === "night" ? "Night" : "Day"} />
+            </div>
+
+            <label htmlFor="manager-composer">{view.kind === "new-flow" ? "Start with Manager" : "Continue with Manager"}</label>
+
+            <div className="composer-row">
+              <textarea
+                id="manager-composer"
+                ref={composerRef}
+                className="composer-textarea"
+                placeholder={
+                  view.kind === "new-flow"
+                    ? "比如：我想把 Butler Flow Desktop 升级成更像 Codex 的工作台，但仍保留 Butler 的 thread-first 语义。"
+                    : "继续补充需求、交付标准、测试要求，或确认让 Manager 创建并切到 Supervisor。"
+                }
+                value={messageDraft}
+                onChange={(event) => setMessageDraft(event.target.value)}
+              />
+            </div>
+
+            <div className="composer-actions">
+              <span className="composer-hint">
+                默认小输入框，随输入增长，但最大不超过页面高度的 1/3。
+              </span>
+              <button className="ui-button ui-button-primary" disabled={!messageDraft.trim() || sendingManagerMessage} type="submit">
+                <Send size={16} />
+                {sendingManagerMessage ? "Sending..." : "Send to Manager"}
+              </button>
+            </div>
+          </form>
+        </section>
       </section>
     );
   }
@@ -494,26 +625,28 @@ export default function App() {
   function renderHistoryPage() {
     const historyItems = homeQuery.data?.history || [];
     return (
-      <section className="page-shell">
-        <header className="page-hero">
-          <div>
-            <p className="page-kicker">History 历史</p>
+      <section className="thread-page">
+        <header className="thread-header compact">
+          <div className="thread-heading">
+            <p className="page-kicker">Thread History</p>
             <h1>Project Threads</h1>
-            <p>按 thread 浏览 Manager 会话和已经启动的 Supervisor flow。</p>
+            <p>这里专门用于切换 Butler 当前项目线程，不再承担旧式 dashboard 说明页角色。</p>
           </div>
         </header>
 
-        <div className="history-list">
+        <div className="history-list refined">
           {historyItems.length === 0 ? (
             <div className="empty-inline">还没有 thread，先从 `New Flow` 开始。</div>
           ) : (
             historyItems.map((summary) => (
-              <button className="history-card" key={summary.thread_id} onClick={() => openThread(summary)} type="button">
+              <button className="history-card refined" key={summary.thread_id} onClick={() => openThread(summary)} type="button">
                 <div className="history-card-topline">
-                  <span className="meta-pill">{summary.thread_kind}</span>
-                  {summary.badge ? <span className="meta-pill">{summary.badge}</span> : null}
+                  <div className="history-card-copy">
+                    <span className="history-card-kicker">{summary.thread_kind}</span>
+                    <h3>{summary.title}</h3>
+                  </div>
+                  <span className="history-card-time">{shortTime(summary.updated_at || summary.created_at)}</span>
                 </div>
-                <h3>{summary.title}</h3>
                 <p>{summary.subtitle || "Open thread"}</p>
                 <div className="history-card-meta">
                   {[summary.status, summary.current_phase, summary.active_role_id].filter(Boolean).join(" · ") || "Open"}
@@ -530,58 +663,69 @@ export default function App() {
     const payload = supervisorQuery.data;
     const roleChips = payload?.role_strip.role_chips || [];
     return (
-      <section className="page-shell">
-        <header className="page-hero">
-          <div>
-            <p className="page-kicker">Supervisor 流</p>
+      <section className="thread-page">
+        <header className="thread-header">
+          <div className="thread-heading">
+            <p className="page-kicker">Supervisor Thread</p>
             <h1>{payload?.thread.title || "Supervisor"}</h1>
             <p>{payload?.thread.subtitle || "Supervisor 正在以流式方式推进团队执行。"}</p>
           </div>
-          <div className="hero-pills">
+          <div className="thread-hero-pills">
             <span className="hero-pill">{payload?.summary.effective_status || "running"}</span>
             <span className="hero-pill">{payload?.summary.effective_phase || "implement"}</span>
             <span className="hero-pill">{payload?.summary.active_role_id || "supervisor"}</span>
           </div>
         </header>
 
-        <div className="role-chip-row">
-          {roleChips.map((chip) => {
-            const roleId = String(chip.role_id || "");
-            return (
-              <button className="role-chip" key={roleId} onClick={() => setView({ kind: "agent", flowId: activeFlowId, roleId })} type="button">
-                <strong>{roleId}</strong>
-                <span>{String(chip.state || "idle")}</span>
-              </button>
-            );
-          })}
-        </div>
+        <section className="thread-surface single-column">
+          <div className="thread-stream-panel">
+            <div className="thread-toolbar">
+              <div className="role-chip-row">
+                {roleChips.map((chip) => {
+                  const roleId = String(chip.role_id || "");
+                  return (
+                    <button
+                      className={`role-chip ${chip.is_active ? "is-active" : ""}`}
+                      key={roleId}
+                      onClick={() => setView({ kind: "agent", flowId: activeFlowId, roleId })}
+                      type="button"
+                    >
+                      <strong>{roleId}</strong>
+                      <span>{String(chip.state || "idle")}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-        <div className="action-strip">
-          <button className="ui-button ui-button-secondary" onClick={() => void performFlowAction("pause")} type="button">
-            <PauseCircle size={16} />
-            Pause
-          </button>
-          <button className="ui-button ui-button-secondary" onClick={() => void performFlowAction("resume")} type="button">
-            <PlayCircle size={16} />
-            Resume
-          </button>
-          <button className="ui-button ui-button-secondary" onClick={() => void performFlowAction("retry_current_phase")} type="button">
-            <RefreshCcw size={16} />
-            Retry Phase
-          </button>
-        </div>
+              <div className="action-strip">
+                <button className="ui-button ui-button-secondary" onClick={() => void performFlowAction("pause")} type="button">
+                  <PauseCircle size={16} />
+                  Pause
+                </button>
+                <button className="ui-button ui-button-secondary" onClick={() => void performFlowAction("resume")} type="button">
+                  <PlayCircle size={16} />
+                  Resume
+                </button>
+                <button className="ui-button ui-button-secondary" onClick={() => void performFlowAction("retry_current_phase")} type="button">
+                  <RefreshCcw size={16} />
+                  Retry Phase
+                </button>
+              </div>
+            </div>
 
-        <div className="stream-list">
-          {(payload?.blocks || []).map((block) => (
-            <StreamBlock
-              block={block}
-              expanded={currentBlockExpanded(block)}
-              key={block.block_id}
-              onActionTarget={handleActionTarget}
-              onToggle={() => toggleBlock(block.block_id)}
-            />
-          ))}
-        </div>
+            <div className="stream-list thread-stream-list">
+              {(payload?.blocks || []).map((block) => (
+                <StreamBlock
+                  block={block}
+                  expanded={currentBlockExpanded(block)}
+                  key={block.block_id}
+                  onActionTarget={handleActionTarget}
+                  onToggle={() => toggleBlock(block.block_id)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
       </section>
     );
   }
@@ -589,34 +733,42 @@ export default function App() {
   function renderAgentPage() {
     const payload = agentQuery.data;
     return (
-      <section className="page-shell">
-        <header className="page-hero">
-          <div>
+      <section className="thread-page">
+        <header className="thread-header">
+          <div className="thread-heading">
             <button className="back-link" onClick={() => setView({ kind: "supervisor", flowId: activeFlowId })} type="button">
               <ArrowLeft size={16} />
               Back to Supervisor
             </button>
             <p className="page-kicker">Agent Focus</p>
             <h1>{payload?.title || "Agent"}</h1>
-            <p>{payload?.thread.subtitle || "查看团队中某个 agent 的流式工作页面。"}</p>
+            <p>{payload?.thread.subtitle || "这是当前 flow thread 在单个 role 视角下的整线程聚焦页。"}</p>
           </div>
-          <div className="hero-pills">
+          <div className="thread-hero-pills">
             <span className="hero-pill">{payload?.role_id || "agent"}</span>
             <span className="hero-pill">{String(payload?.role.state || "idle")}</span>
           </div>
         </header>
 
-        <div className="stream-list">
-          {(payload?.blocks || []).map((block) => (
-            <StreamBlock
-              block={block}
-              expanded={currentBlockExpanded(block)}
-              key={block.block_id}
-              onActionTarget={handleActionTarget}
-              onToggle={() => toggleBlock(block.block_id)}
-            />
-          ))}
-        </div>
+        <section className="thread-surface single-column">
+          <div className="thread-stream-panel">
+            <div className="thread-stream-header">
+              <strong>Role Lens</strong>
+              <span>{payload?.role_id || "agent"}</span>
+            </div>
+            <div className="stream-list thread-stream-list">
+              {(payload?.blocks || []).map((block) => (
+                <StreamBlock
+                  block={block}
+                  expanded={currentBlockExpanded(block)}
+                  key={block.block_id}
+                  onActionTarget={handleActionTarget}
+                  onToggle={() => toggleBlock(block.block_id)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
       </section>
     );
   }
@@ -625,47 +777,54 @@ export default function App() {
     const payload = templateQuery.data;
     const assets = payload?.assets || [];
     return (
-      <section className="page-shell">
-        <header className="page-hero">
-          <div>
-            <p className="page-kicker">Templates 模板</p>
+      <section className="thread-page">
+        <header className="thread-header">
+          <div className="thread-heading">
+            <p className="page-kicker">Template Team</p>
             <h1>{payload?.thread.title || "Templates"}</h1>
-            <p>{payload?.thread.subtitle || "管理 template 与默认 agent team 轮廓。"}</p>
+            <p>{payload?.thread.subtitle || "统一查看 template、默认 agent team 与 review standards。"}</p>
           </div>
         </header>
 
-        <div className="asset-selector">
-          {assets.map((asset) => {
-            const assetId = String(asset.asset_id || asset.id || "");
-            return (
-              <button
-                className={`asset-pill ${assetId === payload?.asset_id ? "is-active" : ""}`}
-                key={assetId}
-                onClick={() => setTemplateAssetId(assetId)}
-                type="button"
-              >
-                {String(asset.label || asset.title || assetId)}
-              </button>
-            );
-          })}
-        </div>
+        <section className="thread-surface single-column">
+          <div className="thread-stream-panel">
+            <div className="asset-selector">
+              {assets.map((asset) => {
+                const assetId = String(asset.asset_id || asset.id || "");
+                return (
+                  <button
+                    className={`asset-pill ${assetId === payload?.asset_id ? "is-active" : ""}`}
+                    key={assetId}
+                    onClick={() => setTemplateAssetId(assetId)}
+                    type="button"
+                  >
+                    {String(asset.label || asset.title || assetId)}
+                  </button>
+                );
+              })}
+            </div>
 
-        <div className="stream-list">
-          {(payload?.blocks || []).map((block) => (
-            <StreamBlock
-              block={block}
-              expanded={currentBlockExpanded(block)}
-              key={block.block_id}
-              onActionTarget={handleActionTarget}
-              onToggle={() => toggleBlock(block.block_id)}
-            />
-          ))}
-        </div>
+            <div className="stream-list thread-stream-list">
+              {(payload?.blocks || []).map((block) => (
+                <StreamBlock
+                  block={block}
+                  expanded={currentBlockExpanded(block)}
+                  key={block.block_id}
+                  onActionTarget={handleActionTarget}
+                  onToggle={() => toggleBlock(block.block_id)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
       </section>
     );
   }
 
   function renderMainContent() {
+    if (!bridgeAvailable) {
+      return <BridgeMissingState />;
+    }
     if (!configPath) {
       return (
         <EmptyAttachState
@@ -702,15 +861,20 @@ export default function App() {
             <Sparkles size={16} />
           </span>
           <div>
-            <strong>Butler Flow</strong>
-            <span>Conversation-first Workbench</span>
+            <strong>Butler Flow Desktop</strong>
+            <span>Codex-aligned shell, Butler-native threads</span>
           </div>
+        </div>
+
+        <div className="rail-context">
+          <span className="rail-context-label">Workspace</span>
+          <strong title={configPath}>{configPath || "Select a Butler config"}</strong>
         </div>
 
         <div className="rail-nav">
           <RailButton
             active={railSection === "manager"}
-            detail="brainstorm → requirements → standards"
+            detail="brainstorm → requirements → launch"
             icon={<Bot size={16} />}
             label="Manager 管理台"
             onClick={() => {
@@ -722,7 +886,7 @@ export default function App() {
             active={railSection === "history"}
             detail="project threads"
             icon={<History size={16} />}
-            label="History 历史"
+            label="Threads 历史"
             onClick={() => {
               setRailSection("history");
               setView({ kind: "history" });
@@ -734,6 +898,7 @@ export default function App() {
             icon={<PlusSquare size={16} />}
             label="New Flow 新建"
             onClick={() => {
+              setManagerSessionId("");
               setRailSection("new-flow");
               setView({ kind: "new-flow" });
               setMessageDraft("");
@@ -741,7 +906,7 @@ export default function App() {
           />
           <RailButton
             active={railSection === "templates"}
-            detail="template + agent team"
+            detail="template + default agent team"
             icon={<LayoutTemplate size={16} />}
             label="Templates 模板"
             onClick={() => {
@@ -757,13 +922,13 @@ export default function App() {
             <span>{recentThreads.length}</span>
           </div>
           {recentThreads.length === 0 ? (
-            <div className="empty-inline small">Attach config 后这里会显示对话与 flow 历史。</div>
+            <div className="empty-inline small">Attach config 后，这里会显示 manager 与 flow 线程。</div>
           ) : (
             recentThreads.slice(0, 8).map((summary) => (
               <ThreadShortcut
                 active={
-                  (view.kind === "supervisor" && view.flowId === summary.flow_id) ||
-                  (view.kind === "manager" && managerSessionId === summary.manager_session_id)
+                  (isSupervisorSummary(summary) && view.kind === "supervisor" && view.flowId === summary.flow_id) ||
+                  (isManagerSummary(summary) && view.kind === "manager" && managerSessionId === summary.manager_session_id)
                 }
                 key={summary.thread_id}
                 onClick={() => openThread(summary)}
@@ -772,20 +937,38 @@ export default function App() {
             ))
           )}
         </div>
+
+        <div className="rail-footer">
+          <div className="rail-footer-block">
+            <span>Theme</span>
+            <strong>{theme === "night" ? "Night" : "Day"}</strong>
+          </div>
+          <div className="rail-footer-block">
+            <span>Bridge</span>
+            <strong>{bridgeAvailable ? "Connected" : "Browser only"}</strong>
+          </div>
+        </div>
       </aside>
 
       <main className="desktop-main">
         <header className="global-header">
           <div className="global-header-copy">
-            <span>Config</span>
-            <strong>{configPath || "Select a Butler config to start."}</strong>
+            <span>Current Surface</span>
+            <strong>
+              {view.kind === "manager" && "Manager thread"}
+              {view.kind === "new-flow" && "Blank manager thread"}
+              {view.kind === "history" && "Project threads"}
+              {view.kind === "templates" && "Template team"}
+              {view.kind === "supervisor" && "Supervisor thread"}
+              {view.kind === "agent" && "Agent focus"}
+            </strong>
           </div>
           <div className="global-header-actions">
             <button className="ui-button ui-button-secondary" onClick={() => void chooseConfig()} type="button">
               <FolderSearch size={16} />
               Config
             </button>
-            <button className="ui-button ui-button-secondary" onClick={() => void refreshAll()} type="button">
+            <button className="ui-button ui-button-secondary" disabled={!bridgeAvailable} onClick={() => void refreshAll()} type="button">
               <RefreshCcw size={16} />
               Refresh
             </button>
@@ -798,13 +981,21 @@ export default function App() {
 
         {renderMainContent()}
 
-        {homeQuery.error ? <div className="status-toast error">Thread home load failed: {String(homeQuery.error.message)}</div> : null}
-        {managerQuery.error ? <div className="status-toast error">Manager thread load failed: {String(managerQuery.error.message)}</div> : null}
-        {supervisorQuery.error ? (
+        {bridgeAvailable && homeQuery.error ? (
+          <div className="status-toast error">Thread home load failed: {String(homeQuery.error.message)}</div>
+        ) : null}
+        {bridgeAvailable && managerQuery.error ? (
+          <div className="status-toast error">Manager thread load failed: {String(managerQuery.error.message)}</div>
+        ) : null}
+        {bridgeAvailable && supervisorQuery.error ? (
           <div className="status-toast error">Supervisor thread load failed: {String(supervisorQuery.error.message)}</div>
         ) : null}
-        {agentQuery.error ? <div className="status-toast error">Agent focus load failed: {String(agentQuery.error.message)}</div> : null}
-        {templateQuery.error ? <div className="status-toast error">Template load failed: {String(templateQuery.error.message)}</div> : null}
+        {bridgeAvailable && agentQuery.error ? (
+          <div className="status-toast error">Agent focus load failed: {String(agentQuery.error.message)}</div>
+        ) : null}
+        {bridgeAvailable && templateQuery.error ? (
+          <div className="status-toast error">Template load failed: {String(templateQuery.error.message)}</div>
+        ) : null}
         {statusMessage ? <div className="status-toast">{statusMessage}</div> : null}
       </main>
     </div>

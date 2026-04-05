@@ -218,6 +218,7 @@
 - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/products/butler_flow/desktop/ + butler_main/products/butler_flow/desktop_bridge.py + butler_main/products/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars；远程/无头环境下优先走手填 `Config Path Fallback`，不要把原生 file dialog 当唯一验证入口
   - 若排查 Desktop 是否“已完成”，把验证拆成四层记录：Python bridge 回归、desktop `typecheck/build`、renderer `vitest`、Electron `Playwright` 点击回归；不要把源码编译通过误记成运行时已验证
 - 若目标是当前 thread-first Desktop、`Manager -> Supervisor -> Agent focus` 串联、`History` project threads、`Templates` 单流 team 管理、或 `day/night theme`，先补读 [0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](../daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)；当前 renderer 已不再以旧 `workspace/manage/detail drawer` 为主心智
+  - 若这轮还涉及视觉壳层、bridge fallback、history 双 thread 合同或 manager/supervisor 上下文回跳，额外核对 0405 正文中的第二波补充：`thread-home` history 现役是 `manager + supervisor` 双 summary，renderer 不得再用 `flow_id` 猜 thread 身份
 - 若跑 Desktop e2e，优先直接用 `cd butler_main/products/butler_flow/desktop && npm run test:e2e`；当前脚本会先 `build`，再优先使用现有 `DISPLAY`，无图形时自动尝试 `xvfb-run`
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
   - 最后补跑 `tools/butler-flow ... --help`、`butler-flow --help` 与 `python -m butler_main --help`

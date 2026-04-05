@@ -331,7 +331,7 @@ def _manager_summary_from_session(
     )
 
 
-def _flow_summary_as_thread(summary: dict[str, Any]) -> dict[str, Any]:
+def _flow_summary_as_thread(summary: dict[str, Any], *, manager_session_id: str = "") -> dict[str, Any]:
     flow_id = str(summary.get("flow_id") or "").strip()
     return _thread_summary(
         thread_id=f"flow:{flow_id}",
@@ -340,6 +340,7 @@ def _flow_summary_as_thread(summary: dict[str, Any]) -> dict[str, Any]:
         subtitle=_compact_text(summary.get("goal") or summary.get("guard_condition") or "Supervisor stream"),
         status=str(summary.get("effective_status") or "").strip(),
         updated_at=str(summary.get("updated_at") or "").strip(),
+        manager_session_id=manager_session_id,
         flow_id=flow_id,
         active_role_id=str(summary.get("active_role_id") or "").strip(),
         current_phase=str(summary.get("effective_phase") or "").strip(),
@@ -359,7 +360,7 @@ def thread_home_payload(*, config: str | None, limit: int = 20) -> dict[str, Any
     session_rows = list_manage_sessions(workspace_root, limit=max(1, int(limit or 20))) if workspace_root else []
     history: list[dict[str, Any]] = []
     manager_history: list[dict[str, Any]] = []
-    linked_flow_ids: set[str] = set()
+    manager_session_by_flow_id: dict[str, str] = {}
     for row in session_rows:
         manager_session_id = str(row.get("manager_session_id") or "").strip()
         session = dict(row.get("session") or {})
@@ -369,16 +370,21 @@ def thread_home_payload(*, config: str | None, limit: int = 20) -> dict[str, Any
         summary = _manager_summary_from_session(manager_session_id, session, draft, pending_action, turns)
         flow_id = str(summary.get("flow_id") or "").strip()
         if flow_id:
-            linked_flow_ids.add(flow_id)
+            manager_session_by_flow_id[flow_id] = manager_session_id
         manager_history.append(summary)
         history.append(summary)
 
     flows = list((workspace_payload(config=config, limit=limit).get("flows") or {}).get("items") or [])
     for row in flows:
         flow_id = str(row.get("flow_id") or "").strip()
-        if not flow_id or flow_id in linked_flow_ids:
+        if not flow_id:
             continue
-        history.append(_flow_summary_as_thread(dict(row or {})))
+        history.append(
+            _flow_summary_as_thread(
+                dict(row or {}),
+                manager_session_id=manager_session_by_flow_id.get(flow_id, ""),
+            )
+        )
 
     history.sort(key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""), reverse=True)
 

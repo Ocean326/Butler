@@ -29,6 +29,8 @@
 - 补充：0405 当前真源已经把 Butler Flow Desktop 收口为 thread-first workbench：`Manager -> Supervisor -> Agent focus -> Templates`
 - 补充：[0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](./daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)
 - 补充：Desktop 当前现役 payload 已从旧 `workspace / manage / single_flow / detail` 主视图升级为 `thread-home / manager-thread / supervisor-thread / agent-focus / template-team / manager-message`
+- 补充：0405 第二波已经把视觉壳层对齐 Codex 交互壳，并明确 `History` 现役合同是 linked `manager + supervisor` 双 thread summary
+- 补充：当前 Electron e2e 仍需带 `DISPLAY/Xvfb` 的主机执行；本机无图形环境时只能先完成 Python/renderer/build 级验证
 7. [0404 当日总纲](./daily-upgrade/0404/00_当日总纲.md)
 - 补充：`0404/00` 已回写本轮仓库级重构完成态；当前应按 canonical tree 理解三产品与 repo 导航
 - 补充：[0404 Butler Flow manager skill-contract 吸收与单 `main` worktree 收口](./daily-upgrade/0404/01_butler-flow_manager-skill-contract吸收与单main-worktree收口.md)

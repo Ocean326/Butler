@@ -15,6 +15,8 @@ import type {
 const now = "2026-04-05 14:00:00";
 const flowId = "flow_mock_desktop";
 const managerSessionId = "manager_session_mock_01";
+const secondaryFlowId = "flow_visual_refresh";
+const secondaryManagerSessionId = "manager_session_mock_02";
 
 function flowSummary() {
   return {
@@ -49,6 +51,16 @@ function flowSummary() {
       summary: "桌面线程壳已经可以开始实现"
     },
     updated_at: now
+  };
+}
+
+function secondaryFlowSummary() {
+  return {
+    ...flowSummary(),
+    flow_id: secondaryFlowId,
+    label: "Visual Refresh Flow",
+    goal: "验证历史线程切换后仍能回到正确的 Manager",
+    updated_at: "2026-04-05 15:00:00"
   };
 }
 
@@ -145,6 +157,39 @@ function managerThread(): ManagerThreadDTO {
     pending_action: {},
     latest_response: "Flow 已创建，切到 Supervisor 继续。",
     linked_flow_id: flowId
+  };
+}
+
+function secondaryManagerThread(): ManagerThreadDTO {
+  return {
+    ...managerThread(),
+    thread: {
+      ...managerThread().thread,
+      thread_id: `manager:${secondaryManagerSessionId}`,
+      title: "视觉升级 Manager 线程",
+      subtitle: "这是另一个 manager thread，用来验证上下文切换。",
+      updated_at: "2026-04-05 15:00:00",
+      manager_session_id: secondaryManagerSessionId,
+      flow_id: secondaryFlowId,
+      current_phase: "delivery"
+    },
+    manager_session_id: secondaryManagerSessionId,
+    manage_target: `instance:${secondaryFlowId}`,
+    active_manage_target: `instance:${secondaryFlowId}`,
+    latest_response: "继续视觉升级。",
+    linked_flow_id: secondaryFlowId,
+    blocks: [
+      {
+        block_id: "manager:alt:1",
+        kind: "requirements",
+        title: "视觉升级要求",
+        summary: "从 History 打开 supervisor 后，返回 Manager 必须回到这个上下文。",
+        created_at: "2026-04-05 14:10:00",
+        status: "active",
+        expanded_by_default: true,
+        payload: {}
+      }
+    ]
   };
 }
 
@@ -257,25 +302,78 @@ function supervisorThread(): SupervisorThreadDTO {
   };
 }
 
-function agentFocus(roleId: string): AgentFocusDTO {
-  const summary = flowSummary();
+function secondarySupervisorThread(): SupervisorThreadDTO {
+  const summary = secondaryFlowSummary();
+  return {
+    ...supervisorThread(),
+    thread: {
+      ...supervisorThread().thread,
+      thread_id: `flow:${secondaryFlowId}`,
+      title: "Visual Refresh Flow",
+      subtitle: "Supervisor 正在验证历史线程与 manager 上下文同步。",
+      updated_at: "2026-04-05 15:00:00",
+      manager_session_id: secondaryManagerSessionId,
+      flow_id: secondaryFlowId
+    },
+    flow_id: secondaryFlowId,
+    summary,
+    blocks: [
+      {
+        block_id: "supervisor:alt:start",
+        kind: "decision",
+        title: "Validate thread round-trip",
+        summary: "先从 History 打开 supervisor，再回 Manager，确认上下文没漂移。",
+        created_at: "2026-04-05 14:20:00",
+        status: "decision",
+        expanded_by_default: true,
+        payload: { summary },
+        role_id: "implementer",
+        phase: "implement",
+        action_label: "Open Agent",
+        action_target: "role:implementer",
+        tags: ["supervisor", "decision"]
+      }
+    ],
+    latest_handoff: {
+      handoff_id: "handoff-visual-refresh",
+      to_role_id: "implementer",
+      summary: "验证 history -> supervisor -> manager round-trip"
+    }
+  };
+}
+
+function agentFocus(nextFlowId: string, roleId: string): AgentFocusDTO {
+  const isSecondaryFlow = nextFlowId === secondaryFlowId;
+  const summary = isSecondaryFlow ? secondaryFlowSummary() : flowSummary();
+  const focusFlowId = isSecondaryFlow ? secondaryFlowId : flowId;
+  const focusManagerSessionId = isSecondaryFlow ? secondaryManagerSessionId : managerSessionId;
+  const focusUpdatedAt = isSecondaryFlow ? "2026-04-05 15:00:00" : now;
+  const focusSummary =
+    roleId === "implementer"
+      ? isSecondaryFlow
+        ? "正在验证历史线程切换后的 manager 上下文。"
+        : "正在实现 renderer 和 IPC。"
+      : isSecondaryFlow
+        ? "准备接收视觉升级回归 handoff。"
+        : "准备接收 handoff 并做验证。";
+
   return {
     thread: {
-      thread_id: `agent:${flowId}:${roleId}`,
+      thread_id: `agent:${focusFlowId}:${roleId}`,
       thread_kind: "agent",
       title: roleId,
       subtitle: "Agent focus stream",
       status: "running",
       created_at: "2026-04-05 13:56:00",
-      updated_at: now,
-      manager_session_id: managerSessionId,
-      flow_id: flowId,
+      updated_at: focusUpdatedAt,
+      manager_session_id: focusManagerSessionId,
+      flow_id: focusFlowId,
       active_role_id: roleId,
       current_phase: "implement",
       badge: roleId === "implementer" ? "active" : "idle",
       tags: ["managed_flow"]
     },
-    flow_id: flowId,
+    flow_id: focusFlowId,
     role_id: roleId,
     title: `${roleId} · focus`,
     summary,
@@ -284,7 +382,7 @@ function agentFocus(roleId: string): AgentFocusDTO {
         block_id: `agent:${roleId}:brief`,
         kind: "role_brief",
         title: `Agent · ${roleId}`,
-        summary: roleId === "implementer" ? "正在实现 renderer 和 IPC。" : "准备接收 handoff 并做验证。",
+        summary: focusSummary,
         created_at: "2026-04-05 13:56:00",
         status: roleId === "implementer" ? "active" : "idle",
         expanded_by_default: true,
@@ -297,8 +395,14 @@ function agentFocus(roleId: string): AgentFocusDTO {
         block_id: `agent:${roleId}:progress`,
         kind: "progress",
         title: "Progress 更新",
-        summary: roleId === "implementer" ? "thread API 已接线，准备重写单流页面。" : "等待实现完成后接手回归。",
-        created_at: now,
+        summary: isSecondaryFlow
+          ? roleId === "implementer"
+            ? "secondary flow 正在验证 history -> supervisor -> manager 回跳。"
+            : "等待 secondary flow 的实现结论后做收口。"
+          : roleId === "implementer"
+            ? "thread API 已接线，准备重写单流页面。"
+            : "等待实现完成后接手回归。",
+        created_at: focusUpdatedAt,
         status: "progress",
         expanded_by_default: true,
         payload: {
@@ -315,8 +419,16 @@ function agentFocus(roleId: string): AgentFocusDTO {
     },
     related_handoffs: [
       roleId === "reviewer"
-        ? { handoff_id: "handoff-8", to_role_id: "reviewer", summary: "等待回归" }
-        : { handoff_id: "handoff-7", to_role_id: "implementer", summary: "开始实现" }
+        ? {
+            handoff_id: isSecondaryFlow ? "handoff-visual-refresh-review" : "handoff-8",
+            to_role_id: "reviewer",
+            summary: isSecondaryFlow ? "等待视觉升级回归" : "等待回归"
+          }
+        : {
+            handoff_id: isSecondaryFlow ? "handoff-visual-refresh" : "handoff-7",
+            to_role_id: "implementer",
+            summary: isSecondaryFlow ? "验证 history -> supervisor -> manager round-trip" : "开始实现"
+          }
     ],
     artifacts: [{ artifact_ref: "artifact://desktop/workbench", title: "Desktop shell" }]
   };
@@ -401,7 +513,7 @@ export class MockFlowWorkbenchAdapter {
         config_path: "/tmp/butler-demo/config.json"
       },
       flows: {
-        items: [flowSummary()]
+        items: [flowSummary(), secondaryFlowSummary()]
       }
     };
   }
@@ -488,11 +600,11 @@ export class MockFlowWorkbenchAdapter {
         draft_summary: "先用 Manager 对齐需求，再切到 Supervisor。",
         status: "active",
         title: "Manager 管理台",
-        total_sessions: 1,
+        total_sessions: 2,
         active_flow_id: flowId,
         active_thread_id: `manager:${managerSessionId}`
       },
-      history: [managerThread().thread, supervisorThread().thread],
+      history: [managerThread().thread, supervisorThread().thread, secondaryManagerThread().thread, secondarySupervisorThread().thread],
       templates: [templateTeam().thread]
     };
   }
@@ -526,15 +638,21 @@ export class MockFlowWorkbenchAdapter {
         ]
       };
     }
+    if (sessionId === secondaryManagerSessionId) {
+      return secondaryManagerThread();
+    }
     return managerThread();
   }
 
-  async getSupervisorThread(_flowId?: string): Promise<SupervisorThreadDTO> {
+  async getSupervisorThread(nextFlowId?: string): Promise<SupervisorThreadDTO> {
+    if (nextFlowId === secondaryFlowId) {
+      return secondarySupervisorThread();
+    }
     return supervisorThread();
   }
 
-  async getAgentFocus(_flowId: string, roleId: string): Promise<AgentFocusDTO> {
-    return agentFocus(roleId);
+  async getAgentFocus(nextFlowId: string, roleId: string): Promise<AgentFocusDTO> {
+    return agentFocus(nextFlowId, roleId);
   }
 
   async getTemplateTeam(assetId?: string): Promise<TemplateTeamDTO> {

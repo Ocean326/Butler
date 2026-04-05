@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { electronApi } from "../../lib/electron-api";
 
-export function useThreadHome(configPath: string) {
+export function useThreadHome(configPath: string, enabled = true) {
   return useQuery({
     queryKey: ["desktop", "thread-home", configPath],
     queryFn: () => electronApi.getThreadHome({ configPath }),
-    refetchInterval: configPath ? 6000 : false,
-    enabled: Boolean(configPath)
+    refetchInterval: configPath && enabled ? 6000 : false,
+    enabled: enabled && Boolean(configPath)
   });
 }
 

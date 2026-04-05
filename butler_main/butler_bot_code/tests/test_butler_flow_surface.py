@@ -438,6 +438,29 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
             self.assertEqual(manager["pending_action"]["preview"], "Create Team + Supervisor")
             self.assertEqual(len(read_manage_turns(root, "manager_session_1")), 2)
 
+    def test_thread_home_keeps_both_manager_and_supervisor_threads_for_linked_flows(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            _seed_manager_session(root, manager_session_id="manager_session_1", flow_id="flow_linked_history")
+            path = _write_flow_state(root, flow_id="flow_linked_history", status="running", kind="managed_flow")
+            state = json.loads(flow_state_path(path).read_text(encoding="utf-8"))
+            state["updated_at"] = "2026-04-05 12:45:00"
+            state["goal"] = "linked supervisor flow"
+            write_json_atomic(flow_state_path(path), state)
+
+            home = flow_surface.thread_home_payload(config=config)
+
+            manager_rows = [item for item in home["history"] if item["thread_kind"] == "manager"]
+            supervisor_rows = [item for item in home["history"] if item["thread_kind"] == "supervisor"]
+
+            self.assertEqual(len(manager_rows), 1)
+            self.assertEqual(len(supervisor_rows), 1)
+            self.assertEqual(manager_rows[0]["flow_id"], "flow_linked_history")
+            self.assertEqual(supervisor_rows[0]["flow_id"], "flow_linked_history")
+            self.assertEqual(supervisor_rows[0]["manager_session_id"], "manager_session_1")
+            self.assertEqual(home["manager_entry"]["default_manager_session_id"], "manager_session_1")
+
     def test_thread_home_manager_entry_stays_on_latest_manager_session_when_flow_is_newer(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

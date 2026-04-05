@@ -26,7 +26,7 @@ async function expectDesktopApiReady(window) {
 }
 
 test.describe("Butler Desktop Electron", () => {
-  test("launches, attaches config by path, and opens the workbench", async () => {
+  test("launches, attaches config by path, and defaults into the manager thread", async () => {
     const { app, window } = await launchApp();
     try {
       await expect(window).toHaveTitle(/Butler Desktop/);
@@ -34,26 +34,62 @@ test.describe("Butler Desktop Electron", () => {
       await window.getByLabel("Config Path Fallback").fill(configPath);
       await window.getByRole("button", { name: "Attach Path" }).click();
       await expect(window.getByText(`Config attached: ${configPath}`)).toBeVisible();
-      await expect(window.getByRole("button", { name: /flow_mock_desktop/i })).toBeVisible();
+      await expect(window.getByRole("heading", { name: "Desktop 线程工作台" })).toBeVisible();
+      await expect(window.getByRole("button", { name: /send to manager/i })).toBeVisible();
+    } finally {
+      await app.close();
+    }
+  });
 
-      await window.getByRole("button", { name: /flow_mock_desktop/i }).click();
-      await expect(window.getByRole("heading", { name: "Ship Butler Desktop" })).toBeVisible();
+  test("starts from New Flow and automatically enters supervisor after manager send", async () => {
+    const { app, window } = await launchApp();
+    try {
+      await expectDesktopApiReady(window);
+      await window.getByLabel("Config Path Fallback").fill(configPath);
+      await window.getByRole("button", { name: "Attach Path" }).click();
+      await window.getByRole("button", { name: /new flow 新建/i }).click();
+      await expect(window.getByRole("heading", { name: "新建 Flow" })).toBeVisible();
+
+      await window.getByLabel("Start with Manager").fill("请创建 desktop 视觉升级 flow");
+      await window.getByRole("button", { name: /send to manager/i }).click();
+
+      await expect(window.getByRole("heading", { name: "Butler Flow Desktop" })).toBeVisible();
       await expect(window.getByRole("button", { name: "Pause" })).toBeVisible();
     } finally {
       await app.close();
     }
   });
 
-  test("navigates to manage center after config attach", async () => {
+  test("opens templates and agent focus within the new thread-first shell", async () => {
     const { app, window } = await launchApp();
     try {
       await expectDesktopApiReady(window);
       await window.getByLabel("Config Path Fallback").fill(configPath);
       await window.getByRole("button", { name: "Attach Path" }).click();
-      await window.getByRole("button", { name: "Manage" }).click();
+      await window.getByRole("button", { name: /templates 模板/i }).click();
+      await expect(window.getByRole("heading", { name: "Desktop Shell Template" })).toBeVisible();
 
-      await expect(window.getByRole("heading", { name: "Assets and execution guidance" })).toBeVisible();
-      await expect(window.getByRole("heading", { name: "Desktop Shell V1" })).toBeVisible();
+      await window.getByRole("button", { name: /Butler Flow Desktop/i }).click();
+      await expect(window.getByRole("heading", { name: "Butler Flow Desktop" })).toBeVisible();
+      await window.getByRole("button", { name: /implementer/i }).last().click();
+      await expect(window.getByRole("heading", { name: "implementer · focus" })).toBeVisible();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("keeps manager context aligned after opening a supervisor thread from history", async () => {
+    const { app, window } = await launchApp();
+    try {
+      await expectDesktopApiReady(window);
+      await window.getByLabel("Config Path Fallback").fill(configPath);
+      await window.getByRole("button", { name: "Attach Path" }).click();
+      await window.getByRole("button", { name: /threads 历史/i }).click();
+      await window.getByRole("button", { name: /Visual Refresh Flow/i }).last().click();
+      await expect(window.getByRole("heading", { name: "Visual Refresh Flow" })).toBeVisible();
+
+      await window.getByRole("button", { name: /manager 管理台/i }).click();
+      await expect(window.getByRole("heading", { name: "视觉升级 Manager 线程" })).toBeVisible();
     } finally {
       await app.close();
     }

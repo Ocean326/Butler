@@ -59,13 +59,14 @@ def _seed_flow(root: Path, *, flow_id: str) -> None:
     )
 
 
-def _seed_manager_session(root: Path, *, manager_session_id: str) -> None:
+def _seed_manager_session(root: Path, *, manager_session_id: str, flow_id: str = "") -> None:
+    active_target = f"instance:{flow_id}" if flow_id else "new"
     write_manage_session(
         root,
         manager_session_id,
         {
             "manager_session_id": manager_session_id,
-            "active_manage_target": "new",
+            "active_manage_target": active_target,
             "manager_stage": "requirements",
             "confirmation_scope": "flow_create",
             "updated_at": "2026-04-05 12:40:00",
@@ -75,7 +76,7 @@ def _seed_manager_session(root: Path, *, manager_session_id: str) -> None:
         root,
         manager_session_id,
         {
-            "manage_target": "new",
+            "manage_target": active_target,
             "asset_kind": "instance",
             "label": "Desktop 线程工作台",
             "workflow_kind": "managed_flow",
@@ -86,7 +87,7 @@ def _seed_manager_session(root: Path, *, manager_session_id: str) -> None:
         root,
         manager_session_id,
         {
-            "manage_target": "new",
+            "manage_target": active_target,
             "preview": "Create Team + Supervisor",
         },
     )
@@ -95,7 +96,7 @@ def _seed_manager_session(root: Path, *, manager_session_id: str) -> None:
         manager_session_id,
         {
             "created_at": "2026-04-05 12:20:00",
-            "manage_target": "new",
+            "manage_target": active_target,
             "instruction": "先把想法收敛",
             "response": "Manager 已整理出 thread-first IA。",
             "parse_status": "ok",
@@ -148,7 +149,7 @@ class ButlerFlowDesktopBridgeTests(unittest.TestCase):
             root = Path(tmp)
             config = _config_path(root)
             _seed_flow(root, flow_id="flow_desktop_bridge")
-            _seed_manager_session(root, manager_session_id="manager_session_bridge")
+            _seed_manager_session(root, manager_session_id="manager_session_bridge", flow_id="flow_desktop_bridge")
 
             buffer = io.StringIO()
             with redirect_stdout(buffer):
@@ -157,6 +158,14 @@ class ButlerFlowDesktopBridgeTests(unittest.TestCase):
             home = json.loads(buffer.getvalue())
             self.assertEqual(exit_code, 0)
             self.assertEqual(home["manager_entry"]["default_manager_session_id"], "manager_session_bridge")
+            self.assertEqual(
+                [item["thread_kind"] for item in home["history"] if item.get("flow_id") == "flow_desktop_bridge"],
+                ["manager", "supervisor"],
+            )
+            supervisor_row = next(
+                item for item in home["history"] if item["thread_kind"] == "supervisor" and item.get("flow_id") == "flow_desktop_bridge"
+            )
+            self.assertEqual(supervisor_row["manager_session_id"], "manager_session_bridge")
 
             manager_buffer = io.StringIO()
             with redirect_stdout(manager_buffer):

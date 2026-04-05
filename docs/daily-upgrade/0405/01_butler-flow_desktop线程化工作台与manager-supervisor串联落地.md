@@ -15,6 +15,7 @@
 5. `Templates` 页面负责 `template + agent team` 管理
 6. `Manager -> Supervisor -> Agent focus` 必须串起来，而不是停留在只读 UI 原型
 7. 视觉基线以冷白 / 蓝灰日间模式和蓝黑夜间模式为准，不再沿用暖色方案
+8. 视觉壳层对齐 Codex 交互壳，但 Butler 语义、线程命名与入口概念保持不改名
 
 ## 2. 一句话裁决
 
@@ -92,6 +93,27 @@
   - `config path` 本地持久化
   - `day/night theme` 本地持久化
   - `manager message` 发送后自动刷新 thread queries
+  - `bridge missing` 显式降级为空页面态，不在纯浏览器环境抛 preload/query 风暴
+
+### 3.4 0405 第二波：视觉壳升级与线程合同补齐
+
+本轮又把 thread-first Desktop 从“已经可用”继续推进到“视觉与交互壳对齐 Codex，但仍保留 Butler 语义”的完成态：
+
+- `App.tsx + workbench.css`
+  - 左 rail 收窄，统一冷色 card / rail token
+  - `Manager / New Flow` 改成 `thread stream + bottom dock composer`
+  - composer 默认小，输入增长后最多占视口 `1/3`
+  - `night` 改成默认主题
+- `History / Recent Threads`
+  - `thread-home` 现役合同改成同时保留 linked `manager` 与 `supervisor` 两类 thread
+  - renderer 改成按 `thread_kind` 判别 thread 身份，不再用 `flow_id` 猜测 manager/supervisor
+  - 从 `History/Recent Threads -> Supervisor -> Manager` 时，会同步 `manager_session_id`，避免上下文漂移
+- `bridge fallback`
+  - 当 `window.butlerDesktop` 未注入时，Desktop 显示 `Desktop bridge 未连接`
+  - 所有 thread query 都以 bridge availability 控制 `enabled/refetch`
+- mock / test fixtures
+  - mock adapter 新增第二条 flow / manager session，用来覆盖线程 round-trip
+  - alternate flow 的 `Agent Focus` 现已按 `flowId` 返回正确上下文，而不是错误落回主 flow
 
 ## 4. 产品口径更新
 
@@ -114,6 +136,16 @@
 
 - Agent 不是单独历史线程
 - Agent 是同一 flow thread 内的 focused stream
+
+### 4.2.1 History 是 project thread list，而不是单一 manager 索引
+
+0405 第二波后，`thread-home` 的现役裁决进一步明确为：
+
+- launched manager session 仍保留一条 `manager` thread summary
+- linked flow 也保留一条 `supervisor` thread summary
+- 两者都可出现在 `History / Recent Threads`
+- renderer 必须按 `thread_kind` 决定打开 `Manager` 还是 `Supervisor`
+- supervisor summary 若带有 `manager_session_id`，则返回 `Manager` 时要回到对应 session，而不是默认 manager
 
 ### 4.3 Templates 回到 thread 风格而非旧 manage detail
 
@@ -139,43 +171,58 @@
   - 保持同一信息层级，不做另一套布局
 - 不再沿用暖色 beige / copper 路线
 - 主区统一单流；不再把细节塞进常驻右侧抽屉
+- `Manager / New Flow` 的 composer 是页面底部 dock，而不是并列 side panel
+- `Agent Focus` 是 full-thread role lens，不是 drawer/detail pane
 
 ## 6. 测试与验证
 
 ### 6.1 Python 回归
 
 - `./.venv/bin/python -m pytest butler_main/butler_bot_code/tests/test_butler_flow_surface.py -q`
-  - 当前结果：`8 passed`
+  - 当前结果：`10 passed`
   - 新增覆盖：
     - `thread-home`
     - `manager-thread`
     - `supervisor-thread`
     - `agent-focus`
+    - linked flow 同时保留 `manager + supervisor` 双 thread summary
 - `./.venv/bin/python -m pytest butler_main/butler_bot_code/tests/test_butler_flow_desktop_bridge.py -q`
-  - 当前结果：`3 passed`
+  - 当前结果：`4 passed`
   - 新增覆盖：
     - `thread-home`
     - `manager-thread`
     - `supervisor-thread`
+    - bridge CLI 输出 linked flow 的双 thread history 合同
 
 ### 6.2 Desktop 工程验证
 
 - `cd butler_main/products/butler_flow/desktop && npm run typecheck`
   - 当前结果：通过
 - `cd butler_main/products/butler_flow/desktop && npm run test:renderer`
-  - 当前结果：`5 passed`
+  - 当前结果：`14 passed`
   - 覆盖：
-    - config attach
-    - Manager 默认页
-    - Manager 发送消息并跳转 Supervisor
-    - Templates 页面
-    - Agent focus 跳转
+    - bridge missing fallback
+    - config attach / Manager 默认页
+    - `New Flow` 空白 manager thread
+    - manager launch -> supervisor
+    - `History` project threads
+    - launched manager row 即使带 `flow_id` 也仍打开 Manager
+    - theme 持久化
+    - composer 结构与高度上限
+    - secondary flow 上下文 round-trip
+    - mock adapter alternate-flow agent focus
+- `cd butler_main/products/butler_flow/desktop && npm run build`
+  - 当前结果：通过
+- `cd butler_main/products/butler_flow/desktop && npm run test:e2e`
+  - 当前结果：脚本级阻塞
+  - 原因：当前主机没有 `DISPLAY`，也没有 `xvfb-run / Xvfb`
+  - 结论：本轮不能把 Electron 点击回归记成“已通过”，只能记成“已尝试但受环境阻塞”
 
 ### 6.3 测试用例文档
 
 已新增：
 
-- `butler_main/butler_bot_code/tests/butler_flow_desktop_thread_workbench_test_cases.md`
+- `butler_main/butler_bot_code/tests/butler_flow_desktop_visual_shell_test_cases.md`
 
 其中覆盖：
 
@@ -189,8 +236,9 @@
 当前仍保留以下边界：
 
 1. `manager-message` 的真实执行仍依赖本机 `Codex CLI` 可用
-2. 本轮 renderer tests 仍是 `vitest + mocked desktop api`，尚未补 Electron 级 thread-first e2e
-3. 工作区当前存在与本轮无关的旧脏改动：
+2. Electron e2e 当前受本机图形环境阻塞，尚未拿到真实窗口层通过证据
+3. 本轮 renderer tests 虽已补更多结构/状态回归，但几何视觉仍主要依赖 Electron 层确认
+4. 工作区当前存在与本轮无关的旧脏改动：
    - `.superpowers/`
    - 根 `package-lock.json`
    - Desktop `package.json/package-lock.json` 的 Electron 版本改动并非本轮主目标
