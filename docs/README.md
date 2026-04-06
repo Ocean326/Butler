@@ -25,6 +25,9 @@
 3. [分层地图](./project-map/01_layer_map.md)
 4. [功能地图](./project-map/02_feature_map.md)
 5. [真源矩阵](./project-map/03_truth_matrix.md)
+6. [0407 当日总纲](./daily-upgrade/0407/00_当日总纲.md)
+- 补充：[0407 CLI Agent Substrate -> Canonical Team Runtime -> Team OS 脑暴收口](./每日头脑风暴/0407/01_CLI_Agent_Substrate到Canonical_Team_Runtime再到Team_OS_脑暴收口.md)
+- 补充：[0407 以 `Task + Artifact` 为真源的 Full-Stack Team OS 草稿](./每日头脑风暴/0407/02_以Task_Artifact为真源的Full_Stack_Team_OS草稿.md)
 6. [0404 当日总纲](./daily-upgrade/0404/00_当日总纲.md)
 - 补充：`0404/00` 已回写本轮仓库级重构完成态；当前应按 canonical tree 理解三产品与 repo 导航
 - 补充：[0404 Butler Flow manager skill-contract 吸收与单 `main` worktree 收口](./daily-upgrade/0404/01_butler-flow_manager-skill-contract吸收与单main-worktree收口.md)
@@ -50,8 +53,8 @@
 14. [0402 Hermes Agent 专题：Campaign 详细参考学习资料](./daily-upgrade/0402/07_HermesAgent专题_Campaign详细参考学习资料.md)
 15. [0402 Hermes Agent 专题：Campaign 启发式资料](./daily-upgrade/0402/08_HermesAgent专题_Campaign启发式资料.md)
 16. [0402 Butler Flow 长流治理与 supervisor 可观测性升级](./daily-upgrade/0402/11_butler-flow_长流治理与supervisor可观测性升级.md)
-- 补充：[0402 Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）](./daily-upgrade/0402/20260402_Butler-flow%20Desktop%20V2.1%20PRD_main%E5%88%86%E6%94%AF%E5%AF%B9%E9%BD%90_flow%20CLI%E5%85%A5%E5%8F%A3%E4%B8%8E%E5%8F%8C%E8%BD%A8%E5%AE%9E%E6%96%BD_%E6%9B%B4%E6%96%B0%E7%89%88.md)
-- 补充：[0402 Butler-flow-Desktop 开发计划（butler-flow 执行版，含 Desktop 技术选型与 Proma 复用边界）](./daily-upgrade/0402/20260402_Butler-flow-Desktop%E5%BC%80%E5%8F%91%E8%AE%A1%E5%88%92_butlerflow%E6%89%A7%E8%A1%8C%E7%89%88.md)
+- 补充：[0402 Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）](./daily-upgrade/0402/20260402_Butler-flow Desktop V2.1 PRD_main分支对齐_flow CLI入口与双轨实施_更新版.md)
+- 补充：[0402 Butler-flow-Desktop 开发计划（butler-flow 执行版，含 Desktop 技术选型与 Proma 复用边界）](./daily-upgrade/0402/20260402_Butler-flow-Desktop开发计划_butlerflow执行版.md)
 - 补充：[0402 Vibecoding Agent 默认收尾动作与 vibe-close 收口](./daily-upgrade/0402/09_vibecoding_agent默认收尾动作与vibe_close收口.md)
 - 补充：[0402 GitHub / ChatGPT 网页端阅读入口增强](./daily-upgrade/0402/10_github_chatgpt网页端阅读入口增强.md)
 17. [0401 当日总纲](./daily-upgrade/0401/00_当日总纲.md)
@@ -101,7 +104,7 @@
 7. 涉及 skill / Codex / prompt 注入边界，或 console / Draft Board 的 skill 管理与选择面时，补读 [0327 Skill Exposure Plane 与 Codex 消费边界](./daily-upgrade/0327/02_SkillExposurePlane与Codex消费边界.md)
 8. 涉及用宿主 Agent 子进程调用 Codex CLI（`exec` / `exec resume`、`profile` 顺序、非 TTY、MCP 鉴权边界）时，补读 [0331 Agent 监管 Codex 实践（exec 与 resume）](./daily-upgrade/0331/01_Agent监管Codex实践_exec与resume.md)
 9. 涉及前台 `butler-flow` CLI、`workflow shell` / `codex-guard` 历史别名、旧 `butler -workflow` 迁移提示、前台 `single_goal / project_loop / managed_flow`、前台 `exec run/resume`、前台 resume 或 receipt 会话恢复、Textual single flow 主视图、`workspace`、`/manage` shared assets、以及 supervisor `fix` 自治/`issue_kind` `followup_kind`（当前 `fix` 仅处理本地 agent CLI 调用链故障）时，先读 [0331 前台 Workflow Shell 收口](./daily-upgrade/0331/02_前台WorkflowShell收口.md)；若涉及 `execution_mode / role_pack / role_sessions / handoff sidecar`，再补读 [0331 前台 butler-flow 角色运行时与 role-session 绑定实施回写](./daily-upgrade/0331/06_前台butler-flow角色运行时与role-session绑定计划.md)；若涉及 `coding_flow=repo_bound`、`research_flow=isolated`、`execution_context / execution_workspace_root` 或非仓库任务误读根 `AGENTS.md`，补读 [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](./daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)；若涉及 `control_profile`、supervisor 长流治理、显式 repo contract、operator `shrink_packet/bind_repo_contract/force_doctor` 或 manager->supervisor handoff，再补读 [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](./daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)；若涉及 `workspace / single flow` 页面的 `默认 supervisor 单栏流 + Shift+Tab 切到 workflow 流`、`workspace vs /manage` 分工、以及 `approval_state / action receipt / handoff / role / phase` 的结构化流式外显，补读 [0401 Claude Code 对 Butler Flow 工作台化升级与 TUI 信息架构计划](./daily-upgrade/0401/02_ClaudeCode对ButlerFlow工作台化升级与TUI信息架构计划.md)；若涉及 `/manage` transcript-first shell、`$asset` mention、manager chat vs asset edit 分离、manager/session queue、shared asset `bundle_manifest / review_checklist / lineage / role_guidance`、builtin `clone/edit` 裁决，再补读 [0402 Butler Flow Manage Center 资产中心升级与会话式交互落地](./daily-upgrade/0402/02_butler-flow_manage-center资产中心升级与会话式交互落地.md)。
-- 补充：若目标是前台 `butler-flow` 的 Desktop/TUI 双轨规划、shared surface 抽取、Proma 壳技术栈吸收、或把多份 Butler Flow 计划收口成单一执行主计划，补读 [0402 Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）](./daily-upgrade/0402/20260402_Butler-flow%20Desktop%20V2.1%20PRD_main%E5%88%86%E6%94%AF%E5%AF%B9%E9%BD%90_flow%20CLI%E5%85%A5%E5%8F%A3%E4%B8%8E%E5%8F%8C%E8%BD%A8%E5%AE%9E%E6%96%BD_%E6%9B%B4%E6%96%B0%E7%89%88.md) 与 [0402 Butler-flow-Desktop 开发计划（butler-flow 执行版，含 Desktop 技术选型与 Proma 复用边界）](./daily-upgrade/0402/20260402_Butler-flow-Desktop%E5%BC%80%E5%8F%91%E8%AE%A1%E5%88%92_butlerflow%E6%89%A7%E8%A1%8C%E7%89%88.md)。
+- 补充：若目标是前台 `butler-flow` 的 Desktop/TUI 双轨规划、shared surface 抽取、Proma 壳技术栈吸收、或把多份 Butler Flow 计划收口成单一执行主计划，补读 [0402 Butler-flow Desktop V2.1 PRD（main 分支对齐 / foreground flow CLI 入口 / TUI + Desktop 双轨）](./daily-upgrade/0402/20260402_Butler-flow Desktop V2.1 PRD_main分支对齐_flow CLI入口与双轨实施_更新版.md) 与 [0402 Butler-flow-Desktop 开发计划（butler-flow 执行版，含 Desktop 技术选型与 Proma 复用边界）](./daily-upgrade/0402/20260402_Butler-flow-Desktop开发计划_butlerflow执行版.md)。
 - 补充：若目标已进入 Butler Desktop 实装、Electron 壳、Python bridge、shared surface 共用投影、`Config Path Fallback`、或运行验证拆层，补读 [0403 Butler Flow Desktop 壳与 shared surface bridge 落地](./daily-upgrade/0403/03_butler-flow_desktop壳与shared_surface_bridge落地.md)。
 10. 涉及 Agent Harness 能力吸收、framework mapping、subagent/session/guardrail/thread-turn-item 设计时，先读 [0330 Agent Harness 全景研究与 Butler 主线开发指南](./daily-upgrade/0330/02_AgentHarness全景研究与Butler主线开发指南.md)，再按 `02A/B/C/D/R/F/G` 命中子计划。
 11. 涉及系统抽象、事件契约、multi-agent 语义或 observe/projection 边界时，补读 [系统分层与事件契约](./runtime/System_Layering_and_Event_Contracts.md)
