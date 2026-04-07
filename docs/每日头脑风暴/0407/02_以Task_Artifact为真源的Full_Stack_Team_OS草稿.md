@@ -1,13 +1,14 @@
 # 以 `Task + Artifact` 为真源的 Full-Stack Team OS 草稿
 
 日期：2026-04-07  
-类型：每日头脑风暴 / full-stack 远景草稿 / 当前轮次讨论真源补充稿  
-状态：已完成一轮 full-stack 头脑风暴收口  
-用途：把本轮关于「Agency Swarm 式通信图 + A2A 式 task/artifact 模型 + durable workflow/runtime + Proma/Codex 式工作台投影」的讨论，压成一份可继续推演的完整草稿  
+类型：每日头脑风暴 / full-stack 远景草稿 / 当前轮次讨论补充稿
+状态：已完成一轮 full-stack 头脑风暴收口；当前现役裁决仍以 [0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](../../daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md) 为准
+用途：承载本轮关于「Agency Swarm 式通信图 + A2A 式 task/artifact 模型 + durable workflow/runtime + Proma/Codex 式工作台投影」的远景想象，作为未来 `Team OS` 方向的补充草稿
 
 相关内部文档：
 
 - [0407 当日总纲](../../daily-upgrade/0407/00_当日总纲.md)
+- [0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](../../daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md)
 - [CLI Agent Substrate -> Canonical Team Runtime -> Team OS](./01_CLI_Agent_Substrate到Canonical_Team_Runtime再到Team_OS_脑暴收口.md)
 - [当前系统基线](../../project-map/00_current_baseline.md)
 - [分层地图](../../project-map/01_layer_map.md)

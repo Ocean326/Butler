@@ -1,12 +1,13 @@
 # CLI Agent Substrate -> Canonical Team Runtime -> Team OS
 
 日期：2026-04-07  
-类型：每日头脑风暴 / 提案压测后收口稿 / 当前轮次讨论真源  
-状态：已完成一轮多 agent 讨论 + 官方资料核对 + `proposal-stress-test` 压测  
-用途：把本轮关于「建立在 Codex / Claude Code 这类 CLI agent 产品之上的可递归团队契约运行时」的讨论，收口成一份可继续推演的理论文档  
+类型：每日头脑风暴 / 前置讨论稿 / 当前轮次讨论材料
+状态：已完成一轮多 agent 讨论 + 官方资料核对 + `proposal-stress-test` 压测；最终裁决以 [0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](../../daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md) 为准
+用途：承载本轮关于「建立在 Codex / Claude Code 这类 CLI agent 产品之上的可递归团队契约运行时」的前置论证与边界澄清，供后续真源收口引用
 
 相关内部文档：
 
+- [0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](../../daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md)
 - [当前系统基线](../../project-map/00_current_baseline.md)
 - [分层地图](../../project-map/01_layer_map.md)
 - [功能地图](../../project-map/02_feature_map.md)
@@ -524,4 +525,3 @@ flowchart TB
 > **一个 operator-governed、recoverable、repo-bound 的 engineering-task runtime，具备 portable task/artifact/authority semantics。**
 
 等到 `organizational kernel` 被真正证明，再升级叙事到 `Team OS`，会更诚实，也更稳。
-
