@@ -16,7 +16,7 @@
 
 1. 每次改动结束后，先判断改动重量，而不是直接 `git commit`
 2. 先回写最小真源文档，再做 git 收口
-3. 重要改动默认保持 `branch / worktree / push` 最新，不把主工作区长期留在脏状态
+3. 重要改动默认保持 `commit / push` 最新；只有真正的跨层代码施工才默认保持 `branch / worktree` 最新，不把主工作区长期留在脏状态
 
 ## 2. 当前裁决
 
@@ -42,7 +42,8 @@
    - `minimal`：当天 `00_当日总纲.md` + 当天专题正文
    - `strict`：在 `minimal` 基础上，再补 `03_truth_matrix.md`、`04_change_packets.md`、`docs/README.md`
 6. `system` 改动若当前在默认分支：
-   - 先切到建议 branch
+   - 若是 `docs-only system`，默认直接 `commit / push`，不再自动新建 sibling worktree
+   - 若是跨层代码系统升级，先切到建议 branch
    - commit
    - 若存在 remote，则默认 push
    - 再创建同主题 sibling worktree
@@ -106,9 +107,8 @@
   - 条件满足时 `git push -u`
   - 条件满足时 `git worktree add`
 - `system` 且当前位于默认分支时，现役动作是：
-  - 在当前工作区切 branch 完成本次 commit
-  - 新建 sibling worktree 挂载该 branch
-  - 当前工作区切回默认分支
+  - `docs-only system`：直接在当前分支完成 commit；若有 remote，则继续 push；不自动新建 worktree
+  - 跨层代码系统升级：在当前工作区切 branch 完成本次 commit，再新建 sibling worktree 挂载该 branch，最后切回默认分支
 
 ### 5.3 `print-prompt`
 
@@ -118,7 +118,8 @@
 ## 6. 验收
 
 - `test_vibe_close.py`
-  - 覆盖 docs/tool/agent 协议改动在 `--planned` 下升级为 `system`
+  - 覆盖 docs/tool/agent 协议改动在 `--planned` 下升级为 `system` 但不默认新建 worktree
   - 覆盖单层代码改动判定为 `normal`
-  - 覆盖 `apply` 在默认分支下创建 branch、commit、worktree，并把当前工作区切回 `main`
+  - 覆盖 docs-only `system` 在默认分支下直接 commit，不创建 worktree
+  - 覆盖跨层代码 `system` 在默认分支下创建 branch、commit、worktree，并把当前工作区切回 `main`
   - 覆盖 CLI `analyze` 输出 JSON

@@ -15,7 +15,7 @@
 - `install-butler-flow`
   - 把 `butler-flow` / `flow-desktop` 安装到 `~/.local/bin/`
 - `vibe-close`
-  - 给 vibecoding agent 用的默认收尾入口：分析改动重量、给出文档回写目标，并执行 commit / push / worktree 收口
+  - 给 vibecoding agent 用的默认收尾入口：分析改动重量、给出文档回写目标，并执行 commit / push 收口；只有跨层代码系统升级才默认追加 worktree 收口
 
 ### 运维 / 联通脚本
 

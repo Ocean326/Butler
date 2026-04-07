@@ -28,13 +28,24 @@ LIGHT_ONLY_AREAS = {
     "tests",
     "repo-root",
 }
+DOCS_ONLY_SYSTEM_AREAS = {
+    "agent-protocol",
+    "docs-governance",
+    "docs-daily",
+    "docs",
+    "tests",
+    "repo-root",
+}
 AREA_PREFIXES: tuple[tuple[str, str], ...] = (
     ("AGENTS.md", "agent-protocol"),
     ("docs/project-map/", "docs-governance"),
     ("docs/README.md", "docs-governance"),
     ("docs/daily-upgrade/", "docs-daily"),
     ("docs/", "docs"),
+    ("tools/README.md", "docs-governance"),
+    ("tools/vibe-close", "docs-governance"),
     ("tools/", "tools"),
+    ("butler_main/vibe_close.py", "docs-governance"),
     ("butler_main/products/campaign_orchestrator/", "control-plane"),
     ("butler_main/orchestrator/", "control-plane"),
     ("butler_main/domains/campaign/", "control-plane"),
@@ -271,6 +282,12 @@ def analyze_repo(
     else:
         change_level = "normal"
 
+    docs_only_system = (
+        change_level == "system"
+        and bool(matched_features)
+        and not matched_layers
+        and all(area in DOCS_ONLY_SYSTEM_AREAS for area in matched_features)
+    )
     doc_mode = "strict" if change_level == "system" else ("minimal" if (docs_changed or code_changed) else "none")
     effective_today = today or date.today()
     mmdd = effective_today.strftime("%m%d")
@@ -300,7 +317,8 @@ def analyze_repo(
     suggested_branch = f"{branch_prefix}/{topic_slug}"
     suggested_summary = _humanize_slug(topic_slug)
     suggested_worktree = ""
-    if change_level == "system":
+    requires_worktree = change_level == "system" and not docs_only_system
+    if requires_worktree:
         suggested_worktree = str((repo_root.parent / f"{repo_root.name}-wt" / f"{effective_today.isoformat()}-{topic_slug}").resolve())
 
     return CloseAnalysis(
@@ -316,7 +334,7 @@ def analyze_repo(
         change_level=change_level,
         doc_mode=doc_mode,
         doc_targets=doc_targets,
-        requires_worktree=change_level == "system",
+        requires_worktree=requires_worktree,
         requires_push=bool(remote_name) and change_level != "light",
         suggested_commit_type=commit_type,
         suggested_branch=suggested_branch,
