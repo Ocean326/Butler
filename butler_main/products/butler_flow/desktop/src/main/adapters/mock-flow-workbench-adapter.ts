@@ -10,6 +10,11 @@ const now = "2026-04-03T14:00:00Z";
 export class MockFlowWorkbenchAdapter {
   async getHome(): Promise<WorkspacePayload> {
     return {
+      surface_meta: {
+        canonical_surface: "mission_index",
+        display_title: "Mission Index",
+        projection_kind: "mission_index"
+      },
       preflight: {
         workspace_root: "/tmp/butler-demo",
         config_path: "/tmp/butler-demo/config.json"
@@ -68,7 +73,16 @@ export class MockFlowWorkbenchAdapter {
     };
     return {
       flow_id: "flow_mock_desktop",
+      surface_meta: {
+        canonical_surface: "run_console",
+        display_title: "Run Console",
+        projection_kind: "run_console"
+      },
       status: { flow_id: "flow_mock_desktop" },
+      mission_console: {
+        task_contract_id: "task_contract_flow_mock_desktop",
+        goal: "Ship Butler Desktop"
+      },
       summary,
       step_history: [
         { step_id: "plan-1", phase: "plan", decision: "ADVANCE", summary: "layout locked", created_at: now },
@@ -198,6 +212,11 @@ export class MockFlowWorkbenchAdapter {
 
   async getManageCenter(): Promise<ManageCenterDTO> {
     return {
+      surface_meta: {
+        canonical_surface: "contract_studio",
+        display_title: "Contract Studio",
+        projection_kind: "contract_studio"
+      },
       preflight: { config_path: "/tmp/butler-demo/config.json" },
       assets: {
         items: [
@@ -211,10 +230,14 @@ export class MockFlowWorkbenchAdapter {
       selected_asset: {
         asset_id: "desktop-shell",
         title: "Desktop Shell V1",
-        synopsis: "Electron + React workbench shell"
+        synopsis: "Electron + React mission console shell"
+      },
+      contract_studio: {
+        asset_key: "template:desktop-shell",
+        projection_kind: "contract_studio"
       },
       role_guidance: {
-        planner: "Keep the workbench flow-first.",
+        planner: "Keep the mission console contract-first.",
         implementer: "Preserve Python bridge as source of truth."
       },
       review_checklist: ["Shell launches", "Bridge responds", "Details drawer reads artifacts"],

@@ -21,6 +21,7 @@ from butler_main.butler_flow.state import (
     read_json,
     resolve_flow_dir,
 )
+from butler_main.products.butler_flow.surface_meta import flow_surface_projection
 
 from .dto import (
     FlowDetailDTO,
@@ -41,26 +42,7 @@ from .queries import (
 
 
 def _surface_projection(surface_id: str) -> dict[str, Any]:
-    mapping = {
-        "workspace": {
-            "surface_id": "workspace",
-            "projection_kind": "mission_index",
-            "title": "Mission Index",
-        },
-        "manage_center": {
-            "surface_id": "manage_center",
-            "projection_kind": "contract_studio",
-            "title": "Contract Studio",
-        },
-        "single_flow": {
-            "surface_id": "single_flow",
-            "projection_kind": "run_console",
-            "title": "Run Console",
-        },
-    }
-    payload = dict(mapping.get(str(surface_id or "").strip(), {}))
-    payload["truth_basis"] = ["task_contract.json", "receipts.jsonl", "recovery_cursor.json"]
-    return payload
+    return flow_surface_projection(surface_id)
 
 
 def _contract_studio_payload(selected_asset: dict[str, Any]) -> dict[str, Any]:

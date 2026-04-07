@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import json
 import re
 import sys
@@ -78,6 +79,7 @@ from .state import (
     flow_dir,
     flow_asset_audit_path,
     flow_asset_root,
+    handoffs_path,
     flow_definition_path,
     flow_state_path,
     instance_asset_root,
@@ -96,6 +98,7 @@ from .state import (
     read_manage_draft,
     read_manage_pending_action,
     read_manage_session,
+    read_jsonl,
     read_flow_state,
     read_task_contract,
     read_task_receipts,
@@ -117,8 +120,16 @@ from .state import (
     write_task_contract,
     write_json_atomic,
 )
-from .task_contract import build_governance_summary, build_mission_console_summary, build_task_contract_summary
+from .surface_meta import flow_surface_projection
+from .task_contract import (
+    build_derived_responsibility_graph,
+    build_governance_summary,
+    build_mission_console_summary,
+    build_task_contract_summary,
+)
 from .version import BUTLER_FLOW_VERSION
+
+_ORIGINAL_CLI_PROVIDER_AVAILABLE = cli_provider_available
 
 
 def _truncate(value: str, *, limit: int = 88) -> str:
@@ -159,10 +170,30 @@ class FlowApp:
             hook_callback=hook_callback,
         )
 
+    @staticmethod
+    def _provider_available(provider: str, cfg: dict[str, Any]) -> bool:
+        if cli_provider_available is not _ORIGINAL_CLI_PROVIDER_AVAILABLE:
+            return bool(cli_provider_available(provider, cfg))
+        try:
+            compat_runtime = importlib.import_module("butler_main.butler_flow.runtime")
+        except Exception:
+            compat_runtime = None
+        checker = getattr(compat_runtime, "cli_provider_available", None)
+        if callable(checker) and checker is not _ORIGINAL_CLI_PROVIDER_AVAILABLE:
+            return bool(checker(provider, cfg))
+        return bool(_ORIGINAL_CLI_PROVIDER_AVAILABLE(provider, cfg))
+
+    @staticmethod
+    def _manage_agent_module():
+        try:
+            return importlib.import_module("butler_main.butler_flow.manage_agent")
+        except Exception:
+            return importlib.import_module("butler_main.products.butler_flow.manage_agent")
+
     def _ensure_flow_runtime(self, cfg: dict[str, Any]) -> None:
-        if not cli_provider_available("codex", cfg):
+        if not self._provider_available("codex", cfg):
             raise RuntimeError("Codex CLI is unavailable for Butler Flow")
-        if not cli_provider_available("cursor", cfg):
+        if not self._provider_available("cursor", cfg):
             raise RuntimeError("Cursor CLI is unavailable for Butler Flow judge")
 
     def _new_exec_app(self) -> tuple["FlowApp", JsonlFlowDisplay]:
@@ -1386,6 +1417,16 @@ class FlowApp:
                 effective_status, effective_phase = self._effective_runtime_view(flow_state=flow_state, runtime_snapshot=runtime_snapshot)
                 task_contract = read_task_contract(flow_path)
                 recovery_truth = sync_flow_recovery_truth(flow_path, flow_state=flow_state, task_contract=task_contract)
+                task_contract_summary = build_task_contract_summary(task_contract)
+                latest_governance_receipt_summary = summarize_task_receipt(
+                    latest_governance_receipt(list(recovery_truth.get("receipts") or []))
+                )
+                derived_responsibility_graph = build_derived_responsibility_graph(
+                    task_contract_summary,
+                    flow_state=flow_state,
+                    handoffs=read_jsonl(handoffs_path(flow_path)),
+                    latest_governance_receipt_summary=latest_governance_receipt_summary,
+                )
                 sort_value = 0.0
                 for field in ("updated_at", "created_at"):
                     stamp = str(flow_state.get(field) or "").strip()
@@ -1404,7 +1445,7 @@ class FlowApp:
                 rows.append(
                     {
                         "flow_id": flow_id,
-                        "task_contract_summary": build_task_contract_summary(task_contract),
+                        "task_contract_summary": task_contract_summary,
                         "flow_dir": str(flow_path),
                         "flow_kind": str(flow_state.get("workflow_kind") or "").strip(),
                         "status": str(flow_state.get("status") or "").strip(),
@@ -1425,13 +1466,12 @@ class FlowApp:
                         "updated_at": str(flow_state.get("updated_at") or flow_state.get("created_at") or "").strip(),
                         "goal": str(flow_state.get("goal") or "").strip(),
                         "mission_console": build_mission_console_summary(
-                            build_task_contract_summary(task_contract),
+                            task_contract_summary,
                             latest_receipt_summary=dict(recovery_truth.get("latest_receipt_summary") or {}),
                             latest_artifact_ref=str(recovery_truth.get("latest_artifact_ref") or "").strip(),
                             recovery_state=str(recovery_truth.get("recovery_state") or "").strip(),
-                            latest_governance_receipt_summary=summarize_task_receipt(
-                                latest_governance_receipt(list(recovery_truth.get("receipts") or []))
-                            ),
+                            latest_governance_receipt_summary=latest_governance_receipt_summary,
+                            derived_responsibility_graph=derived_responsibility_graph,
                         ),
                         "runtime_snapshot": runtime_snapshot,
                         "_sort_value": float(sort_value),
@@ -1475,9 +1515,17 @@ class FlowApp:
         latest_governance_receipt_summary = summarize_task_receipt(
             latest_governance_receipt(list(recovery_truth.get("receipts") or []))
         )
+        handoffs = read_jsonl(handoffs_path(flow_path))
+        derived_responsibility_graph = build_derived_responsibility_graph(
+            task_contract_summary,
+            flow_state=flow_state,
+            handoffs=handoffs,
+            latest_governance_receipt_summary=latest_governance_receipt_summary,
+        )
         governance_summary = build_governance_summary(
             task_contract_summary,
             latest_governance_receipt_summary=latest_governance_receipt_summary,
+            derived_responsibility_graph=derived_responsibility_graph,
         )
         mission_console = build_mission_console_summary(
             task_contract_summary,
@@ -1485,6 +1533,7 @@ class FlowApp:
             latest_governance_receipt_summary=latest_governance_receipt_summary,
             latest_artifact_ref=str(recovery_truth.get("latest_artifact_ref") or "").strip(),
             recovery_state=str(recovery_truth.get("recovery_state") or "").strip(),
+            derived_responsibility_graph=derived_responsibility_graph,
         )
         state_store = FileRuntimeStateStore(flow_path)
         trace_store = FileTraceStore(state_store.traces_dir())
@@ -1514,12 +1563,7 @@ class FlowApp:
             "recovery_cursor": dict(recovery_truth.get("recovery_cursor") or {}),
             "recovery_state": str(recovery_truth.get("recovery_state") or "").strip(),
             "mission_console": mission_console,
-            "surface_meta": {
-                "surface_id": "single_flow",
-                "projection_kind": "run_console",
-                "title": "Run Console",
-                "truth_basis": ["task_contract.json", "receipts.jsonl", "recovery_cursor.json"],
-            },
+            "surface_meta": flow_surface_projection("single_flow"),
             "flow_definition": flow_definition,
             "role_runtime": extract_role_runtime_summary(flow_state),
             "runtime_snapshot": {
@@ -1934,8 +1978,8 @@ class FlowApp:
             "config_path": config_path,
             "workspace_root": workspace_root,
             "flow_root": str(build_flow_root(workspace_root)),
-            "codex_available": bool(cli_provider_available("codex", cfg)),
-            "cursor_available": bool(cli_provider_available("cursor", cfg)),
+            "codex_available": self._provider_available("codex", cfg),
+            "cursor_available": self._provider_available("cursor", cfg),
             "execution_mode_default": default_execution_mode(cfg, workflow_kind=PROJECT_LOOP_KIND),
             "role_pack_default": default_role_pack_id(cfg),
             "flow_codex_disabled_mcp_servers": disabled,
@@ -1972,19 +2016,15 @@ class FlowApp:
     def build_flows_payload(self, args: argparse.Namespace) -> dict[str, Any]:
         _, _, workspace_root = self._load_config(getattr(args, "config", None))
         rows = self._flow_rows(workspace_root=workspace_root, limit=safe_int(getattr(args, "limit", DEFAULT_FLOW_LIST_LIMIT), DEFAULT_FLOW_LIST_LIMIT))
+        surface_meta = flow_surface_projection("workspace")
         return {
             "version": BUTLER_FLOW_VERSION,
             "flow_root": str(build_flow_root(workspace_root)),
             "surface_id": "workspace",
-            "projection_kind": "mission_index",
-            "surface_title": "Mission Index",
-            "truth_basis": ["task_contract.json", "receipts.jsonl", "recovery_cursor.json"],
-            "surface_meta": {
-                "surface_id": "workspace",
-                "projection_kind": "mission_index",
-                "title": "Mission Index",
-                "truth_basis": ["task_contract.json", "receipts.jsonl", "recovery_cursor.json"],
-            },
+            "projection_kind": str(surface_meta.get("projection_kind") or "mission_index"),
+            "surface_title": str(surface_meta.get("display_title") or "Mission Index"),
+            "truth_basis": list(surface_meta.get("truth_basis") or []),
+            "surface_meta": surface_meta,
             "items": rows,
         }
 
@@ -2004,18 +2044,14 @@ class FlowApp:
             "builtin": len([row for row in manage_rows if str(row.get("asset_kind") or "") == "builtin"]),
             "template": len([row for row in manage_rows if str(row.get("asset_kind") or "") == "template"]),
         }
+        surface_meta = flow_surface_projection("manage_center")
         return {
             "version": BUTLER_FLOW_VERSION,
             "surface_id": "manage_center",
-            "projection_kind": "contract_studio",
-            "surface_title": "Contract Studio",
-            "truth_basis": ["task_contract.json", "receipts.jsonl", "flow_definition.json"],
-            "surface_meta": {
-                "surface_id": "manage_center",
-                "projection_kind": "contract_studio",
-                "title": "Contract Studio",
-                "truth_basis": ["task_contract.json", "receipts.jsonl", "flow_definition.json"],
-            },
+            "projection_kind": str(surface_meta.get("projection_kind") or "contract_studio"),
+            "surface_title": str(surface_meta.get("display_title") or "Contract Studio"),
+            "truth_basis": list(surface_meta.get("truth_basis") or []),
+            "surface_meta": surface_meta,
             "asset_root": str(flow_asset_root(workspace_root)),
             "builtin_root": str(builtin_asset_root(workspace_root)),
             "template_root": str(template_asset_root(workspace_root)),
@@ -2072,8 +2108,8 @@ class FlowApp:
             self._display.write(f"config={config_path}")
             self._display.write(f"workspace={workspace_root}")
             self._display.write(f"flow_root={build_flow_root(workspace_root)}")
-            self._display.write(f"codex_available={'yes' if cli_provider_available('codex', cfg) else 'no'}")
-            self._display.write(f"cursor_available={'yes' if cli_provider_available('cursor', cfg) else 'no'}")
+            self._display.write(f"codex_available={'yes' if self._provider_available('codex', cfg) else 'no'}")
+            self._display.write(f"cursor_available={'yes' if self._provider_available('cursor', cfg) else 'no'}")
             if last_row:
                 self._display.write(
                     f"last={last_row['flow_id']} status={last_row.get('effective_status') or last_row['status'] or '-'} "
@@ -2567,7 +2603,8 @@ class FlowApp:
                 manage_stage=manage_stage,
             )
         else:
-            result = run_manage_agent(
+            manage_agent_module = self._manage_agent_module()
+            result = manage_agent_module.run_manage_agent(
                 cfg=cfg,
                 workspace_root=workspace_root,
                 run_prompt_receipt_fn=self._run_prompt_receipt_fn,
@@ -2775,7 +2812,7 @@ class FlowApp:
                 or []
             )
         )
-        result = run_manage_chat_agent(
+        result = self._manage_agent_module().run_manage_chat_agent(
             cfg=cfg,
             workspace_root=workspace_root,
             run_prompt_receipt_fn=self._run_prompt_receipt_fn,

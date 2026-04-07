@@ -8,6 +8,7 @@ import { WorkflowStrip } from "../workbench/WorkflowStrip";
 interface WorkbenchShellProps {
   payload?: SingleFlowPayload;
   loading: boolean;
+  surfaceTitle: string;
   actionDraft: string;
   onActionDraftChange: (value: string) => void;
   onAppendInstruction: () => void;
@@ -23,6 +24,7 @@ interface WorkbenchShellProps {
 export function WorkbenchShell({
   payload,
   loading,
+  surfaceTitle,
   actionDraft,
   onActionDraftChange,
   onAppendInstruction,
@@ -43,10 +45,10 @@ export function WorkbenchShell({
     <div className="workbench-shell">
       <header className="workbench-topbar">
         <div>
-          <p className="panel-kicker">Flow Workbench</p>
+          <p className="panel-kicker">{surfaceTitle}</p>
           <h2>{summary?.goal || payload?.flow_id || "Select a flow"}</h2>
           <p className="topbar-copy">
-            {summary?.guard_condition || "The shared surface drives this workbench. Actions route back through the Python foreground runtime."}
+            {summary?.guard_condition || "The run console stays contract-first. Actions route back through the Python foreground runtime."}
           </p>
         </div>
         <div className="topbar-actions">
@@ -77,7 +79,7 @@ export function WorkbenchShell({
         </button>
       </div>
 
-      {loading ? <div className="empty-panel shell-loading">Loading flow workbench…</div> : null}
+      {loading ? <div className="empty-panel shell-loading">Loading run console…</div> : null}
 
       <div className="workbench-grid">
         <div className="workbench-main">

@@ -1142,7 +1142,7 @@ def build_manage_chat_prompt(
     references = _compile_manager_references(skill_id)
     return (
         "You are the Butler Flow manager chat.\n\n"
-        "This is Manage Center conversational mode.\n"
+        "This is Contract Studio conversational mode.\n"
         "Reply with JSON only.\n\n"
         "Required schema:\n"
         "{\n"
@@ -1199,7 +1199,7 @@ def build_manage_chat_prompt(
             else ""
         )
         + "Operational rules:\n"
-        "- 这里是 Manage Center chat mode，先讨论、再整理管理动作。\n"
+        "- 这里是 Contract Studio chat mode，先讨论、再整理管理动作。\n"
         "- 默认优先 template-first；one-off 只在用户明确要求或复用价值很低时才走。\n"
         "- 当前 skill 的职责合同由 `skill_contract` 给出；不要越权改写 draft。\n"
         "- `draft` 是当前讨论中的结构化草稿，只维护当前 skill 真正拥有的字段。\n"

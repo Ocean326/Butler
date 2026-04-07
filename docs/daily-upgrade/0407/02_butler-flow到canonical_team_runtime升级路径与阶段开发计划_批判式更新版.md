@@ -1,7 +1,7 @@
 # 0407 Butler Flow 到 Canonical Team Runtime 升级路径与阶段开发计划（批判式更新版）
 
 日期：2026-04-07
-状态：方案更新 / `P0-P3` 已落地 / 当前执行计划
+状态：方案更新 / `P0-P5` 已落地 / `P6` gate 验收中
 所属层级：当前实施主落 L1 `Agent Execution Runtime`，辅触 L2 durability substrate / Product surface / Control Plane
 定位：用 `proposal-critique-refine` 对 “butler-flow -> canonical team runtime” 路线做删改式收敛，明确该保留什么、该降级什么、该延后什么、该先证明什么
 
@@ -71,11 +71,28 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
    - `rollback_to_receipt`
    - `pause_for_operator`
 
-因此，当前真正未闭合的主缺口已经不是 `TaskContract` 本身，而是：
+7. authority / policy 的写路径当前已收口为：
+   - typed governance receipt
+   - `task_contract.json` 当前快照同步
+   - `recovery_cursor.json` 刷新
+   `workflow_state.json` 只继续保留 runtime shadow/cache。
+8. `apply_operator_action()` 已修正 stale external operator-state merge，避免 canonical control-profile / repo-binding / doctor 相关变更被旧 shadow 状态覆盖。
+9. `surface_meta` 已成为 shared projection truth，稳定提供：
+   - `canonical_surface`
+   - `display_title`
+   - `legacy_aliases`
+10. 当前可见标题已统一为：
+   - `Mission Index`
+   - `Contract Studio`
+   - `Run Console`
+   旧 alias 仍接受输入，但不再作为任何主标题、空状态或帮助文案。
+11. compat patch-path 也已补齐：
+   - 测试补丁命中 `app/flow_shell`
+   - `runtime`
+   - `manage_agent`
+   三条现役路径时，都会落回当前 canonical product implementation。
 
-- `P4` 的 typed authority/policy minimum 仍偏薄
-- `P5` 的 Mission Console 叙事还没彻底压到 projection-only 的最终形态
-- `P6` closure gate 仍未做正式验收
+因此，当前真正未闭合的主缺口已经收缩为 `P6` 的正式 gate 证据、文档封板与 PR 整理，而不是 `P4/P5` 本身仍待实现。
 
 ## 1. Proposal Brief
 
@@ -287,7 +304,7 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 - `剩余缺口`
   - `doctor`、`rollback` 与 authority/policy 变更之间的 typed receipt 关系还需继续收紧
 
-### `P4` Authority / Policy Minimum
+### `P4` Authority / Policy Minimum（已落地并完成 hardening）
 
 - `目标`
   - 在不扩成完整组织内核的前提下，让 `authority` 真的变成可写、可审计、可恢复的 typed 最小对象。
@@ -314,12 +331,13 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
     - `control_profile.repo_contract_paths`
   - 任何 authority-changing action 都必须通过 `receipts.jsonl` 留下 typed receipt，才能进入 audit / recovery / rollback 语义。
 - `当前代码回写`
-  - `append_governance_receipts()` 已开始补写 typed governance receipt。
-  - `status / workspace / single-flow` 已开始外显 `governance_summary + latest_governance_receipt_summary`。
+  - governance mutation 当前会先补写 typed receipt，再同步 `task_contract.json` 当前快照，并刷新 `recovery_cursor.json`。
+  - `apply_operator_action()` 已去掉 canonical mutation 落盘时对 stale external operator state 的重新合并，避免 operator action 把权威治理字段重新退回 shadow cache。
+  - `status / workspace / single-flow` 当前已稳定外显 `governance_summary + latest_governance_receipt_summary`。
 - `出关门槛`
-  - 所有 authority-changing action 都必须产出 typed receipt。
+  - 当前实现已满足功能门槛；剩余只是在 `P6 G0/G4` 中把“无 bypass ledger 写路径”做正式验收与证据归档。
 
-### `P5` Derived Responsibility Graph + Mission Console
+### `P5` Derived Responsibility Graph + Mission Console（已落地并完成 visible closure）
 
 - `目标`
   - 只在前四步成立后，引入一个派生的责任图和更诚实的产品投影。
@@ -346,15 +364,24 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
     - `recovery state`
     - `responsibility summary`
 - `当前代码回写`
-  - `surface_meta` 已开始把三块 surface 收口成：
-    - `workspace -> mission index`
-    - `manage_center -> contract studio`
-    - `single_flow -> run console`
-  - `mission_console` 投影已进入 `status / workspace / single-flow` payload。
+  - `surface_meta` 已成为三块 surface 的共享投影定义，字段固定为 `canonical_surface / display_title / legacy_aliases`。
+  - 三块 surface 当前已收口成：
+    - `mission_index / Mission Index`
+    - `contract_studio / Contract Studio`
+    - `run_console / Run Console`
+  - `mission_console` 投影当前已进入 `status / workspace / single-flow` payload，并稳定包含：
+    - `task_contract_summary`
+    - `latest_receipt_summary`
+    - `latest_artifact_ref`
+    - `recovery_state`
+    - `governance_summary`
+    - `derived_responsibility_graph`
+  - `responsibility_summary` 当前保留一轮 compat，但数据源已与 `derived_responsibility_graph` 完全同源。
+  - TUI / controller / desktop bridge / desktop renderer 当前都读取同一套投影定义；旧 `workspace / history / flows / manage_center / single_flow` 只保 compat alias 输入，`manage` 与 `list` 继续是现役入口，不视为 legacy。
 - `出关门槛`
-  - manager/operator/end-user 三个视图都从同一 receipt/contract truth 派生，责任图只读不写。
+  - 当前实现已满足产品收口门槛；剩余只是在 `P6 G5` 中把可见标题、payload 与 controller/TUI/Desktop 行为的一致性做正式验收。
 
-### `P6` Canonical Closure Gate
+### `P6` Canonical Closure Gate（当前进入正式验收）
 
 - `目标`
   - 决定这条线有没有资格进入 `canonical team runtime` 命名。
@@ -367,10 +394,30 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
   - 若 `G0-G5` 全部成立，可内部使用 `canonical team runtime` 口径。
   - 若任一关键门槛未过，则继续使用：
     - `Mission Console over a Receipt-backed Repo-Bound Task Contract Runtime`
+- `当前证据`
+  - `G0`
+    - `task_contract.json / receipts.jsonl / recovery_cursor.json` 已锁成三件套真源；`flow_definition.json` 继续只是 materialization，`workflow_state.json` 继续只是 runtime/recovery shadow。
+  - `G1 + G3`
+    - `new / resume / status / exec / workspace / single-flow` 当前都围绕 `task_contract_id + latest_receipt_summary + recovery_state` 解释任务；缺 transcript 时，surface 与 controller 仍能解释“任务是什么、做到哪、怎么恢复”。
+  - `G4`
+    - authority/policy 变更当前都走 typed governance receipt；operator action 的 stale merge 旁路已被关闭。
+  - `G5`
+    - 可见标题已在 TUI / Desktop / bridge / renderer 统一切到 `Mission Index / Contract Studio / Run Console`；旧 alias 只保路由兼容。
+  - `验证`
+    - `test_butler_flow.py`
+    - `test_butler_flow_tui_app.py`
+    - `test_butler_flow_surface.py`
+    - `test_butler_flow_tui_controller.py`
+    - `test_butler_cli.py`
+    - `test_chat_cli_runner.py`
+    - desktop `typecheck`
+    - renderer `vitest`
+    - `butler-flow --help`
+    - `python -m butler_main --help`
 
-## 9. 建议开发波次
+## 9. 实际实施波次回写
 
-### 第一波并行：`P0 + P1`
+### 第一波并行：`P0 + P1`（已完成）
 
 - `truth-lane`
   - 三张表与 deprecation plan
@@ -387,7 +434,7 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 2. `flow_definition/workflow_state` 是否已经被降级成 materialization
 3. `new/resume/exec` 是否已经能围绕 contract 说清楚
 
-### 第二波并行：`P2 + P3`
+### 第二波并行：`P2 + P3`（已完成）
 
 - `receipt-lane`
   - artifact / run / operator receipt spine
@@ -396,7 +443,7 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 - `acceptance-lane`
   - transcript-independence 验收
 
-### 第三波并行：`P4 + P5`
+### 第三波并行：`P4 + P5`（已完成）
 
 - `authority-lane`
   - authority/policy minimum
@@ -405,7 +452,7 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 - `docs-lane`
   - 口径、命名、truth matrix 回写
 
-### 最终收口：`P6`
+### 最终收口：`P6`（当前执行中）
 
 - 真源矩阵
 - 改前读包
@@ -446,16 +493,16 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 - `P4` 与 `P5` 是否应并成一波实现
   - 当前建议：可以同一波并行，但不能共享一套写对象。
 - 是否要立刻重命名产品面
-  - 当前建议：先在文档和 mental model 上改成 `Mission Console`，具体 UI 命名可稍后落。
+  - 当前结果：可见壳层已正式改成 `Mission Index / Contract Studio / Run Console`，旧名只保 compat alias，不再显示为主标题。
 
 ## 13. Final Recommendation
 
 - `Final Recommendation`
-  - `proceed`
+  - `proceed-to-gate`
 - `Next-Step Artifact`
-  - `implementation plan`
+  - `gate evidence + ready PR`
 - `Why This Pass Stops Here`
-  - 继续讨论不会再带来同等级增益。剩余关键不确定性已经变成：映射表怎么写、receipt spine 怎么落、恢复验收怎么证伪。这些都需要下一轮实施计划与 working slice，而不是更多理论辩论。
+  - 剩余关键不确定性已经不在实现面，而在 gate 证据是否完整、文档是否同步、PR 是否能清楚说明 truth owner / governance / projection closure。继续扩功能不会比完成正式闭环更有价值。
 
 ## 14. 0407 Implementation Update（P0 + P1）
 
@@ -526,3 +573,30 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 1. `P2` 先从 `flow_exec_receipt + task_contract_summary` 起步，而不是一上来重写全 artifact ledger。
 2. `P3` 先做 `latest accepted receipt` 指针，再谈完整 `rollback/replay`。
 3. `P4` 只引入最小 `AuthorityTransitionReceipt`，不要把 authority 摘要直接膨胀成完整组织内核。
+
+## 15. 0407 Closure Update（`P4` Hardening + `P5` Projection Closure）
+
+### 15.1 `P4` 写路径硬化
+
+本轮已把 authority/policy 的落盘路径从“局部功能成立”收紧成“统一闭环成立”：
+
+1. authority/policy 变化当前先写 typed governance receipt，再同步 `task_contract.json`，最后刷新 `recovery_cursor.json`。
+2. `workflow_state.json` 继续只承接 runtime shadow/cache，不再承担 authority/policy 的权威写入。
+3. `apply_operator_action()` 已修正 control-profile 变更被 stale external state 覆盖的问题，`bind_repo_contract`、`force_doctor` 等 operator action 不再从 canonical mutation 路径滑出 ledger。
+
+### 15.2 `P5` 可见投影收口
+
+本轮已把产品壳从旧 workbench 叙事收紧成统一 projection：
+
+1. `workspace -> Mission Index`
+2. `manage_center -> Contract Studio`
+3. `single_flow -> Run Console`
+4. `surface_meta` 当前是共享投影元数据真源，统一提供 `canonical_surface / display_title / legacy_aliases`。
+5. `mission_console` 当前是 surface 主摘要，至少稳定包含 `task_contract_summary / latest_receipt_summary / latest_artifact_ref / recovery_state / governance_summary / derived_responsibility_graph`。
+
+### 15.3 compat 与验证
+
+1. 旧 `workspace / history / flows / manage_center / single_flow` 仍接受为 compat alias，但不再显示为产品主标题。
+2. `manage` 与 `list` 继续是现役入口，不应被误记为 legacy。
+3. provider / manage-agent 的 compat patch path 已补齐，避免测试只 patch 旧入口时失效。
+4. 当前验证已覆盖 Python 回归、desktop typecheck、renderer vitest 与 CLI help。

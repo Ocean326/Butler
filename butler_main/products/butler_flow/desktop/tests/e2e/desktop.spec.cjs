@@ -44,15 +44,15 @@ test.describe("Butler Desktop Electron", () => {
     }
   });
 
-  test("navigates to manage center after config attach", async () => {
+  test("navigates to contract studio after config attach", async () => {
     const { app, window } = await launchApp();
     try {
       await expectDesktopApiReady(window);
       await window.getByLabel("Config Path Fallback").fill(configPath);
       await window.getByRole("button", { name: "Attach Path" }).click();
-      await window.getByRole("button", { name: "Manage" }).click();
+      await window.getByRole("button", { name: "Contract Studio" }).click();
 
-      await expect(window.getByRole("heading", { name: "Assets and execution guidance" })).toBeVisible();
+      await expect(window.getByRole("heading", { name: "Contracts, assets, and guidance" })).toBeVisible();
       await expect(window.getByRole("heading", { name: "Desktop Shell V1" })).toBeVisible();
     } finally {
       await app.close();

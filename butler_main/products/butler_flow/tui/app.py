@@ -41,6 +41,7 @@ from butler_main.butler_flow.constants import (
 )
 from butler_main.butler_flow.events import FlowUiEvent
 from butler_main.butler_flow.models import PreparedFlowRun
+from butler_main.products.butler_flow.surface_meta import flow_surface_title
 
 TRANSCRIPT_FILTERS = ("all", "assistant", "system", "judge", "operator", "supervisor")
 HISTORY_STEP_PREVIEW_LIMIT = 6
@@ -759,7 +760,7 @@ class ButlerFlowTuiApp(App[int]):
         focused = self._selected_flow_id or self._current_flow_id or "-"
         return "\n".join(
             [
-                "Workspace",
+                flow_surface_title("workspace", fallback="Mission Index"),
                 f"focused={focused}",
                 f"flows={len(rows)}",
             ]
@@ -1123,7 +1124,7 @@ class ButlerFlowTuiApp(App[int]):
     def _render_history_header(self, *, rows: list[dict[str, Any]]) -> str:
         return "\n".join(
             [
-                "Workspace Browser",
+                flow_surface_title("workspace", fallback="Mission Index"),
                 f"focused={self._selected_flow_id or '-'}",
                 f"items={len(rows)}",
                 f"detail={self._workspace_detail_mode}",
@@ -1241,7 +1242,7 @@ class ButlerFlowTuiApp(App[int]):
         try:
             payload = self._history_detail_payload(flow_id=str(selected_row.get("flow_id") or "").strip())
         except Exception as exc:
-            history_detail.update(f"Workspace detail unavailable: {type(exc).__name__}: {exc}")
+            history_detail.update(f"Mission Index detail unavailable: {type(exc).__name__}: {exc}")
             return
         history_detail.update(self._render_history_detail(row=selected_row, payload=payload))
 
@@ -1267,7 +1268,7 @@ class ButlerFlowTuiApp(App[int]):
         if rows:
             history_list.index = selected_index
         history_header.update(self._render_history_header(rows=rows))
-        history_hint.update("workspace runtime browser · /resume <flow_id>  /inspect <flow_id>  /manage  /back")
+        history_hint.update("mission index runtime view · /resume <flow_id>  /inspect <flow_id>  /manage  /back")
         self._update_history_detail(rows=rows)
 
     def _setup_stage_order(self) -> tuple[str, ...]:
@@ -1478,7 +1479,7 @@ class ButlerFlowTuiApp(App[int]):
         builtin_count = len([row for row in rows if str(row.get("asset_kind") or "") == "builtin"])
         return "\n".join(
             [
-                "Manage Center",
+                flow_surface_title("manage_center", fallback="Contract Studio"),
                 f"assets={len(rows)}",
                 f"templates={template_count}",
                 f"builtin={builtin_count}",
@@ -1580,14 +1581,15 @@ class ButlerFlowTuiApp(App[int]):
         rows = self._manage_rows()
         header = self.query_one("#manage-header", Static)
         hint = self.query_one("#manage-hint", Static)
-        header.update("Manage Center")
-        hint.update("plain text → manager · $template:<id> opens picker · /manage keeps direct asset edits · /back")
+        title = flow_surface_title("manage_center", fallback="Contract Studio")
+        header.update(title)
+        hint.update("plain text → contract manager · $template:<id> opens picker · /manage keeps direct asset edits · /back")
         if not self._manage_cursor_asset_key and rows:
             self._manage_cursor_asset_key = str(rows[0].get("asset_key") or "").strip()
         self._reset_manage_transcript()
         self._manage_transcript_formatter.write_section(
             self._manage_transcript(),
-            title="Manage Center",
+            title=title,
             body=self._render_manage_overview(rows=rows),
         )
         self._manage_transcript_formatter.write_section(
@@ -2739,7 +2741,7 @@ class ButlerFlowTuiApp(App[int]):
             self._handle_setup_input(raw)
             return
         if self._view_mode == "history" and not raw.startswith("/"):
-            self.notify("History view only accepts slash commands.", severity="warning")
+            self.notify("Mission Index detail only accepts slash commands.", severity="warning")
             return
         if self._view_mode == "flow" and not raw.startswith("/"):
             self._handle_flow_prompt(raw)

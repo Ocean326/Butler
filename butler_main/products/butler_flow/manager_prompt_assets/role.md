@@ -1,4 +1,4 @@
-你是 Butler Flow 的 `manager`，工作在 Manage Center 中。
+你是 Butler Flow 的 `manager`，工作在 Contract Studio 中。
 
 只遵守以下精选原则：
 

@@ -1404,6 +1404,7 @@ class ButlerFlowTests(unittest.TestCase):
                 run_prompt_receipt_fn=lambda *args, **kwargs: None,
                 display=flow_shell.FlowDisplay(StringIO(), StringIO()),
             )
+            runtime._write_flow_state(flow_dir, flow_state)
             receipt = runtime.apply_operator_action(
                 cfg={},
                 flow_dir_path=flow_dir,
@@ -1411,12 +1412,37 @@ class ButlerFlowTests(unittest.TestCase):
                 action_type="bind_repo_contract",
                 payload={"repo_contract_path": "docs/project-map/00_current_baseline.md"},
             )
+            task_contract = self._read_json(flow_dir / "task_contract.json")
+            receipts = self._read_jsonl(flow_dir / "receipts.jsonl")
+            recovery_cursor = self._read_json(flow_dir / "recovery_cursor.json")
+            policy_receipt = next(
+                row for row in reversed(receipts) if str(row.get("receipt_kind") or "") == "policy_update"
+            )
             self.assertEqual(receipt["action_type"], "bind_repo_contract")
             self.assertEqual(flow_state["control_profile"]["repo_binding_policy"], "explicit")
             self.assertEqual(
                 flow_state["control_profile"]["repo_contract_paths"],
                 ["docs/project-map/00_current_baseline.md"],
             )
+            self.assertEqual(
+                dict(dict(task_contract.get("policy") or {}).get("control_profile") or {}).get("repo_binding_policy"),
+                "explicit",
+            )
+            self.assertEqual(
+                dict(dict(task_contract.get("policy") or {}).get("control_profile") or {}).get("repo_contract_paths"),
+                ["docs/project-map/00_current_baseline.md"],
+            )
+            self.assertEqual(policy_receipt["payload"]["action_scope"]["repo_binding_policy"], "explicit")
+            self.assertEqual(
+                policy_receipt["payload"]["action_scope"]["repo_contract_paths"],
+                ["docs/project-map/00_current_baseline.md"],
+            )
+            self.assertEqual(recovery_cursor["task_contract_id"], task_contract["task_contract_id"])
+            self.assertIn(
+                recovery_cursor["latest_accepted_receipt_id"],
+                {receipt["action_id"], policy_receipt["receipt_id"]},
+            )
+            self.assertTrue(str(recovery_cursor["recovery_state"] or "").strip())
 
     def test_supervisor_control_adjustments_persist_to_flow_state(self) -> None:
         if _NEW_FLOW_STATE is None:
@@ -3533,6 +3559,21 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(payload["governance_summary"]["policy_summary"]["repo_binding_policy"], "explicit")
             self.assertEqual(payload["mission_console"]["goal"], "ship mission console runtime")
             self.assertEqual(payload["latest_governance_receipt_summary"]["receipt_kind"], "policy_update")
+            self.assertEqual(payload["surface_meta"]["canonical_surface"], "run_console")
+            self.assertEqual(payload["surface_meta"]["display_title"], "Run Console")
+            self.assertIn("status", payload["surface_meta"]["legacy_aliases"])
+            self.assertEqual(
+                payload["mission_console"]["derived_responsibility_graph"]["graph_kind"],
+                "derived_responsibility_graph",
+            )
+            self.assertEqual(
+                payload["mission_console"]["derived_responsibility_graph"]["active_role_id"],
+                payload["flow_state"]["active_role_id"],
+            )
+            self.assertEqual(
+                payload["governance_summary"]["derived_responsibility_graph"]["latest_governance_receipt_summary"]["receipt_kind"],
+                "policy_update",
+            )
 
     def test_prepare_new_flow_rejects_high_execution_level(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

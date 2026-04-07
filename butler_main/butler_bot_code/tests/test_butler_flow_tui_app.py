@@ -314,7 +314,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 transcript = _transcript_text(app)
                 action_bar = str(app.query_one("#action-bar", Static).renderable)
 
-                self.assertIn("Workspace", workspace_header)
+                self.assertIn("Mission Index", workspace_header)
                 self.assertIn("flows=2", workspace_header)
                 self.assertIn("flow_alpha", workspace_list)
                 self.assertIn("flow_beta", workspace_list)
@@ -600,7 +600,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 history_header = str(app.query_one("#history-header", Static).renderable)
                 history_detail = str(app.query_one("#history-detail", Static).renderable)
 
-                self.assertIn("Workspace Browser", history_header)
+                self.assertIn("Mission Index", history_header)
                 self.assertIn("items=1", history_header)
                 self.assertIn("Latest Signals", history_detail)
                 self.assertIn("active_role=planner", history_detail)
@@ -683,9 +683,9 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(app._view_mode, "flows")
                 self.assertEqual(getattr(app, "_flows_screen_mode", ""), "manage")
                 manage_header = str(app.query_one("#manage-header", Static).renderable)
-                self.assertIn("Manage Center", manage_header)
+                self.assertIn("Contract Studio", manage_header)
                 manage_transcript = _manage_transcript_text(app)
-                self.assertIn("Manage Center", manage_transcript)
+                self.assertIn("Contract Studio", manage_transcript)
                 self.assertIn("Assets", manage_transcript)
 
     async def test_manage_command_opens_manage_center(self) -> None:
@@ -703,7 +703,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause(0.1)
                 self.assertEqual(app._view_mode, "flows")
                 self.assertEqual(getattr(app, "_flows_screen_mode", ""), "manage")
-                self.assertIn("Manage Center", str(app.query_one("#manage-header", Static).renderable))
+                self.assertIn("Contract Studio", str(app.query_one("#manage-header", Static).renderable))
 
     async def test_manage_input_supports_asset_mentions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1703,7 +1703,7 @@ class ButlerFlowTuiAppTests(unittest.IsolatedAsyncioTestCase):
                     app.on_input_submitted(Input.Submitted(command_input, "just text", None))
                     await pilot.pause(0.1)
                     notify.assert_called_once()
-                    self.assertIn("History view only accepts slash commands.", notify.call_args.args[0])
+                    self.assertIn("Mission Index detail only accepts slash commands.", notify.call_args.args[0])
 
     async def test_new_command_opens_setup_screen(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

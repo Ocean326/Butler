@@ -62,11 +62,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", "-c", help="Path to Butler config json")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    home_parser = subparsers.add_parser("home", help="Return workspace payload")
+    home_parser = subparsers.add_parser("home", help="Return mission-index payload")
     home_parser.add_argument("--limit", type=int, default=20)
     home_parser.set_defaults(handler=_command_home)
 
-    flow_parser = subparsers.add_parser("flow", help="Return single flow payload")
+    flow_parser = subparsers.add_parser("flow", help="Return run-console payload")
     flow_parser.add_argument("--flow-id", required=True)
     flow_parser.set_defaults(handler=_command_flow)
 
@@ -74,7 +74,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     detail_parser.add_argument("--flow-id", required=True)
     detail_parser.set_defaults(handler=_command_detail)
 
-    manage_parser = subparsers.add_parser("manage", help="Return manage-center payload")
+    manage_parser = subparsers.add_parser("manage", help="Return contract-studio payload")
     manage_parser.add_argument("--limit", type=int, default=20)
     manage_parser.set_defaults(handler=_command_manage)
 

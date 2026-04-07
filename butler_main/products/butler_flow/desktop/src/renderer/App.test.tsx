@@ -10,6 +10,11 @@ const CONFIG_PATH = "/tmp/butler/butler_bot.json";
 function mockDesktopApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDesktopApi {
   return {
     getHome: vi.fn().mockResolvedValue({
+      surface_meta: {
+        canonical_surface: "mission_index",
+        display_title: "Mission Index",
+        projection_kind: "mission_index"
+      },
       preflight: {
         workspace_root: "/tmp/butler",
         launch_mode: "shared"
@@ -28,7 +33,16 @@ function mockDesktopApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDeskto
     }),
     getFlow: vi.fn().mockResolvedValue({
       flow_id: "flow_mock_desktop",
+      surface_meta: {
+        canonical_surface: "run_console",
+        display_title: "Run Console",
+        projection_kind: "run_console"
+      },
       status: {},
+      mission_console: {
+        task_contract_id: "task_contract_flow_mock_desktop",
+        goal: "Ship Butler Desktop"
+      },
       summary: {
         flow_id: "flow_mock_desktop",
         workflow_kind: "managed_flow",
@@ -155,6 +169,11 @@ function mockDesktopApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDeskto
     }),
     getDetail: vi.fn().mockResolvedValue({}),
     getManageCenter: vi.fn().mockResolvedValue({
+      surface_meta: {
+        canonical_surface: "contract_studio",
+        display_title: "Contract Studio",
+        projection_kind: "contract_studio"
+      },
       preflight: {},
       assets: {
         items: [
@@ -162,7 +181,7 @@ function mockDesktopApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDeskto
             asset_id: "desktop-shell",
             title: "Desktop Shell V1",
             status: "active",
-            summary: "Electron + React workbench shell"
+            summary: "Electron + React mission console shell"
           }
         ]
       },
@@ -170,8 +189,12 @@ function mockDesktopApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDeskto
         asset_id: "desktop-shell",
         title: "Desktop Shell V1"
       },
+      contract_studio: {
+        asset_key: "template:desktop-shell",
+        projection_kind: "contract_studio"
+      },
       role_guidance: {
-        implementer: "Keep the shell flow-first."
+        implementer: "Keep the run console contract-first."
       },
       review_checklist: ["Shell launches"],
       bundle_manifest: {
@@ -251,9 +274,9 @@ describe("Desktop App", () => {
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: "Manage" }));
+    await user.click(screen.getByRole("button", { name: "Contract Studio" }));
 
-    expect(await screen.findByRole("heading", { name: "Assets and execution guidance" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Contracts, assets, and guidance" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /Desktop Shell V1/i })).toBeInTheDocument();
     expect(screen.getByText(/Promote the shell only after bridge/i)).toBeInTheDocument();
   });

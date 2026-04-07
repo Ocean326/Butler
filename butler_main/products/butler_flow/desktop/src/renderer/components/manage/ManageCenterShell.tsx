@@ -4,9 +4,10 @@ interface ManageCenterShellProps {
   payload?: ManageCenterDTO;
   selectedAssetId: string;
   onSelectAsset: (assetId: string) => void;
+  surfaceTitle: string;
 }
 
-export function ManageCenterShell({ payload, selectedAssetId, onSelectAsset }: ManageCenterShellProps) {
+export function ManageCenterShell({ payload, selectedAssetId, onSelectAsset, surfaceTitle }: ManageCenterShellProps) {
   const items = payload?.assets.items || [];
   const active = items.find((item) => String(item.asset_id || item.id || "") === selectedAssetId) || payload?.selected_asset || {};
   const activeId = String(active.asset_id || active.id || selectedAssetId || "");
@@ -16,13 +17,13 @@ export function ManageCenterShell({ payload, selectedAssetId, onSelectAsset }: M
       <section className="panel-shell manage-list-panel">
         <header className="panel-header compact">
           <div>
-            <p className="panel-kicker">Manage Center</p>
-            <h2>Assets and execution guidance</h2>
+            <p className="panel-kicker">{surfaceTitle}</p>
+            <h2>Contracts, assets, and guidance</h2>
           </div>
         </header>
         <div className="manage-list">
           {items.length === 0 ? (
-            <div className="empty-panel">No managed assets are available for this workspace.</div>
+            <div className="empty-panel">No contract assets are available for this config.</div>
           ) : (
             items.map((item, index) => {
               const itemId = String(item.asset_id || item.id || `asset-${index}`);

@@ -161,6 +161,9 @@
   - `test_butler_flow_tui_app.py`
   - `test_butler_flow_surface.py`
   - `test_butler_flow_desktop_bridge.py`
+- Desktop 壳附加验证：
+  - `cd butler_main/products/butler_flow/desktop && npm run typecheck`
+  - `cd butler_main/products/butler_flow/desktop && npm run test:renderer`
 - TUI 信息架构附加检查：
   - 先确认当前实现是否已是 `workspace + single flow single-column dual-stream console + /manage + /settings`，并注意 `/history` `/flows` 都已经退成兼容语义，不要再把它们写成产品级主入口
 - 再看 `butler_main/products/butler_flow/tui/controller.py` 的 payload 是否已抽象成 `workspace / single_flow.navigator_summary / single_flow.supervisor_view / single_flow.workflow_view / single_flow.inspector` 这些现役投影；`operator_rail_payload / role_strip_payload` 只应作为兼容层
@@ -195,12 +198,15 @@
     - `recovery_cursor.json`
     - `flow_definition.json -> task_contract_id / task_contract_summary / truth_owner`
     - `workflow_state.json` 是否只剩 runtime/recovery cache 语义
-  - 当前 `P4 + P5` 的默认收口方向是：
-    - authority/policy 变更必须产出 typed receipt，并继续挂回同一份 `TaskContract` truth
-    - `workspace -> mission index`
-    - `/manage -> contract studio`
-    - `single-flow -> run console`
+  - 当前 `P4 + P5` 已落完成态，收口口径固定为：
+    - authority/policy 变更必须先产出 typed receipt，再同步同一份 `TaskContract` truth，并刷新 `recovery_cursor.json`
+    - `surface_meta` 是三块 surface 的共享投影定义：`canonical_surface / display_title / legacy_aliases`
+    - `workspace -> Mission Index`
+    - `/manage -> Contract Studio`
+    - `single-flow -> Run Console`
     - 上述 surface 只做 projection，不得回写第二套 mission truth
+    - `mission_console` 与 `derived_responsibility_graph` 只允许从 `task_contract + receipts + recovery_cursor + role_sessions + handoffs` 派生
+    - 旧 `workspace / history / flows / manage_center / single_flow` 只保 compat alias；`manage` 与 `list` 继续是现役入口
   - 当前 `status / workspace / single-flow / TUI` 默认会外显：
     - `latest_receipt_summary`
     - `latest_artifact_ref`
@@ -214,6 +220,7 @@
     - `rollback_to_receipt`
     - `pause_for_operator`
   - 若改 `/manage`，优先检查 `build_manage_payload()`、`manage_flow()`、`tui/app.py` 的 transcript-first shell 与 `$asset` suggester，而不是回退到 `flows-list + flows-detail` 的卡片心智
+  - 若补测试 patch 点，先确认当前 patch 是否命中 `app/flow_shell`、`runtime` 或 `manage_agent` 的 compat provider 入口；现役代码已对这三条路径做回收，避免只 patch 旧入口时失效
   - 若本轮还涉及根工作区遗留脏改动吸收，优先把旧 compat 路径上的改动移植到 `butler_main/products/butler_flow/`，不要把旧物理路径重新写回 canonical tree
   - `free` 设计链路固定是“setup -> /manage template:new -> template:<id> -> launch instance”，不要再把它写回 `/flows` 设计页
   - 若涉及角色运行时，先确认 `execution_mode` 与 `session_strategy`；当前口径是 `simple=shared`、`medium=role_bound`、`complex=per_activation(预留合同)`；再确认 `role_guidance` 是否仍只是 manager/supervisor 的轻量参考，而不是硬 team contract

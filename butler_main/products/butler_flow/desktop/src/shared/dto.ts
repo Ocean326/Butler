@@ -1,5 +1,15 @@
 export type FlowStatus = "running" | "paused" | "completed" | "failed" | "draft" | string;
 
+export interface SurfaceMetaDTO {
+  surface_id?: string;
+  canonical_surface?: string;
+  projection_kind?: string;
+  display_title?: string;
+  legacy_aliases?: string[];
+  truth_basis?: string[];
+  title?: string;
+}
+
 export interface FlowSummaryDTO {
   flow_id: string;
   workflow_kind: string;
@@ -88,12 +98,14 @@ export interface RoleRuntimeDTO {
 }
 
 export interface ManageCenterDTO {
+  surface_meta?: SurfaceMetaDTO;
   preflight: Record<string, unknown>;
   assets: {
     items?: Array<Record<string, unknown>>;
     [key: string]: unknown;
   };
   selected_asset: Record<string, unknown>;
+  contract_studio?: Record<string, unknown>;
   role_guidance: Record<string, unknown>;
   review_checklist: string[];
   bundle_manifest: Record<string, unknown>;
@@ -101,6 +113,7 @@ export interface ManageCenterDTO {
 }
 
 export interface WorkspacePayload {
+  surface_meta?: SurfaceMetaDTO;
   preflight: Record<string, unknown>;
   flows: {
     items: Array<Record<string, unknown>>;
@@ -110,7 +123,18 @@ export interface WorkspacePayload {
 
 export interface SingleFlowPayload extends FlowDetailDTO {
   flow_id: string;
+  surface_meta?: SurfaceMetaDTO;
   status: Record<string, unknown>;
+  task_contract?: Record<string, unknown>;
+  task_contract_summary?: Record<string, unknown>;
+  governance_summary?: Record<string, unknown>;
+  mission_console?: Record<string, unknown>;
+  latest_receipt_summary?: Record<string, unknown>;
+  latest_governance_receipt_summary?: Record<string, unknown>;
+  latest_artifact_ref?: string;
+  accepted_receipt_count?: number;
+  recovery_cursor?: Record<string, unknown>;
+  recovery_state?: string;
   navigator_summary: FlowSummaryDTO;
   supervisor_view: SupervisorViewDTO;
   workflow_view: WorkflowViewDTO;

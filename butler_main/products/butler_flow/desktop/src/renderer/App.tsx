@@ -2,7 +2,7 @@ import { KeyboardEvent, startTransition, useEffect, useState } from "react";
 import { useAtom } from "jotai";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, FolderSearch, RefreshCcw } from "lucide-react";
-import type { SingleFlowPayload } from "../shared/dto";
+import type { SingleFlowPayload, SurfaceMetaDTO } from "../shared/dto";
 import { electronApi } from "./lib/electron-api";
 import { WorkbenchShell } from "./components/app-shell/WorkbenchShell";
 import { ManageCenterShell } from "./components/manage/ManageCenterShell";
@@ -20,11 +20,19 @@ function normalizeConfigPath(value: string): string {
   return String(value || "").trim();
 }
 
+function surfaceTitle(meta: SurfaceMetaDTO | undefined, fallback: string): string {
+  return String(meta?.display_title || meta?.title || fallback).trim() || fallback;
+}
+
 function HomeView({
+  homeTitle,
+  flowTitle,
   selectedFlowId,
   onOpenWorkbench,
   summary
 }: {
+  homeTitle: string;
+  flowTitle: string;
   selectedFlowId: string;
   onOpenWorkbench: () => void;
   summary?: SingleFlowPayload["navigator_summary"];
@@ -33,15 +41,15 @@ function HomeView({
     <div className="home-shell">
       <section className="hero-panel">
         <div>
-          <p className="panel-kicker">Workspace Surface</p>
+          <p className="panel-kicker">{homeTitle}</p>
           <h2>{summary?.goal || "Focus the next live flow"}</h2>
           <p className="topbar-copy">
-            Butler Desktop keeps the live supervisor lane in front and pushes detail to the edges. Pick a flow on the left,
-            then drill down into the workbench.
+            Butler Desktop keeps the contract, latest accepted progress, and recovery cues visible. Pick a flow on the left,
+            then open the run console when you want the live execution lane.
           </p>
         </div>
         <button className="ui-button ui-button-primary" disabled={!selectedFlowId} onClick={onOpenWorkbench} type="button">
-          Open Workbench
+          Open {flowTitle}
         </button>
       </section>
 
@@ -75,14 +83,14 @@ function HomeView({
         <div className="panel-shell">
           <header className="panel-header compact">
             <div>
-              <p className="panel-kicker">Workbench Rules</p>
-              <h2>Shared surface only</h2>
+              <p className="panel-kicker">Projection Rules</p>
+              <h2>Truth-first surface</h2>
             </div>
           </header>
           <ul className="manage-list-plain">
             <li>Renderer reads only the bridge output, never raw sidecars.</li>
-            <li>Supervisor decisions stay in the center lane; runtime detail goes to the drawer.</li>
-            <li>Actions route back through the foreground runtime, then the workbench refreshes.</li>
+            <li>Contract, receipt, and recovery truth stay canonical; the UI stays projection-only.</li>
+            <li>Actions route back through the foreground runtime, then the run console refreshes.</li>
           </ul>
         </div>
       </section>
@@ -111,6 +119,9 @@ export default function App() {
   const homeQuery = useHome(configPath);
   const flowQuery = useFlow(configPath, selectedFlowId);
   const manageQuery = useManage(configPath, activePage === "manage");
+  const homeTitle = surfaceTitle(homeQuery.data?.surface_meta, "Mission Index");
+  const flowTitle = surfaceTitle(flowQuery.data?.surface_meta, "Run Console");
+  const manageTitle = surfaceTitle(manageQuery.data?.surface_meta, "Contract Studio");
 
   useEffect(() => {
     const firstFlowId = String(homeQuery.data?.flows.items?.[0]?.flow_id || "").trim();
@@ -204,6 +215,8 @@ export default function App() {
       <FlowRail
         activePage={activePage}
         configPath={configPath}
+        flowTitle={flowTitle}
+        manageTitle={manageTitle}
         payload={homeQuery.data}
         selectedFlowId={selectedFlowId}
         onPageChange={(page) =>
@@ -224,7 +237,7 @@ export default function App() {
         <header className="global-header">
           <div className="global-header-copy">
             <span>Runtime visible</span>
-            <strong>{configPath || "Select a config to start the desktop surface."}</strong>
+            <strong>{configPath || "Select a config to start the desktop runtime."}</strong>
           </div>
           <div className="global-header-actions">
             <button className="ui-button ui-button-secondary" onClick={() => void chooseConfig()} type="button">
@@ -244,7 +257,7 @@ export default function App() {
               <AlertCircle size={34} />
               <h2>Attach a Butler config first</h2>
               <p>
-                The desktop workbench reads live workspace, flow, and manage-center payloads through the Python bridge. Select a
+                The desktop runtime reads live mission-index, run-console, and contract-studio payloads through the Python bridge. Select a
                 `butler_bot.json` or equivalent config to continue.
               </p>
               <button className="ui-button ui-button-primary" onClick={() => void chooseConfig()} type="button">
@@ -282,6 +295,8 @@ export default function App() {
 
         {configPath && activePage === "home" ? (
           <HomeView
+            homeTitle={homeTitle}
+            flowTitle={flowTitle}
             selectedFlowId={selectedFlowId}
             onOpenWorkbench={() => setActivePage("flow")}
             summary={selectedSummary}
@@ -292,6 +307,7 @@ export default function App() {
           <WorkbenchShell
             payload={flowQuery.data}
             loading={flowQuery.isLoading}
+            surfaceTitle={flowTitle}
             actionDraft={actionDraft}
             onActionDraftChange={setActionDraft}
             onAppendInstruction={() => void performAction("append_instruction", actionDraft)}
@@ -310,6 +326,7 @@ export default function App() {
             payload={manageQuery.data}
             selectedAssetId={selectedManageAssetId}
             onSelectAsset={setSelectedManageAssetId}
+            surfaceTitle={manageTitle}
           />
         ) : null}
 

@@ -5,6 +5,8 @@ import type { DesktopPage } from "../../state/atoms/ui";
 interface FlowRailProps {
   activePage: DesktopPage;
   configPath: string;
+  flowTitle: string;
+  manageTitle: string;
   payload?: WorkspacePayload;
   selectedFlowId: string;
   onPageChange: (page: DesktopPage) => void;
@@ -20,6 +22,8 @@ function text(value: unknown, fallback = "—"): string {
 export function FlowRail({
   activePage,
   configPath,
+  flowTitle,
+  manageTitle,
   payload,
   selectedFlowId,
   onPageChange,
@@ -43,9 +47,9 @@ export function FlowRail({
     <aside className="rail-shell">
       <div className="rail-brand">
         <p className="rail-kicker">Butler Flow Desktop</p>
-        <h1>Flow-first workbench</h1>
+        <h1>Mission Console Runtime</h1>
         <p className="rail-copy">
-          Keep the runtime visible, keep the bridge thin, and keep every action anchored to the Python surface.
+          Keep mission truth visible, keep the bridge thin, and keep every action anchored to the Python surface.
         </p>
       </div>
 
@@ -61,9 +65,9 @@ export function FlowRail({
 
       <nav className="rail-nav">
         {[
-          ["home", "Workspace"],
-          ["flow", "Workbench"],
-          ["manage", "Manage"]
+          ["home", String(payload?.surface_meta?.display_title || "Mission Index")],
+          ["flow", flowTitle],
+          ["manage", manageTitle]
         ].map(([page, label]) => (
           <button
             key={page}
@@ -89,7 +93,7 @@ export function FlowRail({
         />
         <div className="rail-list">
           {rows.length === 0 ? (
-            <div className="rail-empty">No flows available for the current workspace.</div>
+            <div className="rail-empty">No missions are available for the current config.</div>
           ) : (
             rows.map((row) => {
               const flowId = text(row.flow_id, "");
@@ -115,7 +119,7 @@ export function FlowRail({
 
       <div className="rail-footer">
         <div className="rail-footer-block">
-          <span>Workspace Root</span>
+          <span>Execution Root</span>
           <strong title={String(preflight.workspace_root || "")}>{text(preflight.workspace_root)}</strong>
         </div>
         <div className="rail-footer-block">

@@ -111,10 +111,85 @@ def _responsibility_summary(*, owner: dict[str, Any], authority: dict[str, Any])
     }
 
 
+def build_derived_responsibility_graph(
+    contract_summary: dict[str, Any] | None,
+    *,
+    flow_state: dict[str, Any] | None = None,
+    handoffs: list[dict[str, Any]] | None = None,
+    latest_governance_receipt_summary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    summary = dict(contract_summary or {})
+    state = dict(flow_state or {})
+    role_sessions = dict(state.get("role_sessions") or {})
+    active_role_id = _text(state.get("active_role_id"))
+    runtime_role_ids: list[str] = []
+
+    def _add_runtime_role(role_id: Any) -> None:
+        token = _text(role_id)
+        if token and token not in runtime_role_ids:
+            runtime_role_ids.append(token)
+
+    for role_id in role_sessions:
+        _add_runtime_role(role_id)
+    _add_runtime_role(active_role_id)
+    for handoff in list(handoffs or []):
+        row = dict(handoff or {})
+        _add_runtime_role(row.get("from_role_id") or row.get("source_role_id"))
+        _add_runtime_role(row.get("to_role_id") or row.get("target_role_id"))
+
+    runtime_roles: list[dict[str, Any]] = []
+    for role_id in runtime_role_ids:
+        session_payload = dict(role_sessions.get(role_id) or {})
+        runtime_roles.append(
+            {
+                "role_id": role_id,
+                "session_id": _text(session_payload.get("session_id")),
+                "status": _text(session_payload.get("status") or ("active" if role_id and role_id == active_role_id else "idle")),
+                "is_active": bool(role_id and role_id == active_role_id),
+            }
+        )
+
+    handoff_edges: list[dict[str, Any]] = []
+    for handoff in list(handoffs or []):
+        row = dict(handoff or {})
+        handoff_id = _text(row.get("handoff_id"))
+        if not handoff_id:
+            continue
+        handoff_edges.append(
+            {
+                "handoff_id": handoff_id,
+                "from_role_id": _text(row.get("from_role_id") or row.get("source_role_id")),
+                "to_role_id": _text(row.get("to_role_id") or row.get("target_role_id")),
+                "status": _text(row.get("status")),
+                "summary": _text(row.get("summary")),
+            }
+        )
+
+    responsibility_summary = dict(summary.get("responsibility_summary") or {})
+    return {
+        "graph_kind": "derived_responsibility_graph",
+        "truth_basis": ["task_contract.json", "receipts.jsonl", "role_sessions.json", "handoffs.jsonl"],
+        "contract_roles": [
+            {
+                "role": role,
+                "owner": _text(dict(summary.get("owner_summary") or {}).get(role)),
+                "authority": _text(dict(summary.get("authority_summary") or {}).get(role)),
+            }
+            for role in ("requester", "manager", "operator")
+        ],
+        "runtime_roles": runtime_roles,
+        "handoff_edges": handoff_edges,
+        "active_role_id": active_role_id,
+        "latest_governance_receipt_summary": dict(latest_governance_receipt_summary or {}),
+        "responsibility_summary": responsibility_summary,
+    }
+
+
 def build_governance_summary(
     contract_summary: dict[str, Any] | None,
     *,
     latest_governance_receipt_summary: dict[str, Any] | None = None,
+    derived_responsibility_graph: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     summary = dict(contract_summary or {})
     return {
@@ -122,7 +197,10 @@ def build_governance_summary(
         "owner_summary": dict(summary.get("owner_summary") or {}),
         "authority_summary": dict(summary.get("authority_summary") or {}),
         "policy_summary": dict(summary.get("policy_summary") or {}),
-        "responsibility_summary": dict(summary.get("responsibility_summary") or {}),
+        "responsibility_summary": dict(
+            dict(derived_responsibility_graph or {}).get("responsibility_summary") or summary.get("responsibility_summary") or {}
+        ),
+        "derived_responsibility_graph": dict(derived_responsibility_graph or {}),
         "latest_governance_receipt_summary": dict(latest_governance_receipt_summary or {}),
         "truth_owner": _text(summary.get("truth_owner") or "task_contract.json"),
         "ledger_owner": "receipts.jsonl",
@@ -136,6 +214,7 @@ def build_mission_console_summary(
     latest_governance_receipt_summary: dict[str, Any] | None = None,
     latest_artifact_ref: str = "",
     recovery_state: str = "",
+    derived_responsibility_graph: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     summary = dict(contract_summary or {})
     return {
@@ -145,7 +224,10 @@ def build_mission_console_summary(
         "owner_summary": dict(summary.get("owner_summary") or {}),
         "authority_summary": dict(summary.get("authority_summary") or {}),
         "policy_summary": dict(summary.get("policy_summary") or {}),
-        "responsibility_summary": dict(summary.get("responsibility_summary") or {}),
+        "responsibility_summary": dict(
+            dict(derived_responsibility_graph or {}).get("responsibility_summary") or summary.get("responsibility_summary") or {}
+        ),
+        "derived_responsibility_graph": dict(derived_responsibility_graph or {}),
         "latest_receipt_summary": dict(latest_receipt_summary or {}),
         "latest_governance_receipt_summary": dict(latest_governance_receipt_summary or {}),
         "latest_artifact_ref": _text(latest_artifact_ref),
