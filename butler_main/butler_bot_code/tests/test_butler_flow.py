@@ -2707,6 +2707,112 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(codex_call["runtime_request"]["codex_mode"], "resume")
             self.assertEqual(codex_call["runtime_request"]["codex_session_id"], "thread-external")
 
+    def test_prepare_resume_flow_rebinds_role_session_from_recovery_cursor(self) -> None:
+        if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None or _BUILD_FLOW_ROOT is None:
+            raise AssertionError("butler_flow must expose build/new/write helpers for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            flow_id = "flow_rebind_cursor"
+            flow_dir = _BUILD_FLOW_ROOT(root) / flow_id
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id=flow_id,
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="resume from role session",
+                guard_condition="done",
+                max_attempts=6,
+                max_phase_attempts=3,
+            )
+            flow_state["status"] = "running"
+            flow_state["current_phase"] = "imp"
+            flow_state["active_role_id"] = "implementer"
+            flow_state["role_sessions"] = {
+                "implementer": {"role_id": "implementer", "session_id": "role-session-1", "status": "ready"}
+            }
+            app = self._app(_ReceiptRunner([]))
+            app._save_flow_state(flow_dir, flow_state)
+            state = self._flow_state(flow_dir)
+            _WRITE_JSON_ATOMIC(
+                flow_dir / "recovery_cursor.json",
+                {
+                    "flow_id": flow_id,
+                    "task_contract_id": state["task_contract_id"],
+                    "latest_accepted_receipt_id": "",
+                    "latest_artifact_ref": "",
+                    "current_phase": "imp",
+                    "active_role_id": "implementer",
+                    "codex_session_id": "",
+                    "recovery_state": "rebind_role_session",
+                    "updated_at": "2026-04-07 10:00:00",
+                },
+            )
+            args = argparse.Namespace(
+                command="resume",
+                config=config,
+                flow_id=flow_id,
+                workflow_id="",
+                last=False,
+                codex_session_id="",
+                kind=PROJECT_LOOP_KIND,
+                goal="",
+                guard_condition="",
+                execution_mode="",
+                role_pack="",
+                max_attempts=0,
+                max_phase_attempts=0,
+                no_stream=True,
+            )
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                prepared = app.prepare_resume_flow(args)
+            self.assertEqual(prepared.flow_state["resume_source"], "recovery:rebind_role_session")
+            self.assertEqual(prepared.flow_state["codex_session_id"], "role-session-1")
+
+    def test_resume_reports_pause_for_operator_without_starting_runtime(self) -> None:
+        if _NEW_FLOW_STATE is None or _BUILD_FLOW_ROOT is None:
+            raise AssertionError("butler_flow must expose build/new helpers for tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            flow_id = "flow_pause_required"
+            flow_dir = _BUILD_FLOW_ROOT(root) / flow_id
+            flow_state = _NEW_FLOW_STATE(
+                workflow_id=flow_id,
+                workflow_kind=PROJECT_LOOP_KIND,
+                workspace_root=str(root),
+                goal="wait for operator",
+                guard_condition="done",
+                max_attempts=4,
+                max_phase_attempts=2,
+            )
+            flow_state["status"] = "paused"
+            flow_state["approval_state"] = "operator_required"
+            flow_state["last_completion_summary"] = "operator input required before resume"
+            runner = _ReceiptRunner([])
+            app = self._app(runner)
+            app._save_flow_state(flow_dir, flow_state)
+            args = argparse.Namespace(
+                command="resume",
+                config=config,
+                flow_id=flow_id,
+                workflow_id="",
+                last=False,
+                codex_session_id="",
+                kind=PROJECT_LOOP_KIND,
+                goal="",
+                guard_condition="",
+                execution_mode="",
+                role_pack="",
+                max_attempts=0,
+                max_phase_attempts=0,
+                no_stream=True,
+            )
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                rc = app.resume(args)
+            self.assertEqual(rc, 0)
+            self.assertEqual(runner.calls, [])
+            self.assertIn("recovery_action=pause_for_operator", app._stdout.getvalue())
+
     def test_butler_flow_codex_calls_guard_oauth_remote_mcp_servers_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -3343,6 +3449,28 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(definition["task_contract_id"], state.get("task_contract_id"))
             self.assertEqual(dict(definition.get("task_contract_summary") or {}).get("goal"), "ship catalog")
 
+    def test_prepare_new_flow_bootstraps_receipts_and_recovery_cursor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = self._app(_ReceiptRunner([]))
+            args = self._new_args(
+                config=config,
+                kind=PROJECT_LOOP_KIND,
+                launch_mode="flow",
+                execution_level="medium",
+                catalog_flow_id="project_loop",
+                goal="bootstrap truth files",
+                guard_condition="done",
+            )
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                prepared = app.prepare_new_flow(args)
+            receipts = self._read_jsonl(prepared.flow_path / "receipts.jsonl")
+            recovery_cursor = self._read_json(prepared.flow_path / "recovery_cursor.json")
+            self.assertEqual(receipts, [])
+            self.assertEqual(recovery_cursor["task_contract_id"], prepared.flow_state["task_contract_id"])
+            self.assertEqual(recovery_cursor["recovery_state"], "reseed_same_contract")
+
     def test_prepare_new_flow_rejects_high_execution_level(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -3545,6 +3673,54 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertTrue((flow_dir / "bundle" / "skills" / "doctor" / "SKILL.md").exists())
             self.assertEqual(definition["bundle_manifest"]["doctor_ref"], str((flow_dir / "bundle" / "doctor.md").resolve()))
             self.assertEqual(definition["bundle_manifest"]["doctor_skill_ref"], str((flow_dir / "bundle" / "skills" / "doctor" / "SKILL.md").resolve()))
+
+    def test_status_json_reports_receipt_and_recovery_truth(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            runner = _ReceiptRunner(
+                [
+                    _receipt(text="implemented"),
+                    _receipt(
+                        text=json.dumps(
+                            {
+                                "decision": "COMPLETE",
+                                "reason": "done",
+                                "next_codex_prompt": "",
+                                "completion_summary": "done",
+                            },
+                            ensure_ascii=False,
+                        )
+                    ),
+                ]
+            )
+            app = self._app(runner)
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                rc = app.run_new(self._run_args(config=config))
+            self.assertEqual(rc, 0)
+            flow_id = self._flow_dirs(root)[0].name
+            status_app = self._app(_ReceiptRunner([]))
+            status_args = argparse.Namespace(
+                command="status",
+                config=config,
+                flow_id=flow_id,
+                workflow_id="",
+                last=False,
+                json=True,
+            )
+            rc = status_app.status(status_args)
+            self.assertEqual(rc, 0)
+            payload = json.loads(status_app._stdout.getvalue())
+            self.assertIn(
+                payload["latest_receipt_summary"]["receipt_kind"],
+                {"turn_acceptance", "artifact_acceptance"},
+            )
+            self.assertGreaterEqual(payload["accepted_receipt_count"], 1)
+            self.assertEqual(payload["recovery_state"], "completed")
+            self.assertEqual(
+                payload["recovery_cursor"]["latest_accepted_receipt_id"],
+                payload["latest_receipt_summary"]["receipt_id"],
+            )
 
     def test_heuristic_supervisor_spawns_doctor_for_resume_no_rollout_failure(self) -> None:
         if _NEW_FLOW_STATE is None or _WRITE_JSON_ATOMIC is None or _BUILD_FLOW_ROOT is None:

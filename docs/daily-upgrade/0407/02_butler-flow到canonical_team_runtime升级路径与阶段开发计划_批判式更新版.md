@@ -1,8 +1,8 @@
 # 0407 Butler Flow 到 Canonical Team Runtime 升级路径与阶段开发计划（批判式更新版）
 
-日期：2026-04-07  
-状态：方案更新 / 当前执行计划  
-所属层级：当前为 docs-only；后续实施主落 L1 `Agent Execution Runtime`，辅触 L2 / L4 / Control Plane  
+日期：2026-04-07
+状态：方案更新 / `P0-P3` 已落地 / 当前执行计划
+所属层级：当前实施主落 L1 `Agent Execution Runtime`，辅触 L2 durability substrate / Product surface / Control Plane
 定位：用 `proposal-critique-refine` 对 “butler-flow -> canonical team runtime” 路线做删改式收敛，明确该保留什么、该降级什么、该延后什么、该先证明什么
 
 关联：
@@ -43,6 +43,39 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 - `P6` 不再是一个“再加一层”的实现阶段，而是命名与真源闭环门槛
 - `team graph` 不再是早期 headline phase，而是后置、只读、派生的责任图
 - `Team OS` 继续留在 upgrade conditions 之外，不进入当前产品口径
+
+## 0. 当前实施回写（截至 2026-04-07）
+
+当前代码基线已经不再只是 `P0 + P1`，而是：
+
+1. `task_contract.json` 已作为任务真源稳定存在。
+2. `flow_definition.json` 已降级为 materialization，围绕 `task_contract_id + task_contract_summary` 外显。
+3. `receipts.jsonl` 已落地为第一条 canonical receipt spine：
+   - `turn_acceptance`
+   - `artifact_acceptance`
+   - `operator_action`
+   - `exec_terminal`
+   - `authority_transition`
+   - `policy_update`
+4. `recovery_cursor.json` 已落地为 transcript-independent recovery pointer。
+5. `status / workspace / single-flow / TUI summary` 已能外显：
+   - `latest_receipt_summary`
+   - `latest_artifact_ref`
+   - `accepted_receipt_count`
+   - `recovery_cursor`
+   - `recovery_state`
+6. `resume` 当前已优先读取 `task_contract.json -> recovery_cursor.json -> receipts.jsonl`，并能最小区分：
+   - `resume_existing_session`
+   - `reseed_same_contract`
+   - `rebind_role_session`
+   - `rollback_to_receipt`
+   - `pause_for_operator`
+
+因此，当前真正未闭合的主缺口已经不是 `TaskContract` 本身，而是：
+
+- `P4` 的 typed authority/policy minimum 仍偏薄
+- `P5` 的 Mission Console 叙事还没彻底压到 projection-only 的最终形态
+- `P6` closure gate 仍未做正式验收
 
 ## 1. Proposal Brief
 
@@ -211,7 +244,7 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 - `出关门槛`
   - 单 repo-bound coding task 能从 contract 启动，并能通过 `resume/exec` 续接，不需要再靠 free-form flow 叙事兜底。
 
-### `P2` Artifact + Receipt Spine
+### `P2` Artifact + Receipt Spine（当前已落地第一版）
 
 - `目标`
   - 把 butler-flow 的 accepted progress 全部压进统一 receipt spine。
@@ -225,8 +258,14 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
     - `OperatorActionReceipt`（可先预埋）
 - `出关门槛`
   - 任何被接受的代码、文档、测试、验收动作都必须具备 receipt coverage。
+- `当前实现`
+  - `receipts.jsonl` 已落到实例目录
+  - `runtime` 已把 accepted turn / accepted artifact / operator action / terminal exec / governance change 写回同一条 ledger
+  - `artifacts.json` 已补齐 `task_contract_id / produced_by_receipt_id / accepted_in_receipt_id / status`
+- `剩余缺口`
+  - 还没把更完整的 receipt taxonomy 和更强 receipt typing 收到最终 `P6` 验收门槛
 
-### `P3` Operator Recovery Lane
+### `P3` Operator Recovery Lane（当前已落地第一版）
 
 - `目标`
   - 把恢复路径改成 “从 `RecoveryCursor + latest accepted receipt` 恢复”，而不是从聊天历史猜状态。
@@ -241,6 +280,13 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
   - `doctor`
 - `出关门槛`
   - 强杀 vendor session 后，系统仍能在不依赖 prompt prose 的前提下恢复推进。
+- `当前实现`
+  - `recovery_cursor.json` 已成为恢复指针文件
+  - `resume` 当前已按 contract/cursor/receipt/role-session 做最小恢复判断
+  - `pause_for_operator` 已从“隐含状态”收口成真实恢复结论
+  - `status / surface / TUI` 已能在缺 transcript 时解释“任务是什么、做到哪、从哪恢复”
+- `剩余缺口`
+  - `doctor`、`rollback` 与 authority/policy 变更之间的 typed receipt 关系还需继续收紧
 
 ### `P4` Authority / Policy Minimum
 

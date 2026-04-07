@@ -16,6 +16,8 @@ from butler_main.butler_flow.state import (
     flow_turns_path,
     handoffs_path,
     now_text,
+    read_recovery_cursor,
+    read_task_receipts,
     read_json,
     resolve_flow_dir,
 )
@@ -75,6 +77,10 @@ def build_workspace_surface(
             entry.update(
                 {
                     "task_contract_summary": summary.get("task_contract_summary"),
+                    "latest_receipt_summary": summary.get("latest_receipt_summary"),
+                    "latest_artifact_ref": summary.get("latest_artifact_ref"),
+                    "accepted_receipt_count": summary.get("accepted_receipt_count"),
+                    "recovery_state": summary.get("recovery_state"),
                     "approval_state": summary.get("approval_state"),
                     "execution_mode": summary.get("execution_mode"),
                     "session_strategy": summary.get("session_strategy"),
@@ -467,6 +473,8 @@ def inspect_payload(*, config: str | None, flow_id: str) -> dict[str, Any]:
         "turns": _read_jsonl(flow_turns_path(flow_path)),
         "actions": _read_jsonl(flow_actions_path(flow_path)),
         "artifacts": read_json(flow_artifacts_path(flow_path)).get("items") or [],
+        "receipts": read_task_receipts(flow_path),
+        "recovery_cursor": read_recovery_cursor(flow_path),
         "handoffs": _read_jsonl(handoffs_path(flow_path)),
     }
 
@@ -871,6 +879,11 @@ def _detail_payload_from_inspected(
         "status": status,
         "task_contract": dict(status.get("task_contract") or {}),
         "task_contract_summary": dict(status.get("task_contract_summary") or {}),
+        "latest_receipt_summary": dict(status.get("latest_receipt_summary") or {}),
+        "latest_artifact_ref": str(status.get("latest_artifact_ref") or "").strip(),
+        "accepted_receipt_count": int(status.get("accepted_receipt_count") or 0),
+        "recovery_cursor": dict(inspected.get("recovery_cursor") or status.get("recovery_cursor") or {}),
+        "recovery_state": str(status.get("recovery_state") or "").strip(),
         "approval": {
             "approval_state": str(flow_state.get("approval_state") or "").strip() or "not_required",
             "pending_codex_prompt": str(flow_state.get("pending_codex_prompt") or "").strip(),
@@ -880,6 +893,7 @@ def _detail_payload_from_inspected(
         "receipts": {
             "operator_actions": list(inspected.get("actions") or []),
             "turns": list(inspected.get("turns") or []),
+            "canonical": list(inspected.get("receipts") or []),
         },
         "timeline": timeline,
         "roles": {
@@ -903,6 +917,7 @@ def _detail_payload_from_inspected(
         "runtime": {
             "runtime_snapshot": dict(status.get("runtime_snapshot") or {}),
             "trace_summary": dict(status.get("trace_summary") or {}),
+            "recovery_cursor": dict(inspected.get("recovery_cursor") or status.get("recovery_cursor") or {}),
         },
     }
 
@@ -943,6 +958,10 @@ def workspace_payload(*, config: str | None, limit: int = 10) -> dict[str, Any]:
             entry.update(
                 {
                     "task_contract_summary": dict(status.get("task_contract_summary") or {}),
+                    "latest_receipt_summary": dict(status.get("latest_receipt_summary") or {}),
+                    "latest_artifact_ref": str(status.get("latest_artifact_ref") or "").strip(),
+                    "accepted_receipt_count": int(status.get("accepted_receipt_count") or 0),
+                    "recovery_state": str(status.get("recovery_state") or "").strip(),
                     "approval_state": summary.get("approval_state"),
                     "execution_mode": summary.get("execution_mode"),
                     "session_strategy": summary.get("session_strategy"),
@@ -1004,12 +1023,22 @@ def single_flow_payload(*, config: str | None, flow_id: str) -> dict[str, Any]:
         status=status,
         task_contract=dict(status.get("task_contract") or {}),
         task_contract_summary=dict(status.get("task_contract_summary") or {}),
+        latest_receipt_summary=dict(status.get("latest_receipt_summary") or {}),
+        latest_artifact_ref=str(status.get("latest_artifact_ref") or "").strip(),
+        accepted_receipt_count=int(status.get("accepted_receipt_count") or 0),
+        recovery_cursor=dict(inspected.get("recovery_cursor") or status.get("recovery_cursor") or {}),
+        recovery_state=str(status.get("recovery_state") or "").strip(),
         summary=summary,
         step_history=step_history,
         timeline=timeline,
         turns=list(inspected.get("turns") or []),
         actions=list(inspected.get("actions") or []),
         artifacts=list(inspected.get("artifacts") or []),
+        receipts={
+            "operator_actions": list(inspected.get("actions") or []),
+            "turns": list(inspected.get("turns") or []),
+            "canonical": list(inspected.get("receipts") or []),
+        },
         handoffs=handoffs,
         flow_definition=dict(status.get("flow_definition") or {}),
         runtime_snapshot=dict(status.get("runtime_snapshot") or {}),

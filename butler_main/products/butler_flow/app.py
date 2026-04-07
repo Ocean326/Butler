@@ -49,6 +49,7 @@ from .manage_agent import (
     run_manage_chat_agent,
 )
 from .models import FlowExecReceiptV1, PreparedFlowRun
+from .receipt_spine import plan_resume_recovery
 from .role_runtime import (
     default_execution_mode,
     default_role_pack_id,
@@ -62,7 +63,9 @@ from .runtime import FlowRuntime, flow_disabled_mcp_servers, flow_timeout_second
 from .state import (
     FileRuntimeStateStore,
     FileTraceStore,
+    append_governance_receipts,
     append_jsonl,
+    append_task_receipt,
     asset_bundle_manifest,
     asset_bundle_root,
     build_flow_root,
@@ -71,6 +74,7 @@ from .state import (
     design_session_path,
     design_turns_path,
     ensure_asset_bundle_files,
+    ensure_flow_sidecars,
     flow_dir,
     flow_asset_audit_path,
     flow_asset_root,
@@ -88,15 +92,19 @@ from .state import (
     normalize_supervisor_profile_payload,
     normalize_doctor_policy_payload,
     now_text,
+    read_recovery_cursor,
     read_manage_draft,
     read_manage_pending_action,
     read_manage_session,
     read_flow_state,
     read_task_contract,
+    read_task_receipts,
     read_json,
     resolve_flow_dir,
     resolve_flow_workspace_root,
     safe_int,
+    sync_flow_recovery_truth,
+    sync_task_contract_truth,
     task_contract_path,
     template_asset_root,
     write_bundle_sources,
@@ -109,7 +117,7 @@ from .state import (
     write_task_contract,
     write_json_atomic,
 )
-from .task_contract import build_task_contract, build_task_contract_summary
+from .task_contract import build_task_contract_summary
 from .version import BUTLER_FLOW_VERSION
 
 
@@ -150,6 +158,12 @@ class FlowApp:
             event_callback=event_callback,
             hook_callback=hook_callback,
         )
+
+    def _ensure_flow_runtime(self, cfg: dict[str, Any]) -> None:
+        if not cli_provider_available("codex", cfg):
+            raise RuntimeError("Codex CLI is unavailable for Butler Flow")
+        if not cli_provider_available("cursor", cfg):
+            raise RuntimeError("Cursor CLI is unavailable for Butler Flow judge")
 
     def _new_exec_app(self) -> tuple["FlowApp", JsonlFlowDisplay]:
         display = JsonlFlowDisplay(self._stdout, self._stderr)
@@ -198,6 +212,7 @@ class FlowApp:
     def _build_exec_receipt(self, *, flow_path: Path, flow_state: dict[str, Any], return_code: int) -> FlowExecReceiptV1:
         last_codex_metadata = dict(dict(flow_state.get("last_codex_receipt") or {}).get("metadata") or {})
         task_contract = read_task_contract(flow_path)
+        recovery_truth = sync_flow_recovery_truth(flow_path, flow_state=flow_state, task_contract=task_contract)
         return {
             "receipt_id": f"flow_exec_receipt_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid4().hex[:8]}",
             "kind": "flow_exec_receipt",
@@ -231,17 +246,48 @@ class FlowApp:
             "last_cursor_receipt": dict(flow_state.get("last_cursor_receipt") or {}),
             "trace_refs": [str(item or "").strip() for item in list(flow_state.get("trace_refs") or []) if str(item or "").strip()],
             "receipt_refs": [str(item or "").strip() for item in list(flow_state.get("receipt_refs") or []) if str(item or "").strip()],
+            "recovery_state": str(recovery_truth.get("recovery_state") or "").strip(),
             "created_at": now_text(),
         }
 
     def _emit_exec_receipt(self, display: JsonlFlowDisplay, *, flow_path: Path, flow_state: dict[str, Any], return_code: int) -> int:
         receipt = self._build_exec_receipt(flow_path=flow_path, flow_state=flow_state, return_code=return_code)
+        task_contract = read_task_contract(flow_path)
+        append_task_receipt(
+            flow_path,
+            {
+                "receipt_id": str(receipt.get("receipt_id") or "").strip(),
+                "receipt_kind": "exec_terminal",
+                "flow_id": str(receipt.get("flow_id") or "").strip(),
+                "task_contract_id": str(receipt.get("task_contract_id") or "").strip(),
+                "phase": str(receipt.get("current_phase") or "").strip(),
+                "attempt_no": safe_int(receipt.get("attempt_count"), 0),
+                "active_role_id": str(receipt.get("active_role_id") or "").strip(),
+                "summary": str(receipt.get("summary") or receipt.get("status") or "").strip(),
+                "source_ref": str(receipt.get("flow_dir") or "").strip(),
+                "recovery_state": str(receipt.get("recovery_state") or "").strip(),
+                "created_at": str(receipt.get("created_at") or now_text()).strip(),
+            },
+        )
+        sync_flow_recovery_truth(
+            flow_path,
+            flow_state=flow_state,
+            task_contract=task_contract,
+            recovery_state=str(receipt.get("recovery_state") or "").strip(),
+        )
         display.write_jsonl(dict(receipt))
         return int(return_code)
 
     def _exec_prepared_flow(self, prepared: PreparedFlowRun, *, stream_enabled: bool) -> int:
         exec_app, display = self._new_exec_app()
         flow_state = prepared.flow_state
+        if str(flow_state.get("resume_source") or "").strip() == "recovery:pause_for_operator":
+            return self._emit_exec_receipt(
+                display,
+                flow_path=prepared.flow_path,
+                flow_state=flow_state,
+                return_code=0,
+            )
         terminal_status = str(flow_state.get("status") or "").strip().lower()
         if terminal_status in {"completed", "failed", "interrupted"}:
             return self._emit_exec_receipt(
@@ -261,6 +307,61 @@ class FlowApp:
             flow_state=flow_state,
             return_code=normalized_return_code,
         )
+
+    def _resume_prompt_from_recovery_plan(self, recovery_plan: dict[str, Any]) -> str:
+        action = str(recovery_plan.get("recovery_action") or "").strip()
+        receipt_id = str(recovery_plan.get("latest_accepted_receipt_id") or "").strip()
+        phase = str(recovery_plan.get("current_phase") or "").strip()
+        prompt_map = {
+            "resume_existing_session": "Resume the existing Codex session, inspect the latest accepted progress, and continue from the current task contract.",
+            "reseed_same_contract": "Reseed from the task contract and latest accepted state without relying on transcript prose, then continue.",
+            "rebind_role_session": "Rebind the active role session, inspect the latest accepted progress, and continue from the current task contract.",
+            "rollback_to_receipt": "Rollback to the latest accepted receipt, restate the next safe step, and continue from that checkpoint.",
+            "pause_for_operator": "Pause and wait for operator direction before starting another runtime turn.",
+        }
+        parts: list[str] = [prompt_map.get(action, prompt_map["reseed_same_contract"])]
+        if receipt_id:
+            parts.append(f"Latest accepted receipt: {receipt_id}.")
+        if phase:
+            parts.append(f"Current phase: {phase}.")
+        return " ".join(part for part in parts if part).strip()
+
+    def _prepare_resume_recovery(
+        self,
+        *,
+        flow_path: Path,
+        flow_state: dict[str, Any],
+    ) -> dict[str, Any]:
+        task_contract = read_task_contract(flow_path)
+        recovery_truth = sync_flow_recovery_truth(flow_path, flow_state=flow_state, task_contract=task_contract)
+        recovery_plan = plan_resume_recovery(
+            flow_state=flow_state,
+            task_contract=task_contract,
+            recovery_cursor=dict(recovery_truth.get("recovery_cursor") or read_recovery_cursor(flow_path) or {}),
+            receipts=list(recovery_truth.get("receipts") or read_task_receipts(flow_path) or []),
+        )
+        flow_state["task_contract_id"] = str(
+            recovery_plan.get("task_contract_id")
+            or task_contract.get("task_contract_id")
+            or flow_state.get("task_contract_id")
+            or ""
+        ).strip()
+        action = str(recovery_plan.get("recovery_action") or "").strip()
+        if action:
+            flow_state["resume_source"] = f"recovery:{action}"
+        if action == "rebind_role_session" and not str(flow_state.get("codex_session_id") or "").strip():
+            flow_state["codex_session_id"] = str(recovery_plan.get("resume_session_id") or "").strip()
+        if action in {"reseed_same_contract", "rollback_to_receipt"}:
+            prompt = self._resume_prompt_from_recovery_plan(recovery_plan)
+            if prompt:
+                flow_state["pending_codex_prompt"] = prompt
+        if action == "pause_for_operator":
+            flow_state["status"] = "paused"
+            if not str(flow_state.get("approval_state") or "").strip():
+                flow_state["approval_state"] = "operator_required"
+            if not str(flow_state.get("last_completion_summary") or "").strip():
+                flow_state["last_completion_summary"] = str(recovery_plan.get("summary") or "").strip()
+        return recovery_plan
 
     def _prompt_value(self, prompt: str, current: str = "") -> str:
         if str(current or "").strip():
@@ -1283,6 +1384,8 @@ class FlowApp:
                     "note": snapshot.note,
                 }
                 effective_status, effective_phase = self._effective_runtime_view(flow_state=flow_state, runtime_snapshot=runtime_snapshot)
+                task_contract = read_task_contract(flow_path)
+                recovery_truth = sync_flow_recovery_truth(flow_path, flow_state=flow_state, task_contract=task_contract)
                 sort_value = 0.0
                 for field in ("updated_at", "created_at"):
                     stamp = str(flow_state.get(field) or "").strip()
@@ -1301,7 +1404,7 @@ class FlowApp:
                 rows.append(
                     {
                         "flow_id": flow_id,
-                        "task_contract_summary": build_task_contract_summary(read_task_contract(flow_path)),
+                        "task_contract_summary": build_task_contract_summary(task_contract),
                         "flow_dir": str(flow_path),
                         "flow_kind": str(flow_state.get("workflow_kind") or "").strip(),
                         "status": str(flow_state.get("status") or "").strip(),
@@ -1315,6 +1418,10 @@ class FlowApp:
                         "attempt_count": safe_int(flow_state.get("attempt_count"), 0),
                         "max_attempts": safe_int(flow_state.get("max_attempts"), 0),
                         "codex_session_id": str(flow_state.get("codex_session_id") or "").strip(),
+                        "latest_receipt_summary": dict(recovery_truth.get("latest_receipt_summary") or {}),
+                        "latest_artifact_ref": str(recovery_truth.get("latest_artifact_ref") or "").strip(),
+                        "accepted_receipt_count": safe_int(recovery_truth.get("accepted_receipt_count"), 0),
+                        "recovery_state": str(recovery_truth.get("recovery_state") or "").strip(),
                         "updated_at": str(flow_state.get("updated_at") or flow_state.get("created_at") or "").strip(),
                         "goal": str(flow_state.get("goal") or "").strip(),
                         "runtime_snapshot": runtime_snapshot,
@@ -1354,6 +1461,7 @@ class FlowApp:
         flow_definition = read_json(flow_definition_path(flow_path))
         if not flow_definition:
             flow_definition = self._save_flow_definition(flow_path, flow_state, task_contract=task_contract)
+        recovery_truth = sync_flow_recovery_truth(flow_path, flow_state=flow_state, task_contract=task_contract)
         task_contract_summary = build_task_contract_summary(task_contract)
         state_store = FileRuntimeStateStore(flow_path)
         trace_store = FileTraceStore(state_store.traces_dir())
@@ -1375,6 +1483,11 @@ class FlowApp:
             "flow_state": flow_state,
             "task_contract": task_contract,
             "task_contract_summary": task_contract_summary,
+            "latest_receipt_summary": dict(recovery_truth.get("latest_receipt_summary") or {}),
+            "latest_artifact_ref": str(recovery_truth.get("latest_artifact_ref") or "").strip(),
+            "accepted_receipt_count": safe_int(recovery_truth.get("accepted_receipt_count"), 0),
+            "recovery_cursor": dict(recovery_truth.get("recovery_cursor") or {}),
+            "recovery_state": str(recovery_truth.get("recovery_state") or "").strip(),
             "flow_definition": flow_definition,
             "role_runtime": extract_role_runtime_summary(flow_state),
             "runtime_snapshot": {
@@ -1493,13 +1606,8 @@ class FlowApp:
 
     def _save_flow_state(self, flow_path: Path, flow_state: dict[str, Any]) -> None:
         self._normalize_flow_state_payload(flow_state)
-        task_contract = build_task_contract(
-            flow_state=flow_state,
-            flow_definition=read_json(flow_definition_path(flow_path)),
-            current=read_json(task_contract_path(flow_path)),
-        )
+        previous_contract, task_contract = sync_task_contract_truth(flow_path, flow_state)
         flow_state["task_contract_id"] = str(task_contract.get("task_contract_id") or "").strip()
-        write_task_contract(flow_path, task_contract)
         workflow_id = str(flow_state.get("workflow_id") or flow_path.name).strip() or flow_path.name
         bundle_manifest = self._runtime_bundle_manifest(
             workspace_root=str(flow_state.get("workspace_root") or "").strip(),
@@ -1530,6 +1638,14 @@ class FlowApp:
         flow_state["updated_at"] = now_text()
         write_json_atomic(flow_state_path(flow_path), flow_state)
         self._save_flow_definition(flow_path, flow_state, task_contract=task_contract)
+        ensure_flow_sidecars(flow_path, flow_state)
+        append_governance_receipts(
+            flow_path,
+            previous_contract=previous_contract,
+            task_contract=task_contract,
+            flow_state=flow_state,
+        )
+        sync_flow_recovery_truth(flow_path, flow_state=flow_state, task_contract=task_contract)
 
     def _append_manage_audit(
         self,
@@ -1986,7 +2102,7 @@ class FlowApp:
 
     def prepare_new_flow(self, args: argparse.Namespace, *, interactive_setup: bool = False) -> PreparedFlowRun:
         cfg, config_path, workspace_root = self._load_config(getattr(args, "config", None))
-        self._runtime.ensure_flow_runtime(cfg)
+        self._ensure_flow_runtime(cfg)
         launch_draft = self._build_launch_draft_from_args(args, interactive_setup=interactive_setup)
         goal = str(launch_draft.get("goal") or "").strip()
         guard_condition = str(launch_draft.get("guard_condition") or "").strip()
@@ -2089,7 +2205,7 @@ class FlowApp:
 
     def prepare_resume_flow(self, args: argparse.Namespace) -> PreparedFlowRun:
         cfg, config_path, workspace_root = self._load_config(getattr(args, "config", None))
-        self._runtime.ensure_flow_runtime(cfg)
+        self._ensure_flow_runtime(cfg)
         flow_id = self._flow_identity_from_args(workspace_root=workspace_root, args=args)
         if flow_id:
             flow_path = flow_dir(workspace_root, flow_id)
@@ -2097,6 +2213,7 @@ class FlowApp:
             if not flow_state:
                 raise FileNotFoundError(f"flow not found: {flow_id}")
             self._normalize_flow_state_payload(flow_state)
+            self._prepare_resume_recovery(flow_path=flow_path, flow_state=flow_state)
             if str(flow_state.get("workflow_kind") or "").strip() in {PROJECT_LOOP_KIND, MANAGED_FLOW_KIND}:
                 sync_project_phase_attempt_count(flow_state)
             if str(getattr(args, "goal", "") or "").strip():
@@ -2159,6 +2276,12 @@ class FlowApp:
             self._display.write(f"[butler-flow] resuming codex_session_id={flow_state.get('codex_session_id')}")
         else:
             self._display.write(f"[butler-flow] resuming flow_id={flow_state.get('workflow_id')}")
+        if str(flow_state.get("resume_source") or "").strip() == "recovery:pause_for_operator":
+            self._display.write("[butler-flow] recovery_action=pause_for_operator")
+            self._display.write(
+                f"[butler-flow] note={_truncate(str(flow_state.get('last_completion_summary') or 'operator input required before resume'), limit=160)}"
+            )
+            return 0
         self._display.write(f"[butler-flow] kind={flow_state.get('workflow_kind')}")
         self._display.write(f"[butler-flow] goal={_truncate(str(flow_state.get('goal') or ''), limit=120)}")
         return self.execute_prepared_flow(prepared, stream_enabled=not bool(getattr(args, "no_stream", False)))
@@ -2175,6 +2298,8 @@ class FlowApp:
         flow_state = dict(payload.get("flow_state") or {})
         flow_definition = dict(payload.get("flow_definition") or {})
         task_contract_summary = dict(payload.get("task_contract_summary") or {})
+        latest_receipt_summary = dict(payload.get("latest_receipt_summary") or {})
+        recovery_cursor = dict(payload.get("recovery_cursor") or {})
         runtime = dict(payload.get("runtime_snapshot") or {})
         self._display.write(f"workflow_id={payload['flow_id']}")
         self._display.write(f"task_contract_id={task_contract_summary.get('task_contract_id') or flow_state.get('task_contract_id') or '-'}")
@@ -2203,6 +2328,16 @@ class FlowApp:
             f"runtime_elapsed={flow_state.get('runtime_elapsed_seconds') or 0}s/{flow_state.get('max_runtime_seconds') or 0}s"
         )
         self._display.write(f"codex_session_id={flow_state.get('codex_session_id') or '-'}")
+        self._display.write(
+            f"latest_receipt={latest_receipt_summary.get('receipt_kind') or '-'} "
+            f"id={latest_receipt_summary.get('receipt_id') or '-'} "
+            f"artifact={payload.get('latest_artifact_ref') or '-'} "
+            f"accepted_receipts={payload.get('accepted_receipt_count') or 0}"
+        )
+        self._display.write(
+            f"recovery_state={payload.get('recovery_state') or '-'} "
+            f"cursor_receipt={recovery_cursor.get('latest_accepted_receipt_id') or '-'}"
+        )
         self._display.write(f"process_state={runtime.get('process_state')} pid={runtime.get('pid') or 0}")
         self._display.write(f"last_decision={dict(flow_state.get('last_cursor_decision') or {}).get('decision') or '-'}")
         self._display.write(f"last_summary={flow_state.get('last_completion_summary') or '-'}")

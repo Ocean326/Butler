@@ -33,6 +33,10 @@ class FlowSummaryDTO:
     context_governor: dict[str, Any] = field(default_factory=dict)
     latest_handoff_summary: dict[str, Any] = field(default_factory=dict)
     task_contract_summary: dict[str, Any] = field(default_factory=dict)
+    latest_receipt_summary: dict[str, Any] = field(default_factory=dict)
+    latest_artifact_ref: str = ""
+    accepted_receipt_count: int = 0
+    recovery_state: str = ""
     updated_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -116,12 +120,18 @@ class FlowDetailDTO:
     status: dict[str, Any] = field(default_factory=dict)
     task_contract: dict[str, Any] = field(default_factory=dict)
     task_contract_summary: dict[str, Any] = field(default_factory=dict)
+    latest_receipt_summary: dict[str, Any] = field(default_factory=dict)
+    latest_artifact_ref: str = ""
+    accepted_receipt_count: int = 0
+    recovery_cursor: dict[str, Any] = field(default_factory=dict)
+    recovery_state: str = ""
     summary: FlowSummaryDTO | dict[str, Any] = field(default_factory=FlowSummaryDTO)
     step_history: list[dict[str, Any]] = field(default_factory=list)
     timeline: list[dict[str, Any]] = field(default_factory=list)
     turns: list[dict[str, Any]] = field(default_factory=list)
     actions: list[dict[str, Any]] = field(default_factory=list)
     artifacts: list[dict[str, Any]] = field(default_factory=list)
+    receipts: dict[str, Any] = field(default_factory=dict)
     handoffs: list[dict[str, Any]] = field(default_factory=list)
     flow_definition: dict[str, Any] = field(default_factory=dict)
     runtime_snapshot: dict[str, Any] = field(default_factory=dict)

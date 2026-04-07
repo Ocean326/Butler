@@ -82,6 +82,10 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
                 "latest_token_usage": {"input_tokens": 12},
                 "context_governor": {"mode": "reset"},
             },
+            "latest_receipt_summary": {"receipt_id": "receipt-1", "receipt_kind": "turn_acceptance"},
+            "latest_artifact_ref": "artifact:1:imp",
+            "accepted_receipt_count": 3,
+            "recovery_state": "reseed_same_contract",
             "effective_status": "running",
             "effective_phase": "review",
         }
@@ -103,6 +107,10 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
         self.assertEqual(summary.effective_phase, "review")
         self.assertEqual(summary.approval_state, "operator_required")
         self.assertEqual(summary.active_role_id, "implementer")
+        self.assertEqual(summary.latest_receipt_summary["receipt_kind"], "turn_acceptance")
+        self.assertEqual(summary.latest_artifact_ref, "artifact:1:imp")
+        self.assertEqual(summary.accepted_receipt_count, 3)
+        self.assertEqual(summary.recovery_state, "reseed_same_contract")
         self.assertEqual(summary.latest_handoff_summary["handoff_id"], "handoff-1")
 
     def test_build_role_runtime_wraps_role_and_handoff_payload(self) -> None:
@@ -192,6 +200,10 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
                         "last_operator_action": {"action_type": "pause"},
                         "role_pack_id": "coding_flow",
                     },
+                    "latest_receipt_summary": {"receipt_id": "receipt-2", "receipt_kind": "artifact_acceptance"},
+                    "latest_artifact_ref": "artifact:2:review",
+                    "accepted_receipt_count": 4,
+                    "recovery_state": "resume_existing_session",
                 }
 
             surface = build_workspace_surface(
@@ -209,6 +221,10 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
             row = surface.to_dict()["flows"]["items"][0]
             self.assertEqual(row["approval_state"], "operator_required")
             self.assertEqual(row["execution_mode"], "medium")
+            self.assertEqual(row["latest_receipt_summary"]["receipt_kind"], "artifact_acceptance")
+            self.assertEqual(row["latest_artifact_ref"], "artifact:2:review")
+            self.assertEqual(row["accepted_receipt_count"], 4)
+            self.assertEqual(row["recovery_state"], "resume_existing_session")
             self.assertEqual(row["latest_handoff_summary"]["handoff_id"], "handoff-1")
 
     def test_single_flow_payload_builds_surface_views(self) -> None:

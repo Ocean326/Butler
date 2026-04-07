@@ -101,7 +101,9 @@ from .role_runtime import (
 from .state import (
     FileRuntimeStateStore,
     FileTraceStore,
+    append_governance_receipts,
     append_jsonl,
+    append_task_receipt,
     default_control_profile,
     ensure_trace,
     ensure_flow_sidecars,
@@ -115,6 +117,8 @@ from .state import (
     strategy_trace_path,
     mutations_path,
     prompt_packets_path,
+    sync_flow_recovery_truth,
+    sync_task_contract_truth,
     flow_state_path,
     flow_turns_path,
     now_text,
@@ -2097,8 +2101,16 @@ class FlowRuntime:
 
     def _write_flow_state(self, flow_dir_path, flow_state: dict[str, Any]) -> None:
         self._merge_external_operator_state(flow_dir_path, flow_state)
+        previous_contract, task_contract = sync_task_contract_truth(flow_dir_path, flow_state)
+        append_governance_receipts(
+            flow_dir_path,
+            previous_contract=previous_contract,
+            task_contract=task_contract,
+            flow_state=flow_state,
+        )
         write_json_atomic(flow_state_path(flow_dir_path), flow_state)
         self._sync_role_runtime_sidecars(flow_dir_path, flow_state)
+        sync_flow_recovery_truth(flow_dir_path, flow_state=flow_state, task_contract=task_contract)
 
     def _consume_operator_action(
         self,
@@ -2792,6 +2804,24 @@ class FlowRuntime:
         _append_unique_ref(flow_state, "trace_refs", trace_id)
         _append_unique_ref(flow_state, "receipt_refs", action_id)
         self._append_action_record(flow_dir_path, receipt)
+        append_task_receipt(
+            flow_dir_path,
+            {
+                "receipt_id": action_id,
+                "receipt_kind": "operator_action",
+                "flow_id": str(flow_state.get("workflow_id") or "").strip(),
+                "task_contract_id": str(flow_state.get("task_contract_id") or "").strip(),
+                "phase": str(flow_state.get("current_phase") or "").strip(),
+                "attempt_no": safe_int(flow_state.get("attempt_count"), 0),
+                "active_role_id": str(flow_state.get("active_role_id") or "").strip(),
+                "action_type": action,
+                "source_ref": action_id,
+                "summary": result_summary,
+                "recovery_state": str(flow_state.get("status") or "").strip(),
+                "created_at": str(receipt.get("created_at") or now_text()).strip(),
+                "payload": dict(receipt),
+            },
+        )
         self._emit_ui_event(
             kind="operator_action_applied",
             flow_dir_path=flow_dir_path,
@@ -3552,9 +3582,18 @@ class FlowRuntime:
                     artifact_ref = f"artifact:{attempt_no}:{phase}"
                     artifact_payload = {
                         "artifact_ref": artifact_ref,
+                        "task_contract_id": str(flow_state.get("task_contract_id") or "").strip(),
                         "producer_role_id": active_role_id,
                         "consumer_role_ids": [next_role_id] if str(next_role_id or "").strip() else [],
                         "turn_id": turn_id,
+                        "produced_by_receipt_id": str(turn_record.get("receipt_id") or "").strip(),
+                        "accepted_in_receipt_id": (
+                            str(turn_record.get("receipt_id") or "").strip()
+                            if decision_name in {"ADVANCE", "COMPLETE"}
+                            else ""
+                        ),
+                        "status": "accepted" if decision_name in {"ADVANCE", "COMPLETE"} else "recorded",
+                        "created_at": now_text(),
                         **artifact,
                     }
                     self._register_artifact(flow_dir_path, artifact_payload)
@@ -3573,6 +3612,48 @@ class FlowRuntime:
                         message=artifact_ref,
                         payload=artifact_payload,
                     )
+                if decision_name in {"ADVANCE", "COMPLETE"}:
+                    append_task_receipt(
+                        flow_dir_path,
+                        {
+                            "receipt_id": str(turn_record.get("receipt_id") or "").strip(),
+                            "receipt_kind": "turn_acceptance",
+                            "flow_id": flow_id,
+                            "task_contract_id": str(flow_state.get("task_contract_id") or "").strip(),
+                            "phase": phase,
+                            "attempt_no": attempt_no,
+                            "active_role_id": active_role_id,
+                            "decision": decision_name,
+                            "source_ref": str(turn_record.get("turn_id") or "").strip(),
+                            "summary": str(flow_state.get("last_completion_summary") or decision.get("reason") or "").strip(),
+                            "recovery_state": str(flow_state.get("status") or "").strip(),
+                            "created_at": now_text(),
+                            "payload": {
+                                "followup_kind": followup_kind,
+                                "issue_kind": issue_kind,
+                                "latest_judge_decision": dict(decision or {}),
+                            },
+                        },
+                    )
+                    if artifact_ref:
+                        append_task_receipt(
+                            flow_dir_path,
+                            {
+                                "receipt_id": f"{str(turn_record.get('receipt_id') or '').strip()}:artifact",
+                                "receipt_kind": "artifact_acceptance",
+                                "flow_id": flow_id,
+                                "task_contract_id": str(flow_state.get("task_contract_id") or "").strip(),
+                                "phase": phase,
+                                "attempt_no": attempt_no,
+                                "active_role_id": active_role_id,
+                                "artifact_ref": artifact_ref,
+                                "decision": decision_name,
+                                "source_ref": str(turn_record.get("receipt_id") or turn_record.get("turn_id") or "").strip(),
+                                "summary": f"artifact accepted: {artifact_ref}",
+                                "recovery_state": str(flow_state.get("status") or "").strip(),
+                                "created_at": now_text(),
+                            },
+                        )
                 if self._role_runtime_active(flow_state) and role_runtime_enabled(
                     cfg,
                     execution_mode=str(flow_state.get("execution_mode") or "").strip(),

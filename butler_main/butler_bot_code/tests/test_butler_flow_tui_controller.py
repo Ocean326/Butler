@@ -23,6 +23,8 @@ from butler_main.butler_flow.state import (  # noqa: E402
     flow_artifacts_path,
     flow_dir,
     flow_events_path,
+    recovery_cursor_path,
+    receipts_path,
     flow_state_path,
     flow_turns_path,
     handoffs_path,
@@ -441,6 +443,8 @@ class ButlerFlowTuiControllerTests(unittest.TestCase):
             )
             state = json.loads(flow_state_path(path).read_text(encoding="utf-8"))
             state["current_phase"] = "review"
+            state["active_role_id"] = "planner"
+            state["codex_session_id"] = "thread-summary"
             state["phase_history"] = [
                 {
                     "at": "2026-03-31 10:00:00",
@@ -456,13 +460,47 @@ class ButlerFlowTuiControllerTests(unittest.TestCase):
                 },
             ]
             write_json_atomic(flow_state_path(path), state)
+            _append_jsonl(
+                receipts_path(path),
+                [
+                    {
+                        "receipt_id": "receipt-2",
+                        "receipt_kind": "turn_acceptance",
+                        "flow_id": "flow_summary",
+                        "task_contract_id": "task_contract_flow_summary",
+                        "status": "accepted",
+                        "phase": "imp",
+                        "attempt_no": 2,
+                        "active_role_id": "planner",
+                        "summary": "imp done",
+                        "created_at": "2026-03-31 10:05:00",
+                    }
+                ],
+            )
+            write_json_atomic(
+                recovery_cursor_path(path),
+                {
+                    "flow_id": "flow_summary",
+                    "task_contract_id": "task_contract_flow_summary",
+                    "latest_accepted_receipt_id": "receipt-2",
+                    "latest_artifact_ref": "",
+                    "current_phase": "review",
+                    "active_role_id": "planner",
+                    "codex_session_id": "thread-summary",
+                    "recovery_state": "resume_existing_session",
+                    "updated_at": "2026-03-31 10:05:01",
+                },
+            )
 
             payload = controller.single_flow_payload(config=config, flow_id="flow_summary")
 
             self.assertEqual(payload["summary"]["effective_status"], "running")
             self.assertEqual(payload["summary"]["effective_phase"], "review")
             self.assertEqual(payload["summary"]["task_contract_id"], "task_contract_flow_summary")
+            self.assertEqual(payload["summary"]["latest_receipt_summary"]["receipt_kind"], "turn_acceptance")
+            self.assertEqual(payload["summary"]["recovery_state"], "resume_existing_session")
             self.assertEqual(dict(payload.get("task_contract_summary") or {}).get("goal"), "ship v1.1")
+            self.assertEqual(payload["recovery_cursor"]["latest_accepted_receipt_id"], "receipt-2")
             self.assertEqual(len(payload["step_history"]), 2)
             self.assertEqual(payload["step_history"][0]["phase"], "plan")
             self.assertEqual(payload["step_history"][1]["decision"], "ADVANCE")

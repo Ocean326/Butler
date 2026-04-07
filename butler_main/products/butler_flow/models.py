@@ -328,6 +328,39 @@ class FlowActionReceiptV1(TypedDict, total=False):
     created_at: str
 
 
+class TaskReceiptV1(TypedDict, total=False):
+    receipt_id: str
+    receipt_kind: str
+    flow_id: str
+    task_contract_id: str
+    status: str
+    phase: str
+    attempt_no: int
+    active_role_id: str
+    artifact_ref: str
+    decision: str
+    action_type: str
+    source_ref: str
+    summary: str
+    authority_snapshot: dict[str, Any]
+    policy_snapshot: dict[str, Any]
+    recovery_state: str
+    payload: dict[str, Any]
+    created_at: str
+
+
+class RecoveryCursorV1(TypedDict, total=False):
+    flow_id: str
+    task_contract_id: str
+    latest_accepted_receipt_id: str
+    latest_artifact_ref: str
+    current_phase: str
+    active_role_id: str
+    codex_session_id: str
+    recovery_state: str
+    updated_at: str
+
+
 class FlowExecReceiptV1(TypedDict, total=False):
     receipt_id: str
     kind: str
@@ -357,6 +390,7 @@ class FlowExecReceiptV1(TypedDict, total=False):
     last_cursor_receipt: dict[str, Any]
     trace_refs: list[str]
     receipt_refs: list[str]
+    recovery_state: str
     created_at: str
 
 

@@ -52,6 +52,13 @@ from .constants import (
     SESSION_STRATEGY_SHARED,
 )
 from .flow_definition import default_phase_plan, first_phase_id
+from .receipt_spine import (
+    build_recovery_cursor,
+    latest_artifact_ref,
+    latest_task_receipt,
+    normalize_task_receipt,
+    summarize_task_receipt,
+)
 from .task_contract import build_task_contract, build_task_contract_summary
 from .version import BUTLER_FLOW_VERSION
 
@@ -229,6 +236,23 @@ def read_json(path: Path) -> dict[str, Any]:
     except Exception:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        text = str(line or "").strip()
+        if not text:
+            continue
+        try:
+            decoded = json.loads(text)
+        except Exception:
+            continue
+        if isinstance(decoded, dict):
+            rows.append(decoded)
+    return rows
 
 
 def flow_asset_root(workspace: str | Path) -> Path:
@@ -750,6 +774,14 @@ def task_contract_path(flow_dir: Path) -> Path:
     return flow_dir / "task_contract.json"
 
 
+def receipts_path(flow_dir: Path) -> Path:
+    return flow_dir / "receipts.jsonl"
+
+
+def recovery_cursor_path(flow_dir: Path) -> Path:
+    return flow_dir / "recovery_cursor.json"
+
+
 def role_sessions_path(flow_dir: Path) -> Path:
     return flow_dir / "role_sessions.json"
 
@@ -802,6 +834,286 @@ def write_task_contract(flow_dir: Path, payload: dict[str, Any]) -> dict[str, An
     )
     write_json_atomic(task_contract_path(flow_dir), normalized)
     return normalized
+
+
+def read_task_receipts(flow_dir: Path) -> list[dict[str, Any]]:
+    return [normalize_task_receipt(row) for row in read_jsonl(receipts_path(flow_dir))]
+
+
+def append_task_receipt(flow_dir: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = normalize_task_receipt(payload)
+    existing = {
+        str(row.get("receipt_id") or "").strip()
+        for row in read_task_receipts(flow_dir)
+        if str(row.get("receipt_id") or "").strip()
+    }
+    receipt_id = str(normalized.get("receipt_id") or "").strip()
+    if receipt_id and receipt_id in existing:
+        return normalized
+    append_jsonl(receipts_path(flow_dir), normalized)
+    return normalized
+
+
+def _artifact_items(flow_dir: Path) -> list[dict[str, Any]]:
+    payload = read_json(flow_artifacts_path(flow_dir))
+    if not isinstance(payload, dict):
+        return []
+    return [dict(item or {}) for item in list(payload.get("items") or []) if isinstance(item, dict)]
+
+
+def read_recovery_cursor(flow_dir: Path) -> dict[str, Any]:
+    payload = read_json(recovery_cursor_path(flow_dir))
+    flow_state = read_flow_state(flow_dir)
+    task_contract = read_task_contract(flow_dir)
+    receipts = read_task_receipts(flow_dir)
+    artifacts = _artifact_items(flow_dir)
+    return build_recovery_cursor(
+        flow_state=flow_state,
+        task_contract=task_contract,
+        latest_receipt=latest_task_receipt(receipts),
+        artifacts=artifacts,
+        current=payload,
+        recovery_state=str(payload.get("recovery_state") or "").strip(),
+    )
+
+
+def write_recovery_cursor(
+    flow_dir: Path,
+    payload: dict[str, Any],
+    *,
+    flow_state: dict[str, Any] | None = None,
+    task_contract: dict[str, Any] | None = None,
+    latest_receipt: dict[str, Any] | None = None,
+    artifacts: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    normalized = build_recovery_cursor(
+        flow_state=flow_state,
+        task_contract=task_contract,
+        latest_receipt=latest_receipt,
+        artifacts=artifacts,
+        current=dict(payload or {}),
+        recovery_state=str(dict(payload or {}).get("recovery_state") or "").strip(),
+    )
+    write_json_atomic(recovery_cursor_path(flow_dir), normalized)
+    return normalized
+
+
+def sync_task_contract_truth(flow_dir: Path, flow_state: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    existing_definition = read_json(flow_definition_path(flow_dir))
+    previous_contract = read_json(task_contract_path(flow_dir))
+    task_contract = build_task_contract(
+        flow_state=dict(flow_state or {}),
+        flow_definition=existing_definition,
+        current=previous_contract,
+    )
+    write_task_contract(flow_dir, task_contract)
+    if existing_definition:
+        updated_definition = dict(existing_definition)
+        updated_definition["task_contract_id"] = str(task_contract.get("task_contract_id") or "").strip()
+        updated_definition["task_contract_summary"] = build_task_contract_summary(task_contract)
+        updated_definition["truth_owner"] = "task_contract.json"
+        updated_definition["updated_at"] = now_text()
+        write_json_atomic(flow_definition_path(flow_dir), updated_definition)
+    return previous_contract, task_contract
+
+
+def append_governance_receipts(
+    flow_dir: Path,
+    *,
+    previous_contract: dict[str, Any] | None,
+    task_contract: dict[str, Any] | None,
+    flow_state: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    before = dict(previous_contract or {})
+    after = dict(task_contract or {})
+    state = dict(flow_state or {})
+    if not before or not after:
+        return []
+    appended: list[dict[str, Any]] = []
+    owner_before = dict(before.get("owner") or {})
+    owner_after = dict(after.get("owner") or {})
+    authority_before = dict(before.get("authority") or {})
+    authority_after = dict(after.get("authority") or {})
+    if owner_before != owner_after or authority_before != authority_after:
+        appended.append(
+            append_task_receipt(
+                flow_dir,
+                {
+                    "receipt_id": f"authority_transition_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid4().hex[:8]}",
+                    "receipt_kind": "authority_transition",
+                    "flow_id": str(state.get("workflow_id") or "").strip(),
+                    "task_contract_id": str(after.get("task_contract_id") or state.get("task_contract_id") or "").strip(),
+                    "phase": str(state.get("current_phase") or "").strip(),
+                    "attempt_no": safe_int(state.get("attempt_count"), 0),
+                    "active_role_id": str(state.get("active_role_id") or "").strip(),
+                    "summary": "authority snapshot updated",
+                    "authority_snapshot": {
+                        "owner": owner_after,
+                        "authority": authority_after,
+                    },
+                    "recovery_state": str(state.get("status") or "").strip(),
+                    "created_at": now_text(),
+                },
+            )
+        )
+    policy_before = {
+        "execution_context": str(before.get("execution_context") or "").strip(),
+        "policy": dict(before.get("policy") or {}),
+        "repo_scope": dict(before.get("repo_scope") or {}),
+    }
+    policy_after = {
+        "execution_context": str(after.get("execution_context") or "").strip(),
+        "policy": dict(after.get("policy") or {}),
+        "repo_scope": dict(after.get("repo_scope") or {}),
+    }
+    if policy_before != policy_after:
+        appended.append(
+            append_task_receipt(
+                flow_dir,
+                {
+                    "receipt_id": f"policy_update_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid4().hex[:8]}",
+                    "receipt_kind": "policy_update",
+                    "flow_id": str(state.get("workflow_id") or "").strip(),
+                    "task_contract_id": str(after.get("task_contract_id") or state.get("task_contract_id") or "").strip(),
+                    "phase": str(state.get("current_phase") or "").strip(),
+                    "attempt_no": safe_int(state.get("attempt_count"), 0),
+                    "active_role_id": str(state.get("active_role_id") or "").strip(),
+                    "summary": "policy snapshot updated",
+                    "policy_snapshot": policy_after,
+                    "recovery_state": str(state.get("status") or "").strip(),
+                    "created_at": now_text(),
+                },
+            )
+        )
+    return appended
+
+
+def _bootstrap_task_receipts(
+    flow_dir: Path,
+    *,
+    flow_state: dict[str, Any],
+    task_contract: dict[str, Any],
+) -> list[dict[str, Any]]:
+    path = receipts_path(flow_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.write_text("", encoding="utf-8")
+    turns = read_jsonl(flow_turns_path(flow_dir))
+    accepted_turns = [
+        dict(row or {})
+        for row in turns
+        if str(dict(row or {}).get("decision") or "").strip().upper() in {"ADVANCE", "COMPLETE"}
+    ]
+    if accepted_turns:
+        latest_turn = accepted_turns[-1]
+        turn_receipt = append_task_receipt(
+            flow_dir,
+            {
+                "receipt_id": str(latest_turn.get("receipt_id") or latest_turn.get("turn_id") or "").strip(),
+                "receipt_kind": "turn_acceptance",
+                "flow_id": str(latest_turn.get("flow_id") or flow_state.get("workflow_id") or "").strip(),
+                "task_contract_id": str(task_contract.get("task_contract_id") or flow_state.get("task_contract_id") or "").strip(),
+                "phase": str(latest_turn.get("phase") or flow_state.get("current_phase") or "").strip(),
+                "attempt_no": safe_int(latest_turn.get("attempt_no"), 0),
+                "active_role_id": str(latest_turn.get("role_id") or flow_state.get("active_role_id") or "").strip(),
+                "decision": str(latest_turn.get("decision") or "").strip(),
+                "summary": str(latest_turn.get("reason") or "").strip(),
+                "source_ref": str(latest_turn.get("turn_id") or "").strip(),
+                "created_at": str(latest_turn.get("completed_at") or latest_turn.get("started_at") or now_text()).strip(),
+            },
+        )
+        artifact_refs = [
+            str(item or "").strip()
+            for item in list(latest_turn.get("artifact_refs") or [])
+            if str(item or "").strip()
+        ]
+        if artifact_refs:
+            append_task_receipt(
+                flow_dir,
+                {
+                    "receipt_id": f"{turn_receipt.get('receipt_id')}:artifact",
+                    "receipt_kind": "artifact_acceptance",
+                    "flow_id": str(latest_turn.get("flow_id") or flow_state.get("workflow_id") or "").strip(),
+                    "task_contract_id": str(task_contract.get("task_contract_id") or flow_state.get("task_contract_id") or "").strip(),
+                    "phase": str(latest_turn.get("phase") or flow_state.get("current_phase") or "").strip(),
+                    "attempt_no": safe_int(latest_turn.get("attempt_no"), 0),
+                    "active_role_id": str(latest_turn.get("role_id") or flow_state.get("active_role_id") or "").strip(),
+                    "artifact_ref": artifact_refs[-1],
+                    "decision": str(latest_turn.get("decision") or "").strip(),
+                    "source_ref": str(latest_turn.get("receipt_id") or latest_turn.get("turn_id") or "").strip(),
+                    "summary": f"artifact accepted: {artifact_refs[-1]}",
+                    "created_at": str(latest_turn.get("completed_at") or latest_turn.get("started_at") or now_text()).strip(),
+                },
+            )
+    actions = read_jsonl(flow_actions_path(flow_dir))
+    latest_action = dict(actions[-1] or {}) if actions else dict(flow_state.get("last_operator_action") or {})
+    if latest_action and str(latest_action.get("action_id") or latest_action.get("receipt_id") or "").strip():
+        append_task_receipt(
+            flow_dir,
+            {
+                "receipt_id": str(latest_action.get("receipt_id") or latest_action.get("action_id") or "").strip(),
+                "receipt_kind": "operator_action",
+                "flow_id": str(latest_action.get("flow_id") or flow_state.get("workflow_id") or "").strip(),
+                "task_contract_id": str(task_contract.get("task_contract_id") or flow_state.get("task_contract_id") or "").strip(),
+                "phase": str(dict(latest_action.get("after_state") or {}).get("current_phase") or flow_state.get("current_phase") or "").strip(),
+                "attempt_no": safe_int(flow_state.get("attempt_count"), 0),
+                "active_role_id": str(flow_state.get("active_role_id") or "").strip(),
+                "action_type": str(latest_action.get("action_type") or "").strip(),
+                "source_ref": str(latest_action.get("action_id") or latest_action.get("receipt_id") or "").strip(),
+                "summary": str(latest_action.get("result_summary") or latest_action.get("action_type") or "").strip(),
+                "created_at": str(latest_action.get("created_at") or now_text()).strip(),
+            },
+        )
+    return read_task_receipts(flow_dir)
+
+
+def sync_flow_recovery_truth(
+    flow_dir: Path,
+    *,
+    flow_state: dict[str, Any] | None = None,
+    task_contract: dict[str, Any] | None = None,
+    recovery_state: str = "",
+) -> dict[str, Any]:
+    state = dict(flow_state or read_flow_state(flow_dir))
+    contract = dict(task_contract or read_task_contract(flow_dir))
+    if contract and not task_contract_path(flow_dir).exists():
+        write_task_contract(flow_dir, contract)
+    path = receipts_path(flow_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.write_text("", encoding="utf-8")
+    receipts = read_task_receipts(flow_dir)
+    if not receipts and (state or contract):
+        receipts = _bootstrap_task_receipts(flow_dir, flow_state=state, task_contract=contract)
+    artifacts = _artifact_items(flow_dir)
+    latest_receipt = latest_task_receipt(receipts)
+    cursor = write_recovery_cursor(
+        flow_dir,
+        {
+            "flow_id": str(state.get("workflow_id") or "").strip(),
+            "task_contract_id": str(contract.get("task_contract_id") or state.get("task_contract_id") or "").strip(),
+            "latest_accepted_receipt_id": str(latest_receipt.get("receipt_id") or "").strip(),
+            "latest_artifact_ref": latest_artifact_ref(artifacts),
+            "current_phase": str(state.get("current_phase") or "").strip(),
+            "active_role_id": str(state.get("active_role_id") or "").strip(),
+            "codex_session_id": str(state.get("codex_session_id") or "").strip(),
+            "recovery_state": recovery_state,
+            "updated_at": now_text(),
+        },
+        flow_state=state,
+        task_contract=contract,
+        latest_receipt=latest_receipt,
+        artifacts=artifacts,
+    )
+    return {
+        "receipts": receipts,
+        "latest_receipt": latest_receipt,
+        "latest_receipt_summary": summarize_task_receipt(latest_receipt),
+        "accepted_receipt_count": len(receipts),
+        "latest_artifact_ref": latest_artifact_ref(artifacts),
+        "recovery_cursor": cursor,
+        "recovery_state": str(cursor.get("recovery_state") or "").strip(),
+    }
 
 
 def read_flow_state(flow_dir: Path) -> dict[str, Any]:
@@ -1114,6 +1426,8 @@ def ensure_flow_sidecars(flow_dir: Path, flow_state: dict[str, Any]) -> None:
     events = flow_events_path(flow_dir)
     definition = flow_definition_path(flow_dir)
     contract = task_contract_path(flow_dir)
+    canonical_receipts = receipts_path(flow_dir)
+    recovery_cursor = recovery_cursor_path(flow_dir)
     role_sessions = role_sessions_path(flow_dir)
     handoffs = handoffs_path(flow_dir)
     runtime_plan = runtime_plan_path(flow_dir)
@@ -1140,6 +1454,8 @@ def ensure_flow_sidecars(flow_dir: Path, flow_state: dict[str, Any]) -> None:
         prompt_packets.write_text("", encoding="utf-8")
     if not design_turns.exists():
         design_turns.write_text("", encoding="utf-8")
+    if not canonical_receipts.exists():
+        canonical_receipts.write_text("", encoding="utf-8")
     if not artifacts.exists():
         write_json_atomic(
             artifacts,
@@ -1258,6 +1574,8 @@ def ensure_flow_sidecars(flow_dir: Path, flow_state: dict[str, Any]) -> None:
                 "updated_at": now_text(),
             },
         )
+    if not recovery_cursor.exists():
+        sync_flow_recovery_truth(flow_dir, flow_state=flow_state, task_contract=read_task_contract(flow_dir))
 
 
 def ensure_trace(trace_store: FileTraceStore, *, run_id: str, metadata: dict[str, Any]) -> None:
@@ -1315,6 +1633,8 @@ __all__ = [
     "FileRuntimeStateStore",
     "FileTraceStore",
     "append_jsonl",
+    "append_governance_receipts",
+    "append_task_receipt",
     "append_manage_turn",
     "build_flow_root",
     "build_supervisor_knowledge_payload",
@@ -1335,6 +1655,8 @@ __all__ = [
     "flow_artifacts_path",
     "flow_events_path",
     "flow_definition_path",
+    "receipts_path",
+    "recovery_cursor_path",
     "task_contract_path",
     "flow_asset_root",
     "handoffs_path",
@@ -1367,8 +1689,11 @@ __all__ = [
     "normalize_control_profile_payload",
     "prepare_flow_codex_home",
     "read_flow_state",
+    "read_recovery_cursor",
     "read_task_contract",
+    "read_task_receipts",
     "read_json",
+    "read_jsonl",
     "resolve_flow_workspace_root",
     "safe_int",
     "system_codex_home",
@@ -1378,6 +1703,9 @@ __all__ = [
     "write_manage_pending_action",
     "write_manage_session",
     "write_task_contract",
+    "write_recovery_cursor",
     "write_json_atomic",
     "migrate_legacy_flow_to_task_contract",
+    "sync_flow_recovery_truth",
+    "sync_task_contract_truth",
 ]
