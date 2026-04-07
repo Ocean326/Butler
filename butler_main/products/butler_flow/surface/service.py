@@ -40,14 +40,65 @@ from .queries import (
 )
 
 
+def _surface_projection(surface_id: str) -> dict[str, Any]:
+    mapping = {
+        "workspace": {
+            "surface_id": "workspace",
+            "projection_kind": "mission_index",
+            "title": "Mission Index",
+        },
+        "manage_center": {
+            "surface_id": "manage_center",
+            "projection_kind": "contract_studio",
+            "title": "Contract Studio",
+        },
+        "single_flow": {
+            "surface_id": "single_flow",
+            "projection_kind": "run_console",
+            "title": "Run Console",
+        },
+    }
+    payload = dict(mapping.get(str(surface_id or "").strip(), {}))
+    payload["truth_basis"] = ["task_contract.json", "receipts.jsonl", "recovery_cursor.json"]
+    return payload
+
+
+def _contract_studio_payload(selected_asset: dict[str, Any]) -> dict[str, Any]:
+    asset = dict(selected_asset or {})
+    definition = dict(asset.get("definition") or {})
+    task_contract_summary = dict(asset.get("task_contract_summary") or definition.get("task_contract_summary") or {})
+    acceptance_summary = dict(task_contract_summary.get("acceptance_summary") or {})
+    return {
+        "asset_key": str(asset.get("asset_key") or "").strip(),
+        "asset_kind": str(asset.get("asset_kind") or "").strip(),
+        "goal": str(task_contract_summary.get("goal") or asset.get("goal") or "").strip(),
+        "guard_condition": str(acceptance_summary.get("guard_condition") or asset.get("guard_condition") or "").strip(),
+        "workflow_kind": str(asset.get("workflow_kind") or "").strip(),
+        "editable_contract_fields": ["goal", "acceptance", "authority", "policy"],
+        "projection_kind": "contract_studio",
+    }
+
+
 def build_manage_center_surface(
     *,
     preflight_payload: dict[str, Any],
     assets_payload: dict[str, Any],
 ) -> ManageCenterDTO:
+    rows = list(dict(assets_payload or {}).get("items") or [])
+    selected_asset = dict(rows[0] or {}) if rows else {}
+    role_guidance = dict(selected_asset.get("role_guidance") or {})
+    review_checklist = list(selected_asset.get("review_checklist") or [])
+    bundle_manifest = dict(selected_asset.get("bundle_manifest") or {})
     return ManageCenterDTO(
+        surface_meta=_surface_projection("manage_center"),
         preflight=dict(preflight_payload or {}),
         assets=dict(assets_payload or {}),
+        selected_asset=selected_asset,
+        contract_studio=_contract_studio_payload(selected_asset),
+        role_guidance=role_guidance,
+        review_checklist=review_checklist,
+        bundle_manifest=bundle_manifest,
+        manager_notes=str(role_guidance.get("manager_notes") or "").strip(),
     )
 
 
@@ -77,10 +128,17 @@ def build_workspace_surface(
             entry.update(
                 {
                     "task_contract_summary": summary.get("task_contract_summary"),
+                    "owner_summary": summary.get("owner_summary"),
+                    "authority_summary": summary.get("authority_summary"),
+                    "policy_summary": summary.get("policy_summary"),
+                    "responsibility_summary": summary.get("responsibility_summary"),
                     "latest_receipt_summary": summary.get("latest_receipt_summary"),
+                    "latest_governance_receipt_summary": summary.get("latest_governance_receipt_summary"),
                     "latest_artifact_ref": summary.get("latest_artifact_ref"),
                     "accepted_receipt_count": summary.get("accepted_receipt_count"),
                     "recovery_state": summary.get("recovery_state"),
+                    "mission_console": dict(status_payload.get("mission_console") or {}),
+                    "governance_summary": dict(status_payload.get("governance_summary") or {}),
                     "approval_state": summary.get("approval_state"),
                     "execution_mode": summary.get("execution_mode"),
                     "session_strategy": summary.get("session_strategy"),
@@ -97,7 +155,7 @@ def build_workspace_surface(
             continue
         enriched.append(entry)
     flows["items"] = enriched
-    return WorkspaceSurfaceDTO(preflight=dict(preflight_payload or {}), flows=flows)
+    return WorkspaceSurfaceDTO(surface_meta=_surface_projection("workspace"), preflight=dict(preflight_payload or {}), flows=flows)
 
 
 def handoffs_from_status_payload(status_payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -438,9 +496,11 @@ def manage_center_payload(*, config: str | None, limit: int = 20) -> dict[str, A
     bundle_manifest = dict(selected_asset.get("bundle_manifest") or {})
     manager_notes = str(role_guidance.get("manager_notes") or "").strip()
     dto = ManageCenterDTO(
+        surface_meta=_surface_projection("manage_center"),
         preflight=preflight,
         assets=assets,
         selected_asset=selected_asset,
+        contract_studio=_contract_studio_payload(selected_asset),
         role_guidance=role_guidance,
         review_checklist=review_checklist,
         bundle_manifest=bundle_manifest,
@@ -876,10 +936,14 @@ def _detail_payload_from_inspected(
 ) -> dict[str, Any]:
     return {
         "flow_id": flow_id,
+        "surface_meta": _surface_projection("single_flow"),
         "status": status,
         "task_contract": dict(status.get("task_contract") or {}),
         "task_contract_summary": dict(status.get("task_contract_summary") or {}),
+        "governance_summary": dict(status.get("governance_summary") or {}),
+        "mission_console": dict(status.get("mission_console") or {}),
         "latest_receipt_summary": dict(status.get("latest_receipt_summary") or {}),
+        "latest_governance_receipt_summary": dict(status.get("latest_governance_receipt_summary") or {}),
         "latest_artifact_ref": str(status.get("latest_artifact_ref") or "").strip(),
         "accepted_receipt_count": int(status.get("accepted_receipt_count") or 0),
         "recovery_cursor": dict(inspected.get("recovery_cursor") or status.get("recovery_cursor") or {}),
@@ -958,10 +1022,17 @@ def workspace_payload(*, config: str | None, limit: int = 10) -> dict[str, Any]:
             entry.update(
                 {
                     "task_contract_summary": dict(status.get("task_contract_summary") or {}),
+                    "owner_summary": summary.get("owner_summary"),
+                    "authority_summary": summary.get("authority_summary"),
+                    "policy_summary": summary.get("policy_summary"),
+                    "responsibility_summary": summary.get("responsibility_summary"),
                     "latest_receipt_summary": dict(status.get("latest_receipt_summary") or {}),
+                    "latest_governance_receipt_summary": dict(status.get("latest_governance_receipt_summary") or {}),
                     "latest_artifact_ref": str(status.get("latest_artifact_ref") or "").strip(),
                     "accepted_receipt_count": int(status.get("accepted_receipt_count") or 0),
                     "recovery_state": str(status.get("recovery_state") or "").strip(),
+                    "mission_console": dict(status.get("mission_console") or {}),
+                    "governance_summary": dict(status.get("governance_summary") or {}),
                     "approval_state": summary.get("approval_state"),
                     "execution_mode": summary.get("execution_mode"),
                     "session_strategy": summary.get("session_strategy"),
@@ -977,7 +1048,7 @@ def workspace_payload(*, config: str | None, limit: int = 10) -> dict[str, Any]:
             pass
         enriched.append(entry)
     flows["items"] = enriched
-    return {"preflight": snapshot.get("preflight"), "flows": flows}
+    return {"surface_meta": _surface_projection("workspace"), "preflight": snapshot.get("preflight"), "flows": flows}
 
 
 def _inspector_payload(
@@ -1020,10 +1091,14 @@ def single_flow_payload(*, config: str | None, flow_id: str) -> dict[str, Any]:
     step_history = _step_history(inspected=inspected)
     detail_dto = FlowDetailDTO(
         flow_id=flow_id,
+        surface_meta=_surface_projection("single_flow"),
         status=status,
         task_contract=dict(status.get("task_contract") or {}),
         task_contract_summary=dict(status.get("task_contract_summary") or {}),
+        governance_summary=dict(status.get("governance_summary") or {}),
+        mission_console=dict(status.get("mission_console") or {}),
         latest_receipt_summary=dict(status.get("latest_receipt_summary") or {}),
+        latest_governance_receipt_summary=dict(status.get("latest_governance_receipt_summary") or {}),
         latest_artifact_ref=str(status.get("latest_artifact_ref") or "").strip(),
         accepted_receipt_count=int(status.get("accepted_receipt_count") or 0),
         recovery_cursor=dict(inspected.get("recovery_cursor") or status.get("recovery_cursor") or {}),
@@ -1085,6 +1160,7 @@ def single_flow_payload(*, config: str | None, flow_id: str) -> dict[str, Any]:
         "flow_id": flow_id,
         "status": status,
         **detail_dto,
+        "surface_meta": _surface_projection("single_flow"),
         "navigator_summary": summary,
         "supervisor_view": supervisor_view,
         "workflow_view": workflow_view,

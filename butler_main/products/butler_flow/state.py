@@ -917,6 +917,69 @@ def sync_task_contract_truth(flow_dir: Path, flow_state: dict[str, Any]) -> tupl
     return previous_contract, task_contract
 
 
+def _changed_fields(before: dict[str, Any], after: dict[str, Any], *, prefix: str = "") -> list[str]:
+    paths: list[str] = []
+    keys = sorted(set(dict(before or {}).keys()) | set(dict(after or {}).keys()))
+    for key in keys:
+        path = f"{prefix}.{key}" if prefix else str(key)
+        left = dict(before or {}).get(key)
+        right = dict(after or {}).get(key)
+        if isinstance(left, dict) and isinstance(right, dict):
+            paths.extend(_changed_fields(left, right, prefix=path))
+            continue
+        if isinstance(left, dict) or isinstance(right, dict):
+            paths.append(path)
+            continue
+        if isinstance(left, list) or isinstance(right, list):
+            left_items = list(left or []) if isinstance(left, list) else []
+            right_items = list(right or []) if isinstance(right, list) else []
+            if left_items != right_items:
+                paths.append(path)
+            continue
+        if left != right:
+            paths.append(path)
+    return paths
+
+
+def _change_summary(prefix: str, changed_fields: list[str], *, fallback: str) -> str:
+    if not changed_fields:
+        return fallback
+    preview = ", ".join(changed_fields[:3])
+    if len(changed_fields) > 3:
+        preview = f"{preview} +{len(changed_fields) - 3} more"
+    return f"{prefix}: {preview}"
+
+
+def _authority_action_scope(*, owner: dict[str, Any], authority: dict[str, Any]) -> dict[str, Any]:
+    return {
+        role: {
+            "owner": str(owner.get(role) or "").strip(),
+            "authority": str(authority.get(role) or "").strip(),
+        }
+        for role in ("requester", "manager", "operator")
+        if str(owner.get(role) or "").strip() or str(authority.get(role) or "").strip()
+    }
+
+
+def _policy_action_scope(contract: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(contract or {})
+    repo_scope = dict(payload.get("repo_scope") or {})
+    policy = dict(payload.get("policy") or {})
+    control_profile = dict(policy.get("control_profile") or {})
+    return {
+        "execution_context": str(payload.get("execution_context") or "").strip(),
+        "scope_kind": str(repo_scope.get("scope_kind") or "").strip(),
+        "repo_binding_policy": str(
+            control_profile.get("repo_binding_policy") or repo_scope.get("repo_binding_policy") or ""
+        ).strip(),
+        "repo_contract_paths": [
+            str(item or "").strip()
+            for item in list(control_profile.get("repo_contract_paths") or repo_scope.get("repo_contract_paths") or [])
+            if str(item or "").strip()
+        ],
+    }
+
+
 def append_governance_receipts(
     flow_dir: Path,
     *,
@@ -935,6 +998,11 @@ def append_governance_receipts(
     authority_before = dict(before.get("authority") or {})
     authority_after = dict(after.get("authority") or {})
     if owner_before != owner_after or authority_before != authority_after:
+        changed_fields = _changed_fields(
+            {"owner": owner_before, "authority": authority_before},
+            {"owner": owner_after, "authority": authority_after},
+        )
+        action_scope = _authority_action_scope(owner=owner_after, authority=authority_after)
         appended.append(
             append_task_receipt(
                 flow_dir,
@@ -946,12 +1014,29 @@ def append_governance_receipts(
                     "phase": str(state.get("current_phase") or "").strip(),
                     "attempt_no": safe_int(state.get("attempt_count"), 0),
                     "active_role_id": str(state.get("active_role_id") or "").strip(),
-                    "summary": "authority snapshot updated",
+                    "source_ref": "task_contract.json",
+                    "summary": _change_summary(
+                        "authority updated",
+                        changed_fields,
+                        fallback="authority snapshot updated",
+                    ),
                     "authority_snapshot": {
-                        "owner": owner_after,
-                        "authority": authority_after,
+                        "before": {
+                            "owner": owner_before,
+                            "authority": authority_before,
+                        },
+                        "after": {
+                            "owner": owner_after,
+                            "authority": authority_after,
+                        },
+                        "changed_fields": changed_fields,
+                        "action_scope": action_scope,
                     },
                     "recovery_state": str(state.get("status") or "").strip(),
+                    "payload": {
+                        "changed_fields": changed_fields,
+                        "action_scope": action_scope,
+                    },
                     "created_at": now_text(),
                 },
             )
@@ -967,6 +1052,8 @@ def append_governance_receipts(
         "repo_scope": dict(after.get("repo_scope") or {}),
     }
     if policy_before != policy_after:
+        changed_fields = _changed_fields(policy_before, policy_after)
+        action_scope = _policy_action_scope(after)
         appended.append(
             append_task_receipt(
                 flow_dir,
@@ -978,9 +1065,23 @@ def append_governance_receipts(
                     "phase": str(state.get("current_phase") or "").strip(),
                     "attempt_no": safe_int(state.get("attempt_count"), 0),
                     "active_role_id": str(state.get("active_role_id") or "").strip(),
-                    "summary": "policy snapshot updated",
-                    "policy_snapshot": policy_after,
+                    "source_ref": "task_contract.json",
+                    "summary": _change_summary(
+                        "policy updated",
+                        changed_fields,
+                        fallback="policy snapshot updated",
+                    ),
+                    "policy_snapshot": {
+                        "before": policy_before,
+                        "after": policy_after,
+                        "changed_fields": changed_fields,
+                        "action_scope": action_scope,
+                    },
                     "recovery_state": str(state.get("status") or "").strip(),
+                    "payload": {
+                        "changed_fields": changed_fields,
+                        "action_scope": action_scope,
+                    },
                     "created_at": now_text(),
                 },
             )

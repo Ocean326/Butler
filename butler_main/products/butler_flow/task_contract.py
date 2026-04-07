@@ -12,6 +12,14 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _first_text(*values: Any) -> str:
+    for value in values:
+        token = _text(value)
+        if token:
+            return token
+    return ""
+
+
 def _text_list(value: Any) -> list[str]:
     if isinstance(value, (list, tuple, set)):
         return [str(item or "").strip() for item in value if str(item or "").strip()]
@@ -19,18 +27,130 @@ def _text_list(value: Any) -> list[str]:
     return [text] if text else []
 
 
-def _policy_payload(flow_state: dict[str, Any]) -> dict[str, Any]:
-    control_profile = dict(flow_state.get("control_profile") or {})
+def _first_text_list(*values: Any) -> list[str]:
+    for value in values:
+        items = _text_list(value)
+        if items:
+            return items
+    return []
+
+
+def _control_profile_payload(source: dict[str, Any] | None) -> dict[str, Any]:
+    payload = dict(source or {})
+    if isinstance(payload.get("control_profile"), dict):
+        payload = dict(payload.get("control_profile") or {})
     return {
-        "execution_context": _text(flow_state.get("execution_context")),
+        "task_archetype": _text(payload.get("task_archetype")),
+        "packet_size": _text(payload.get("packet_size")),
+        "evidence_level": _text(payload.get("evidence_level")),
+        "gate_cadence": _text(payload.get("gate_cadence")),
+        "repo_binding_policy": _text(payload.get("repo_binding_policy")),
+        "repo_contract_paths": _text_list(payload.get("repo_contract_paths") or []),
+    }
+
+
+def _policy_payload(
+    flow_state: dict[str, Any],
+    *,
+    flow_definition: dict[str, Any] | None = None,
+    current: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    current_policy = dict(dict(current or {}).get("policy") or {})
+    current_control_profile = _control_profile_payload(current_policy)
+    definition_control_profile = _control_profile_payload(flow_definition)
+    flow_control_profile = _control_profile_payload(flow_state)
+    return {
+        "execution_context": _first_text(
+            flow_state.get("execution_context"),
+            dict(flow_definition or {}).get("execution_context"),
+            current_policy.get("execution_context"),
+            dict(current or {}).get("execution_context"),
+        ),
         "control_profile": {
-            "task_archetype": _text(control_profile.get("task_archetype")),
-            "packet_size": _text(control_profile.get("packet_size")),
-            "evidence_level": _text(control_profile.get("evidence_level")),
-            "gate_cadence": _text(control_profile.get("gate_cadence")),
-            "repo_binding_policy": _text(control_profile.get("repo_binding_policy")),
-            "repo_contract_paths": _text_list(control_profile.get("repo_contract_paths") or []),
+            "task_archetype": _first_text(
+                flow_control_profile.get("task_archetype"),
+                definition_control_profile.get("task_archetype"),
+                current_control_profile.get("task_archetype"),
+            ),
+            "packet_size": _first_text(
+                flow_control_profile.get("packet_size"),
+                definition_control_profile.get("packet_size"),
+                current_control_profile.get("packet_size"),
+            ),
+            "evidence_level": _first_text(
+                flow_control_profile.get("evidence_level"),
+                definition_control_profile.get("evidence_level"),
+                current_control_profile.get("evidence_level"),
+            ),
+            "gate_cadence": _first_text(
+                flow_control_profile.get("gate_cadence"),
+                definition_control_profile.get("gate_cadence"),
+                current_control_profile.get("gate_cadence"),
+            ),
+            "repo_binding_policy": _first_text(
+                flow_control_profile.get("repo_binding_policy"),
+                definition_control_profile.get("repo_binding_policy"),
+                current_control_profile.get("repo_binding_policy"),
+            ),
+            "repo_contract_paths": _first_text_list(
+                flow_control_profile.get("repo_contract_paths") or [],
+                definition_control_profile.get("repo_contract_paths") or [],
+                current_control_profile.get("repo_contract_paths") or [],
+            ),
         },
+    }
+
+
+def _responsibility_summary(*, owner: dict[str, Any], authority: dict[str, Any]) -> dict[str, Any]:
+    return {
+        role: {
+            "owner": _text(owner.get(role)),
+            "authority": _text(authority.get(role)),
+        }
+        for role in ("requester", "manager", "operator")
+    }
+
+
+def build_governance_summary(
+    contract_summary: dict[str, Any] | None,
+    *,
+    latest_governance_receipt_summary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    summary = dict(contract_summary or {})
+    return {
+        "task_contract_id": _text(summary.get("task_contract_id")),
+        "owner_summary": dict(summary.get("owner_summary") or {}),
+        "authority_summary": dict(summary.get("authority_summary") or {}),
+        "policy_summary": dict(summary.get("policy_summary") or {}),
+        "responsibility_summary": dict(summary.get("responsibility_summary") or {}),
+        "latest_governance_receipt_summary": dict(latest_governance_receipt_summary or {}),
+        "truth_owner": _text(summary.get("truth_owner") or "task_contract.json"),
+        "ledger_owner": "receipts.jsonl",
+    }
+
+
+def build_mission_console_summary(
+    contract_summary: dict[str, Any] | None,
+    *,
+    latest_receipt_summary: dict[str, Any] | None = None,
+    latest_governance_receipt_summary: dict[str, Any] | None = None,
+    latest_artifact_ref: str = "",
+    recovery_state: str = "",
+) -> dict[str, Any]:
+    summary = dict(contract_summary or {})
+    return {
+        "task_contract_id": _text(summary.get("task_contract_id")),
+        "goal": _text(summary.get("goal")),
+        "acceptance_summary": dict(summary.get("acceptance_summary") or {}),
+        "owner_summary": dict(summary.get("owner_summary") or {}),
+        "authority_summary": dict(summary.get("authority_summary") or {}),
+        "policy_summary": dict(summary.get("policy_summary") or {}),
+        "responsibility_summary": dict(summary.get("responsibility_summary") or {}),
+        "latest_receipt_summary": dict(latest_receipt_summary or {}),
+        "latest_governance_receipt_summary": dict(latest_governance_receipt_summary or {}),
+        "latest_artifact_ref": _text(latest_artifact_ref),
+        "recovery_state": _text(recovery_state),
+        "truth_basis": ["task_contract.json", "receipts.jsonl", "recovery_cursor.json"],
     }
 
 
@@ -53,52 +173,66 @@ def build_task_contract(
     )
     if not task_contract_id:
         task_contract_id = f"task_contract_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    review_checklist = _text_list(
-        flow_state.get("review_checklist")
-        or flow_definition.get("review_checklist")
-        or current.get("acceptance", {}).get("review_checklist")
-        or []
+    review_checklist = _first_text_list(
+        flow_state.get("review_checklist"),
+        flow_definition.get("review_checklist"),
+        dict(current.get("acceptance") or {}).get("review_checklist"),
+        [],
     )
-    requested_by = _text(
-        current.get("owner", {}).get("requester")
-        or current.get("requester")
-        or flow_state.get("requested_by")
-        or flow_definition.get("requested_by")
-        or "operator"
+    requested_by = _first_text(
+        flow_state.get("requested_by"),
+        flow_definition.get("requested_by"),
+        dict(current.get("owner") or {}).get("requester"),
+        current.get("requester"),
+        "operator",
     )
-    manager_actor = _text(
-        current.get("owner", {}).get("manager")
-        or flow_state.get("manager_actor")
-        or flow_definition.get("manager_actor")
-        or ("manage_agent" if flow_state.get("manage_handoff") or flow_definition.get("manager_handoff") else "")
+    manager_actor = _first_text(
+        flow_state.get("manager_actor"),
+        flow_definition.get("manager_actor"),
+        dict(current.get("owner") or {}).get("manager"),
+        "manage_agent" if flow_state.get("manage_handoff") or flow_definition.get("manager_handoff") else "",
     )
-    operator_actor = _text(
-        current.get("owner", {}).get("operator")
-        or flow_state.get("operator_actor")
-        or flow_definition.get("operator_actor")
-        or "local_operator"
+    operator_actor = _first_text(
+        flow_state.get("operator_actor"),
+        flow_definition.get("operator_actor"),
+        dict(current.get("owner") or {}).get("operator"),
+        "local_operator",
     )
-    policy = dict(current.get("policy") or {}) or _policy_payload(flow_state)
+    policy = _policy_payload(flow_state, flow_definition=flow_definition, current=current)
     control_profile = dict(policy.get("control_profile") or {})
+    current_repo_scope = dict(current.get("repo_scope") or {})
     repo_scope = {
-        "scope_kind": _text(dict(current.get("repo_scope") or {}).get("scope_kind"))
-        or ("repo_bound_task" if _text(flow_state.get("execution_context")) == "repo_bound" else "isolated_task"),
-        "workspace_root": _text(dict(current.get("repo_scope") or {}).get("workspace_root") or flow_state.get("workspace_root")),
-        "repo_binding_policy": _text(
-            dict(current.get("repo_scope") or {}).get("repo_binding_policy")
-            or control_profile.get("repo_binding_policy")
+        "scope_kind": _first_text(
+            dict(flow_state.get("repo_scope") or {}).get("scope_kind"),
+            dict(flow_definition.get("repo_scope") or {}).get("scope_kind"),
+            current_repo_scope.get("scope_kind"),
+            "repo_bound_task" if _first_text(flow_state.get("execution_context"), flow_definition.get("execution_context"), current.get("execution_context")) == "repo_bound" else "isolated_task",
         ),
-        "repo_contract_paths": _text_list(
-            dict(current.get("repo_scope") or {}).get("repo_contract_paths")
-            or control_profile.get("repo_contract_paths")
-            or []
+        "workspace_root": _first_text(
+            dict(flow_state.get("repo_scope") or {}).get("workspace_root"),
+            dict(flow_definition.get("repo_scope") or {}).get("workspace_root"),
+            flow_state.get("workspace_root"),
+            flow_definition.get("workspace_root"),
+            current_repo_scope.get("workspace_root"),
+        ),
+        "repo_binding_policy": _first_text(
+            dict(flow_state.get("repo_scope") or {}).get("repo_binding_policy"),
+            dict(flow_definition.get("repo_scope") or {}).get("repo_binding_policy"),
+            control_profile.get("repo_binding_policy"),
+            current_repo_scope.get("repo_binding_policy"),
+        ),
+        "repo_contract_paths": _first_text_list(
+            dict(flow_state.get("repo_scope") or {}).get("repo_contract_paths") or [],
+            dict(flow_definition.get("repo_scope") or {}).get("repo_contract_paths") or [],
+            control_profile.get("repo_contract_paths") or [],
+            current_repo_scope.get("repo_contract_paths") or [],
         ),
     }
     acceptance = {
-        "guard_condition": _text(
-            dict(current.get("acceptance") or {}).get("guard_condition")
-            or flow_state.get("guard_condition")
-            or flow_definition.get("guard_condition")
+        "guard_condition": _first_text(
+            flow_state.get("guard_condition"),
+            flow_definition.get("guard_condition"),
+            dict(current.get("acceptance") or {}).get("guard_condition"),
         ),
         "review_checklist": review_checklist,
     }
@@ -107,13 +241,33 @@ def build_task_contract(
         "manager": manager_actor,
         "operator": operator_actor or "local_operator",
     }
+    current_authority = dict(current.get("authority") or {})
+    state_authority = dict(flow_state.get("authority") or {})
+    definition_authority = dict(flow_definition.get("authority") or {})
+    manager_authority = _first_text(
+        state_authority.get("manager"),
+        definition_authority.get("manager"),
+    )
+    if not manager_authority:
+        current_manager_authority = _text(current_authority.get("manager"))
+        if current_manager_authority not in {"", "not_assigned", "shape_contract"}:
+            manager_authority = current_manager_authority
+        else:
+            manager_authority = "shape_contract" if owner.get("manager") else "not_assigned"
     authority = {
-        "requester": _text(dict(current.get("authority") or {}).get("requester") or "request"),
-        "manager": _text(
-            dict(current.get("authority") or {}).get("manager")
-            or ("shape_contract" if owner.get("manager") else "not_assigned")
+        "requester": _first_text(
+            state_authority.get("requester"),
+            definition_authority.get("requester"),
+            current_authority.get("requester"),
+            "request",
         ),
-        "operator": _text(dict(current.get("authority") or {}).get("operator") or "launch_resume_recover"),
+        "manager": manager_authority,
+        "operator": _first_text(
+            state_authority.get("operator"),
+            definition_authority.get("operator"),
+            current_authority.get("operator"),
+            "launch_resume_recover",
+        ),
     }
     created_at = _text(
         current.get("created_at")
@@ -124,13 +278,17 @@ def build_task_contract(
     return {
         "task_contract_id": task_contract_id,
         "flow_id": flow_id,
-        "goal": _text(current.get("goal") or flow_state.get("goal") or flow_definition.get("goal")),
+        "goal": _first_text(flow_state.get("goal"), flow_definition.get("goal"), current.get("goal")),
         "repo_scope": repo_scope,
         "acceptance": acceptance,
         "owner": owner,
         "authority": authority,
         "policy": policy,
-        "execution_context": _text(current.get("execution_context") or flow_state.get("execution_context")),
+        "execution_context": _first_text(
+            flow_state.get("execution_context"),
+            flow_definition.get("execution_context"),
+            current.get("execution_context"),
+        ),
         "source_surface": _text(
             source_surface
             or current.get("source_surface")
@@ -156,6 +314,7 @@ def build_task_contract_summary(contract: dict[str, Any] | None) -> dict[str, An
     authority = dict(payload.get("authority") or {})
     policy = dict(payload.get("policy") or {})
     control_profile = dict(policy.get("control_profile") or {})
+    responsibility_summary = _responsibility_summary(owner=owner, authority=authority)
     return {
         "task_contract_id": _text(payload.get("task_contract_id")),
         "goal": _text(payload.get("goal")),
@@ -182,6 +341,7 @@ def build_task_contract_summary(contract: dict[str, Any] | None) -> dict[str, An
             "operator": _text(authority.get("operator")),
         },
         "policy_summary": {
+            "execution_context": _text(payload.get("execution_context") or policy.get("execution_context")),
             "task_archetype": _text(control_profile.get("task_archetype")),
             "packet_size": _text(control_profile.get("packet_size")),
             "evidence_level": _text(control_profile.get("evidence_level")),
@@ -189,5 +349,6 @@ def build_task_contract_summary(contract: dict[str, Any] | None) -> dict[str, An
             "repo_binding_policy": _text(control_profile.get("repo_binding_policy")),
             "repo_contract_paths": _text_list(control_profile.get("repo_contract_paths") or []),
         },
+        "responsibility_summary": responsibility_summary,
         "truth_owner": _text(payload.get("truth_owner") or "task_contract.json"),
     }

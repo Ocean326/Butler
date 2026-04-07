@@ -92,6 +92,7 @@ def normalize_task_receipt(
 
 def summarize_task_receipt(receipt: dict[str, Any] | None) -> dict[str, Any]:
     row = normalize_task_receipt(receipt or {})
+    payload = dict(row.get("payload") or {})
     return {
         "receipt_id": _text(row.get("receipt_id")),
         "receipt_kind": _text(row.get("receipt_kind")),
@@ -105,12 +106,36 @@ def summarize_task_receipt(receipt: dict[str, Any] | None) -> dict[str, Any]:
         "action_type": _text(row.get("action_type")),
         "summary": _text(row.get("summary")),
         "recovery_state": _text(row.get("recovery_state")),
+        "changed_fields": [
+            str(item or "").strip()
+            for item in list(payload.get("changed_fields") or [])
+            if str(item or "").strip()
+        ],
+        "action_scope": dict(payload.get("action_scope") or {}),
         "created_at": _text(row.get("created_at")),
     }
 
 
 def latest_task_receipt(receipts: list[dict[str, Any]] | None) -> dict[str, Any]:
     normalized = [normalize_task_receipt(item) for item in list(receipts or []) if isinstance(item, dict)]
+    if not normalized:
+        return {}
+    normalized.sort(
+        key=lambda row: (
+            _text(row.get("created_at")),
+            _text(row.get("receipt_id")),
+        )
+    )
+    return dict(normalized[-1])
+
+
+def latest_governance_receipt(receipts: list[dict[str, Any]] | None) -> dict[str, Any]:
+    normalized = [
+        normalize_task_receipt(item)
+        for item in list(receipts or [])
+        if isinstance(item, dict)
+        and _text(dict(item or {}).get("receipt_kind") or dict(item or {}).get("kind")) in {"authority_transition", "policy_update"}
+    ]
     if not normalized:
         return {}
     normalized.sort(

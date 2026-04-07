@@ -49,7 +49,7 @@ from .manage_agent import (
     run_manage_chat_agent,
 )
 from .models import FlowExecReceiptV1, PreparedFlowRun
-from .receipt_spine import plan_resume_recovery
+from .receipt_spine import latest_governance_receipt, plan_resume_recovery, summarize_task_receipt
 from .role_runtime import (
     default_execution_mode,
     default_role_pack_id,
@@ -117,7 +117,7 @@ from .state import (
     write_task_contract,
     write_json_atomic,
 )
-from .task_contract import build_task_contract_summary
+from .task_contract import build_governance_summary, build_mission_console_summary, build_task_contract_summary
 from .version import BUTLER_FLOW_VERSION
 
 
@@ -1424,6 +1424,15 @@ class FlowApp:
                         "recovery_state": str(recovery_truth.get("recovery_state") or "").strip(),
                         "updated_at": str(flow_state.get("updated_at") or flow_state.get("created_at") or "").strip(),
                         "goal": str(flow_state.get("goal") or "").strip(),
+                        "mission_console": build_mission_console_summary(
+                            build_task_contract_summary(task_contract),
+                            latest_receipt_summary=dict(recovery_truth.get("latest_receipt_summary") or {}),
+                            latest_artifact_ref=str(recovery_truth.get("latest_artifact_ref") or "").strip(),
+                            recovery_state=str(recovery_truth.get("recovery_state") or "").strip(),
+                            latest_governance_receipt_summary=summarize_task_receipt(
+                                latest_governance_receipt(list(recovery_truth.get("receipts") or []))
+                            ),
+                        ),
                         "runtime_snapshot": runtime_snapshot,
                         "_sort_value": float(sort_value),
                     }
@@ -1463,6 +1472,20 @@ class FlowApp:
             flow_definition = self._save_flow_definition(flow_path, flow_state, task_contract=task_contract)
         recovery_truth = sync_flow_recovery_truth(flow_path, flow_state=flow_state, task_contract=task_contract)
         task_contract_summary = build_task_contract_summary(task_contract)
+        latest_governance_receipt_summary = summarize_task_receipt(
+            latest_governance_receipt(list(recovery_truth.get("receipts") or []))
+        )
+        governance_summary = build_governance_summary(
+            task_contract_summary,
+            latest_governance_receipt_summary=latest_governance_receipt_summary,
+        )
+        mission_console = build_mission_console_summary(
+            task_contract_summary,
+            latest_receipt_summary=dict(recovery_truth.get("latest_receipt_summary") or {}),
+            latest_governance_receipt_summary=latest_governance_receipt_summary,
+            latest_artifact_ref=str(recovery_truth.get("latest_artifact_ref") or "").strip(),
+            recovery_state=str(recovery_truth.get("recovery_state") or "").strip(),
+        )
         state_store = FileRuntimeStateStore(flow_path)
         trace_store = FileTraceStore(state_store.traces_dir())
         trace_summary = trace_store.summarize(flow_id)
@@ -1483,11 +1506,20 @@ class FlowApp:
             "flow_state": flow_state,
             "task_contract": task_contract,
             "task_contract_summary": task_contract_summary,
+            "governance_summary": governance_summary,
             "latest_receipt_summary": dict(recovery_truth.get("latest_receipt_summary") or {}),
+            "latest_governance_receipt_summary": latest_governance_receipt_summary,
             "latest_artifact_ref": str(recovery_truth.get("latest_artifact_ref") or "").strip(),
             "accepted_receipt_count": safe_int(recovery_truth.get("accepted_receipt_count"), 0),
             "recovery_cursor": dict(recovery_truth.get("recovery_cursor") or {}),
             "recovery_state": str(recovery_truth.get("recovery_state") or "").strip(),
+            "mission_console": mission_console,
+            "surface_meta": {
+                "surface_id": "single_flow",
+                "projection_kind": "run_console",
+                "title": "Run Console",
+                "truth_basis": ["task_contract.json", "receipts.jsonl", "recovery_cursor.json"],
+            },
             "flow_definition": flow_definition,
             "role_runtime": extract_role_runtime_summary(flow_state),
             "runtime_snapshot": {
@@ -1940,7 +1972,21 @@ class FlowApp:
     def build_flows_payload(self, args: argparse.Namespace) -> dict[str, Any]:
         _, _, workspace_root = self._load_config(getattr(args, "config", None))
         rows = self._flow_rows(workspace_root=workspace_root, limit=safe_int(getattr(args, "limit", DEFAULT_FLOW_LIST_LIMIT), DEFAULT_FLOW_LIST_LIMIT))
-        return {"version": BUTLER_FLOW_VERSION, "flow_root": str(build_flow_root(workspace_root)), "items": rows}
+        return {
+            "version": BUTLER_FLOW_VERSION,
+            "flow_root": str(build_flow_root(workspace_root)),
+            "surface_id": "workspace",
+            "projection_kind": "mission_index",
+            "surface_title": "Mission Index",
+            "truth_basis": ["task_contract.json", "receipts.jsonl", "recovery_cursor.json"],
+            "surface_meta": {
+                "surface_id": "workspace",
+                "projection_kind": "mission_index",
+                "title": "Mission Index",
+                "truth_basis": ["task_contract.json", "receipts.jsonl", "recovery_cursor.json"],
+            },
+            "items": rows,
+        }
 
     def build_manage_payload(self, args: argparse.Namespace) -> dict[str, Any]:
         _, _, workspace_root = self._load_config(getattr(args, "config", None))
@@ -1960,6 +2006,16 @@ class FlowApp:
         }
         return {
             "version": BUTLER_FLOW_VERSION,
+            "surface_id": "manage_center",
+            "projection_kind": "contract_studio",
+            "surface_title": "Contract Studio",
+            "truth_basis": ["task_contract.json", "receipts.jsonl", "flow_definition.json"],
+            "surface_meta": {
+                "surface_id": "manage_center",
+                "projection_kind": "contract_studio",
+                "title": "Contract Studio",
+                "truth_basis": ["task_contract.json", "receipts.jsonl", "flow_definition.json"],
+            },
             "asset_root": str(flow_asset_root(workspace_root)),
             "builtin_root": str(builtin_asset_root(workspace_root)),
             "template_root": str(template_asset_root(workspace_root)),
@@ -1978,6 +2034,7 @@ class FlowApp:
         if bool(getattr(args, "json", False)):
             self._display.write_json(payload)
             return 0
+        self._display.write(f"surface={payload.get('projection_kind') or 'contract_studio'}")
         self._display.write(f"asset_root={payload['asset_root']}")
         if not rows:
             self._display.write("no managed flow assets found")
@@ -2298,12 +2355,15 @@ class FlowApp:
         flow_state = dict(payload.get("flow_state") or {})
         flow_definition = dict(payload.get("flow_definition") or {})
         task_contract_summary = dict(payload.get("task_contract_summary") or {})
+        governance_summary = dict(payload.get("governance_summary") or {})
         latest_receipt_summary = dict(payload.get("latest_receipt_summary") or {})
+        latest_governance_receipt_summary = dict(payload.get("latest_governance_receipt_summary") or {})
         recovery_cursor = dict(payload.get("recovery_cursor") or {})
         runtime = dict(payload.get("runtime_snapshot") or {})
         self._display.write(f"workflow_id={payload['flow_id']}")
         self._display.write(f"task_contract_id={task_contract_summary.get('task_contract_id') or flow_state.get('task_contract_id') or '-'}")
         self._display.write(f"flow_dir={payload['flow_dir']}")
+        self._display.write(f"surface={dict(payload.get('surface_meta') or {}).get('projection_kind') or 'run_console'}")
         self._display.write(f"kind={flow_state.get('workflow_kind')}")
         self._display.write(f"version={flow_definition.get('version') or flow_state.get('flow_version') or '-'}")
         self._display.write(
@@ -2337,6 +2397,21 @@ class FlowApp:
         self._display.write(
             f"recovery_state={payload.get('recovery_state') or '-'} "
             f"cursor_receipt={recovery_cursor.get('latest_accepted_receipt_id') or '-'}"
+        )
+        authority_summary = dict(governance_summary.get("authority_summary") or {})
+        policy_summary = dict(governance_summary.get("policy_summary") or {})
+        self._display.write(
+            f"authority=requester:{authority_summary.get('requester') or '-'} "
+            f"manager:{authority_summary.get('manager') or '-'} "
+            f"operator:{authority_summary.get('operator') or '-'}"
+        )
+        self._display.write(
+            f"policy=execution_context:{policy_summary.get('execution_context') or '-'} "
+            f"repo_binding:{policy_summary.get('repo_binding_policy') or '-'}"
+        )
+        self._display.write(
+            f"latest_governance_receipt={latest_governance_receipt_summary.get('receipt_kind') or '-'} "
+            f"id={latest_governance_receipt_summary.get('receipt_id') or '-'}"
         )
         self._display.write(f"process_state={runtime.get('process_state')} pid={runtime.get('pid') or 0}")
         self._display.write(f"last_decision={dict(flow_state.get('last_cursor_decision') or {}).get('decision') or '-'}")

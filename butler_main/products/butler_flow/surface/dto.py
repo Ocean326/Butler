@@ -33,7 +33,12 @@ class FlowSummaryDTO:
     context_governor: dict[str, Any] = field(default_factory=dict)
     latest_handoff_summary: dict[str, Any] = field(default_factory=dict)
     task_contract_summary: dict[str, Any] = field(default_factory=dict)
+    owner_summary: dict[str, Any] = field(default_factory=dict)
+    authority_summary: dict[str, Any] = field(default_factory=dict)
+    policy_summary: dict[str, Any] = field(default_factory=dict)
+    responsibility_summary: dict[str, Any] = field(default_factory=dict)
     latest_receipt_summary: dict[str, Any] = field(default_factory=dict)
+    latest_governance_receipt_summary: dict[str, Any] = field(default_factory=dict)
     latest_artifact_ref: str = ""
     accepted_receipt_count: int = 0
     recovery_state: str = ""
@@ -117,10 +122,14 @@ class FlowConsoleDTO:
 @dataclass(frozen=True, slots=True)
 class FlowDetailDTO:
     flow_id: str = ""
+    surface_meta: dict[str, Any] = field(default_factory=dict)
     status: dict[str, Any] = field(default_factory=dict)
     task_contract: dict[str, Any] = field(default_factory=dict)
     task_contract_summary: dict[str, Any] = field(default_factory=dict)
+    governance_summary: dict[str, Any] = field(default_factory=dict)
+    mission_console: dict[str, Any] = field(default_factory=dict)
     latest_receipt_summary: dict[str, Any] = field(default_factory=dict)
+    latest_governance_receipt_summary: dict[str, Any] = field(default_factory=dict)
     latest_artifact_ref: str = ""
     accepted_receipt_count: int = 0
     recovery_cursor: dict[str, Any] = field(default_factory=dict)
@@ -149,6 +158,7 @@ class FlowDetailDTO:
 
 @dataclass(frozen=True, slots=True)
 class WorkspaceSurfaceDTO:
+    surface_meta: dict[str, Any] = field(default_factory=dict)
     preflight: dict[str, Any] = field(default_factory=dict)
     flows: dict[str, Any] = field(default_factory=dict)
 
@@ -158,9 +168,11 @@ class WorkspaceSurfaceDTO:
 
 @dataclass(frozen=True, slots=True)
 class ManageCenterDTO:
+    surface_meta: dict[str, Any] = field(default_factory=dict)
     preflight: dict[str, Any] = field(default_factory=dict)
     assets: dict[str, Any] = field(default_factory=dict)
     selected_asset: dict[str, Any] = field(default_factory=dict)
+    contract_studio: dict[str, Any] = field(default_factory=dict)
     role_guidance: dict[str, Any] = field(default_factory=dict)
     review_checklist: list[str] = field(default_factory=list)
     bundle_manifest: dict[str, Any] = field(default_factory=dict)

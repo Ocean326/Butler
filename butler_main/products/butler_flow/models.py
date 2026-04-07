@@ -461,6 +461,7 @@ class TaskContractSummaryV1(TypedDict, total=False):
     owner_summary: dict[str, Any]
     authority_summary: dict[str, Any]
     policy_summary: dict[str, Any]
+    responsibility_summary: dict[str, Any]
     truth_owner: str
 
 

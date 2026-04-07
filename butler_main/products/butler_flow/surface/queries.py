@@ -135,6 +135,7 @@ def build_flow_summary(*, status_payload: dict[str, Any], handoffs: list[dict[st
         status = dict(status_payload or {})
     flow_state = dict(status.get("flow_state") or {})
     task_contract_summary = dict(status.get("task_contract_summary") or status_payload.get("task_contract_summary") or {})
+    governance_summary = dict(status.get("governance_summary") or status_payload.get("governance_summary") or {})
     latest_judge = dict(flow_state.get("latest_judge_decision") or {})
     last_operator_action = dict(flow_state.get("last_operator_action") or {})
     return FlowSummaryDTO(
@@ -175,7 +176,16 @@ def build_flow_summary(*, status_payload: dict[str, Any], handoffs: list[dict[st
         context_governor=dict(flow_state.get("context_governor") or {}),
         latest_handoff_summary=latest_handoff_summary(handoffs),
         task_contract_summary=task_contract_summary,
+        owner_summary=dict(task_contract_summary.get("owner_summary") or governance_summary.get("owner_summary") or {}),
+        authority_summary=dict(task_contract_summary.get("authority_summary") or governance_summary.get("authority_summary") or {}),
+        policy_summary=dict(task_contract_summary.get("policy_summary") or governance_summary.get("policy_summary") or {}),
+        responsibility_summary=dict(
+            task_contract_summary.get("responsibility_summary") or governance_summary.get("responsibility_summary") or {}
+        ),
         latest_receipt_summary=dict(status.get("latest_receipt_summary") or status_payload.get("latest_receipt_summary") or {}),
+        latest_governance_receipt_summary=dict(
+            status.get("latest_governance_receipt_summary") or status_payload.get("latest_governance_receipt_summary") or {}
+        ),
         latest_artifact_ref=str(status.get("latest_artifact_ref") or status_payload.get("latest_artifact_ref") or "").strip(),
         accepted_receipt_count=int(status.get("accepted_receipt_count") or status_payload.get("accepted_receipt_count") or 0),
         recovery_state=str(status.get("recovery_state") or status_payload.get("recovery_state") or "").strip(),
@@ -253,10 +263,14 @@ def build_flow_detail(*, payload: dict[str, Any]) -> FlowDetailDTO:
     row = dict(payload or {})
     return FlowDetailDTO(
         flow_id=str(row.get("flow_id") or "").strip(),
+        surface_meta=dict(row.get("surface_meta") or {}),
         status=dict(row.get("status") or {}),
         task_contract=dict(row.get("task_contract") or {}),
         task_contract_summary=dict(row.get("task_contract_summary") or {}),
+        governance_summary=dict(row.get("governance_summary") or {}),
+        mission_console=dict(row.get("mission_console") or {}),
         latest_receipt_summary=dict(row.get("latest_receipt_summary") or {}),
+        latest_governance_receipt_summary=dict(row.get("latest_governance_receipt_summary") or {}),
         latest_artifact_ref=str(row.get("latest_artifact_ref") or "").strip(),
         accepted_receipt_count=int(row.get("accepted_receipt_count") or 0),
         recovery_cursor=dict(row.get("recovery_cursor") or {}),

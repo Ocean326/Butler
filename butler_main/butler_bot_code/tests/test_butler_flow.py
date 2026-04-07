@@ -3471,6 +3471,69 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(recovery_cursor["task_contract_id"], prepared.flow_state["task_contract_id"])
             self.assertEqual(recovery_cursor["recovery_state"], "reseed_same_contract")
 
+    def test_save_flow_state_updates_task_contract_and_emits_typed_governance_receipts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            app = self._app(_ReceiptRunner([]))
+            args = self._new_args(
+                config=config,
+                kind=PROJECT_LOOP_KIND,
+                launch_mode="flow",
+                execution_level="medium",
+                catalog_flow_id="project_loop",
+                goal="ship governed runtime",
+                guard_condition="task contract is frozen",
+            )
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+                prepared = app.prepare_new_flow(args)
+            flow_state = dict(prepared.flow_state)
+            flow_state["goal"] = "ship mission console runtime"
+            flow_state["guard_condition"] = "authority and policy are typed"
+            flow_state["requested_by"] = "product_owner"
+            flow_state["manager_actor"] = "delivery_manager"
+            flow_state["control_profile"] = {
+                **dict(flow_state.get("control_profile") or {}),
+                "packet_size": "small",
+                "repo_binding_policy": "explicit",
+                "repo_contract_paths": ["AGENTS.md"],
+            }
+
+            app._save_flow_state(prepared.flow_path, flow_state)
+
+            task_contract = self._read_json(prepared.flow_path / "task_contract.json")
+            receipts = self._read_jsonl(prepared.flow_path / "receipts.jsonl")
+            authority_receipt = next(
+                row for row in receipts if str(row.get("receipt_kind") or "") == "authority_transition"
+            )
+            policy_receipt = next(
+                row for row in receipts if str(row.get("receipt_kind") or "") == "policy_update"
+            )
+
+            self.assertEqual(task_contract["goal"], "ship mission console runtime")
+            self.assertEqual(task_contract["acceptance"]["guard_condition"], "authority and policy are typed")
+            self.assertEqual(task_contract["owner"]["requester"], "product_owner")
+            self.assertEqual(task_contract["owner"]["manager"], "delivery_manager")
+            self.assertEqual(task_contract["repo_scope"]["repo_binding_policy"], "explicit")
+            self.assertEqual(task_contract["repo_scope"]["repo_contract_paths"], ["AGENTS.md"])
+            self.assertIn("owner.requester", authority_receipt["payload"]["changed_fields"])
+            self.assertIn("owner.manager", authority_receipt["payload"]["changed_fields"])
+            self.assertEqual(
+                authority_receipt["authority_snapshot"]["action_scope"]["manager"]["authority"],
+                "shape_contract",
+            )
+            self.assertIn("policy.control_profile.repo_binding_policy", policy_receipt["payload"]["changed_fields"])
+            self.assertEqual(policy_receipt["payload"]["action_scope"]["repo_binding_policy"], "explicit")
+            self.assertEqual(policy_receipt["payload"]["action_scope"]["repo_contract_paths"], ["AGENTS.md"])
+
+            payload = app.build_status_payload(
+                argparse.Namespace(command="status", config=config, flow_id=prepared.flow_state["workflow_id"], workflow_id="", last=False, json=True)
+            )
+            self.assertEqual(payload["governance_summary"]["authority_summary"]["manager"], "shape_contract")
+            self.assertEqual(payload["governance_summary"]["policy_summary"]["repo_binding_policy"], "explicit")
+            self.assertEqual(payload["mission_console"]["goal"], "ship mission console runtime")
+            self.assertEqual(payload["latest_governance_receipt_summary"]["receipt_kind"], "policy_update")
+
     def test_prepare_new_flow_rejects_high_execution_level(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

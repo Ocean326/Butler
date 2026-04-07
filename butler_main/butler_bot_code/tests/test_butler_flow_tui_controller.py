@@ -494,12 +494,15 @@ class ButlerFlowTuiControllerTests(unittest.TestCase):
 
             payload = controller.single_flow_payload(config=config, flow_id="flow_summary")
 
+            self.assertEqual(payload["surface_meta"]["projection_kind"], "run_console")
             self.assertEqual(payload["summary"]["effective_status"], "running")
             self.assertEqual(payload["summary"]["effective_phase"], "review")
             self.assertEqual(payload["summary"]["task_contract_id"], "task_contract_flow_summary")
             self.assertEqual(payload["summary"]["latest_receipt_summary"]["receipt_kind"], "turn_acceptance")
             self.assertEqual(payload["summary"]["recovery_state"], "resume_existing_session")
             self.assertEqual(dict(payload.get("task_contract_summary") or {}).get("goal"), "ship v1.1")
+            self.assertEqual(payload["flow_console"]["summary"], payload["summary"])
+            self.assertEqual(payload["mission_console"]["task_contract_id"], "task_contract_flow_summary")
             self.assertEqual(payload["recovery_cursor"]["latest_accepted_receipt_id"], "receipt-2")
             self.assertEqual(len(payload["step_history"]), 2)
             self.assertEqual(payload["step_history"][0]["phase"], "plan")
@@ -628,13 +631,61 @@ class ButlerFlowTuiControllerTests(unittest.TestCase):
             rows = list(dict(payload.get("flows") or {}).get("items") or [])
             row = next((item for item in rows if str(item.get("flow_id") or "") == "flow_workspace"), {})
 
+            self.assertEqual(dict(payload.get("surface_meta") or {}).get("projection_kind"), "mission_index")
             self.assertEqual(row.get("approval_state"), "operator_required")
             self.assertEqual(row.get("execution_mode"), "medium")
             self.assertEqual(row.get("session_strategy"), "role_bound")
             self.assertEqual(row.get("active_role_id"), "planner")
+            self.assertEqual(row.get("goal"), "ship v1.1")
+            self.assertEqual(dict(row.get("task_contract_summary") or {}).get("task_contract_id"), "task_contract_flow_workspace")
+            self.assertEqual(
+                dict(dict(row.get("task_contract_summary") or {}).get("acceptance_summary") or {}).get("guard_condition"),
+                "verified",
+            )
             self.assertEqual(dict(row.get("latest_handoff_summary") or {}).get("handoff_id"), "handoff-2")
             self.assertEqual(dict(row.get("latest_judge_decision") or {}).get("decision"), "RETRY")
             self.assertEqual(dict(row.get("latest_operator_action") or {}).get("action_type"), "pause")
+
+    def test_manage_center_payload_surfaces_contract_studio_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            controller = _controller()
+            template_path = (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "contract_studio_demo.json"
+            )
+            template_path.parent.mkdir(parents=True, exist_ok=True)
+            template_path.write_text(
+                json.dumps(
+                    {
+                        "flow_id": "contract_studio_demo",
+                        "label": "Contract Studio Demo",
+                        "workflow_kind": "managed_flow",
+                        "goal": "shape contract inputs",
+                        "guard_condition": "reviewed",
+                        "control_profile": {"packet_size": "small"},
+                        "review_checklist": ["review contract"],
+                        "role_guidance": {"manager_notes": "edit the contract before launch"},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            payload = controller.manage_center_payload(config=config)
+
+            self.assertEqual(payload["surface_meta"]["projection_kind"], "contract_studio")
+            self.assertEqual(payload["contract_studio"]["goal"], "shape contract inputs")
+            self.assertEqual(payload["role_guidance"]["manager_notes"], "edit the contract before launch")
+            self.assertEqual(payload["review_checklist"], ["review contract"])
 
     def test_operator_rail_payload_exposes_approval_and_signals(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

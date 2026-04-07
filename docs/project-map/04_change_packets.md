@@ -195,6 +195,12 @@
     - `recovery_cursor.json`
     - `flow_definition.json -> task_contract_id / task_contract_summary / truth_owner`
     - `workflow_state.json` 是否只剩 runtime/recovery cache 语义
+  - 当前 `P4 + P5` 的默认收口方向是：
+    - authority/policy 变更必须产出 typed receipt，并继续挂回同一份 `TaskContract` truth
+    - `workspace -> mission index`
+    - `/manage -> contract studio`
+    - `single-flow -> run console`
+    - 上述 surface 只做 projection，不得回写第二套 mission truth
   - 当前 `status / workspace / single-flow / TUI` 默认会外显：
     - `latest_receipt_summary`
     - `latest_artifact_ref`

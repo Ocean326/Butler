@@ -82,7 +82,23 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
                 "latest_token_usage": {"input_tokens": 12},
                 "context_governor": {"mode": "reset"},
             },
+            "task_contract_summary": {
+                "task_contract_id": "task_contract_flow_summary",
+                "goal": "ship desktop v1",
+                "acceptance_summary": {"guard_condition": "release checklist green"},
+                "owner_summary": {"requester": "requester", "manager": "delivery_manager", "operator": "local_operator"},
+                "authority_summary": {"requester": "request", "manager": "shape_contract", "operator": "launch_resume_recover"},
+                "policy_summary": {"execution_context": "repo_bound", "packet_size": "medium", "repo_binding_policy": "explicit"},
+                "responsibility_summary": {
+                    "manager": {"owner": "delivery_manager", "authority": "shape_contract"},
+                },
+            },
             "latest_receipt_summary": {"receipt_id": "receipt-1", "receipt_kind": "turn_acceptance"},
+            "latest_governance_receipt_summary": {
+                "receipt_id": "receipt-policy-1",
+                "receipt_kind": "policy_update",
+                "changed_fields": ["policy.control_profile.packet_size"],
+            },
             "latest_artifact_ref": "artifact:1:imp",
             "accepted_receipt_count": 3,
             "recovery_state": "reseed_same_contract",
@@ -108,6 +124,9 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
         self.assertEqual(summary.approval_state, "operator_required")
         self.assertEqual(summary.active_role_id, "implementer")
         self.assertEqual(summary.latest_receipt_summary["receipt_kind"], "turn_acceptance")
+        self.assertEqual(summary.latest_governance_receipt_summary["receipt_kind"], "policy_update")
+        self.assertEqual(summary.authority_summary["manager"], "shape_contract")
+        self.assertEqual(summary.policy_summary["execution_context"], "repo_bound")
         self.assertEqual(summary.latest_artifact_ref, "artifact:1:imp")
         self.assertEqual(summary.accepted_receipt_count, 3)
         self.assertEqual(summary.recovery_state, "reseed_same_contract")
@@ -200,10 +219,23 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
                         "last_operator_action": {"action_type": "pause"},
                         "role_pack_id": "coding_flow",
                     },
+                    "task_contract_summary": {
+                        "task_contract_id": "task_contract_flow-1",
+                        "goal": "ship desktop",
+                        "acceptance_summary": {"guard_condition": "verified"},
+                        "authority_summary": {"manager": "shape_contract"},
+                        "policy_summary": {"execution_context": "repo_bound", "packet_size": "medium"},
+                        "responsibility_summary": {
+                            "manager": {"owner": "delivery_manager", "authority": "shape_contract"},
+                        },
+                    },
                     "latest_receipt_summary": {"receipt_id": "receipt-2", "receipt_kind": "artifact_acceptance"},
+                    "latest_governance_receipt_summary": {"receipt_id": "receipt-3", "receipt_kind": "policy_update"},
                     "latest_artifact_ref": "artifact:2:review",
                     "accepted_receipt_count": 4,
                     "recovery_state": "resume_existing_session",
+                    "mission_console": {"goal": "ship desktop", "task_contract_id": "task_contract_flow-1"},
+                    "governance_summary": {"policy_summary": {"execution_context": "repo_bound"}},
                 }
 
             surface = build_workspace_surface(
@@ -222,9 +254,12 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
             self.assertEqual(row["approval_state"], "operator_required")
             self.assertEqual(row["execution_mode"], "medium")
             self.assertEqual(row["latest_receipt_summary"]["receipt_kind"], "artifact_acceptance")
+            self.assertEqual(row["latest_governance_receipt_summary"]["receipt_kind"], "policy_update")
             self.assertEqual(row["latest_artifact_ref"], "artifact:2:review")
             self.assertEqual(row["accepted_receipt_count"], 4)
             self.assertEqual(row["recovery_state"], "resume_existing_session")
+            self.assertEqual(row["authority_summary"]["manager"], "shape_contract")
+            self.assertEqual(row["mission_console"]["task_contract_id"], "task_contract_flow-1")
             self.assertEqual(row["latest_handoff_summary"]["handoff_id"], "handoff-1")
 
     def test_single_flow_payload_builds_surface_views(self) -> None:
@@ -303,9 +338,12 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
 
             payload = flow_surface.single_flow_payload(config=config, flow_id="flow_surface")
 
+            self.assertEqual(payload["surface_meta"]["projection_kind"], "run_console")
             self.assertEqual(payload["summary"]["approval_state"], "operator_required")
             self.assertEqual(payload["summary"]["task_contract_id"], "task_contract_flow_surface")
+            self.assertEqual(payload["summary"]["policy_summary"]["execution_context"], "repo_bound")
             self.assertEqual(payload["task_contract_summary"]["goal"], "ship desktop")
+            self.assertEqual(payload["mission_console"]["goal"], "ship desktop")
             self.assertEqual(payload["navigator_summary"]["active_role_id"], "planner")
             self.assertEqual(payload["supervisor_view"]["latest_judge_decision"]["decision"], "ADVANCE")
             self.assertEqual(payload["workflow_view"]["artifact_refs"], ["artifact:1:imp"])
@@ -346,11 +384,54 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
             rows = list(dict(payload.get("flows") or {}).get("items") or [])
             row = next((item for item in rows if str(item.get("flow_id") or "") == "flow_workspace_surface"), {})
 
+            self.assertEqual(dict(payload.get("surface_meta") or {}).get("projection_kind"), "mission_index")
             self.assertEqual(row.get("approval_state"), "operator_required")
             self.assertEqual(row.get("execution_mode"), "medium")
             self.assertEqual(row.get("session_strategy"), "role_bound")
             self.assertEqual(row.get("active_role_id"), "planner")
             self.assertEqual(dict(row.get("task_contract_summary") or {}).get("task_contract_id"), "task_contract_flow_workspace_surface")
+            self.assertEqual(dict(row.get("mission_console") or {}).get("task_contract_id"), "task_contract_flow_workspace_surface")
             self.assertEqual(dict(row.get("latest_handoff_summary") or {}).get("handoff_id"), "handoff-2")
             self.assertEqual(dict(row.get("latest_judge_decision") or {}).get("decision"), "RETRY")
             self.assertEqual(dict(row.get("latest_operator_action") or {}).get("action_type"), "pause")
+
+    def test_manage_center_payload_surfaces_contract_studio_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            template_path = (
+                root
+                / "butler_main"
+                / "butler_bot_code"
+                / "assets"
+                / "flows"
+                / "templates"
+                / "desktop_delivery.json"
+            )
+            template_path.parent.mkdir(parents=True, exist_ok=True)
+            template_path.write_text(
+                json.dumps(
+                    {
+                        "flow_id": "desktop_delivery",
+                        "label": "Desktop Delivery",
+                        "workflow_kind": "managed_flow",
+                        "goal": "ship desktop delivery",
+                        "guard_condition": "reviewed",
+                        "control_profile": {"packet_size": "small"},
+                        "review_checklist": ["review scope"],
+                        "role_guidance": {"manager_notes": "shape the task contract first"},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            payload = flow_surface.manage_center_payload(config=config)
+
+            self.assertEqual(payload["surface_meta"]["projection_kind"], "contract_studio")
+            self.assertEqual(payload["contract_studio"]["goal"], "ship desktop delivery")
+            self.assertEqual(payload["role_guidance"]["manager_notes"], "shape the task contract first")
+            self.assertEqual(payload["review_checklist"], ["review scope"])
+            self.assertEqual(payload["selected_asset"]["definition"]["control_profile"]["packet_size"], "small")

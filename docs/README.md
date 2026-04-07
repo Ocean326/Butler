@@ -29,9 +29,8 @@
 - 补充：[0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](./daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md)
 - 补充：[0407 Butler Flow 到 Canonical Team Runtime 升级路径与阶段开发计划（批判式更新版）](./daily-upgrade/0407/02_butler-flow到canonical_team_runtime升级路径与阶段开发计划_批判式更新版.md)
 - 补充：`0407/02` 当前已继续回写 `P0 + P1 + P2 + P3` 代码落地结果：`task_contract.json`、`receipts.jsonl`、`recovery_cursor.json`，以及 `task_contract_id + latest_receipt_summary + recovery_state`
+- 补充：`0407/02` 当前也已补记 `P4 + P5` 的第一层代码收口：typed governance receipt、`governance_summary / mission_console`，以及 `workspace -> mission index`、`/manage -> contract studio`、`single-flow -> run console`
 - 补充：[0407 vibe-close：docs 默认并回 `main` 与 worktree 整理策略](./daily-upgrade/0407/03_vibe-close_docs默认并回main与worktree整理策略.md)
-- 补充：[0407 CLI Agent Substrate -> Canonical Team Runtime -> Team OS 脑暴收口](./每日头脑风暴/0407/01_CLI_Agent_Substrate到Canonical_Team_Runtime再到Team_OS_脑暴收口.md)
-- 补充：[0407 以 `Task + Artifact` 为真源的 Full-Stack Team OS 草稿](./每日头脑风暴/0407/02_以Task_Artifact为真源的Full_Stack_Team_OS草稿.md)
 6. [0404 当日总纲](./daily-upgrade/0404/00_当日总纲.md)
 - 补充：`0404/00` 已回写本轮仓库级重构完成态；当前应按 canonical tree 理解三产品与 repo 导航
 - 补充：[0404 Butler Flow manager skill-contract 吸收与单 `main` worktree 收口](./daily-upgrade/0404/01_butler-flow_manager-skill-contract吸收与单main-worktree收口.md)

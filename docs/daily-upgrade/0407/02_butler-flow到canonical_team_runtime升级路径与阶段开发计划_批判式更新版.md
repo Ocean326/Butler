@@ -42,7 +42,7 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 
 - `P6` 不再是一个“再加一层”的实现阶段，而是命名与真源闭环门槛
 - `team graph` 不再是早期 headline phase，而是后置、只读、派生的责任图
-- `Team OS` 继续留在 upgrade conditions 之外，不进入当前产品口径
+- 当前产品命名继续保持在 `canonical team runtime`，直到 `P6` 闭环验收通过
 
 ## 0. 当前实施回写（截至 2026-04-07）
 
@@ -148,7 +148,7 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 | `I2` | `downside-risk` | `team graph / governance kernel` 若太早变成可写对象，会形成 shadow control plane。 | `source-backed + inference` | `high` | `high` | `patched` | 把治理收窄成 authority/policy minimum，把责任图改成只读派生图。 |
 | `I3` | `value-strategy` | 路线没有早期证明一个不可替代的 truth boundary，差异化赌注不够尖。 | `user-provided + inference` | `high` | `medium-high` | `patched` | 把单一赌注写死为 `Receipt-backed Repo-Bound Task Contract Runtime`。 |
 | `I4` | `failure-mode` | `workspace/manage/single flow` 仍容易被读成系统中心，session-first 心智会回潮。 | `inference` | `high` | `medium` | `patched` | 明确把 workbench 重命名为 `Mission Console`，把 `/manage` 重命名为 `contract studio` 的方向。 |
-| `I5` | `governance` | `Authority` 目前还更像一个词，不是稳定 typed object。 | `source-backed + inference` | `medium-high` | `medium-high` | `open` | 在 `P4` 只引入最小 `AuthorityTransitionReceipt`，不提前扩成完整 organizational kernel。 |
+| `I5` | `governance` | `Authority` 目前还更像一个词，不是稳定 typed object。 | `source-backed + inference` | `medium-high` | `medium-high` | `patched-in-code / still-open-as-gate` | 已把 authority/policy 变化写成 typed governance receipt；下一步只继续收紧门槛，不扩成完整 organizational kernel。 |
 
 ## 5. Repairs Applied
 
@@ -188,7 +188,6 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 
 以下叙事在近程路线里不再继续强化：
 
-- `Team OS`
 - `team workspace`
 - `multi-agent platform`
 - `group chat / @ / 1:1` 作为核心组织模型
@@ -216,7 +215,7 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
 - `目标`
   - 先把现役对象分成 `truth / runtime-recovery / projection / compat` 四类。
 - `删改`
-  - 停止用 `Team OS / team workspace / multi-agent platform` 讲 butler-flow。
+  - 停止用更大的组织平台叙事讲 butler-flow。
   - 停止把 `session / history / transcript` 讲成业务连续性本体。
 - `新增`
   - 三张表：
@@ -302,6 +301,21 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
   - 最小 typed 对象：
     - `AuthorityTransitionReceipt`
     - 收窄版 `policy envelope`
+- `具体内容`
+  - authority truth 继续只挂在 `task_contract.json` 当前快照上，并经由 `task_contract_summary.owner_summary + authority_summary + responsibility_summary` 对外外显。
+  - governance ledger 当前已开始把 `authority_transition / policy_update` 写成 typed receipt，字段最少包含：
+    - `before / after`
+    - `changed_fields`
+    - `action_scope`
+  - 当前 policy envelope 只收最稳定对象：
+    - `execution_context`
+    - `repo_scope`
+    - `control_profile.repo_binding_policy`
+    - `control_profile.repo_contract_paths`
+  - 任何 authority-changing action 都必须通过 `receipts.jsonl` 留下 typed receipt，才能进入 audit / recovery / rollback 语义。
+- `当前代码回写`
+  - `append_governance_receipts()` 已开始补写 typed governance receipt。
+  - `status / workspace / single-flow` 已开始外显 `governance_summary + latest_governance_receipt_summary`。
 - `出关门槛`
   - 所有 authority-changing action 都必须产出 typed receipt。
 
@@ -318,6 +332,25 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
   - `workspace = mission index`
   - `/manage = contract studio`
   - `single flow = run console`
+- `具体内容`
+  - `workspace / single-flow / /manage` 只允许作为 projection surface，不再承担任务或治理真源职责。
+  - 这些 surface 的读取真源固定为：
+    - `task_contract.json`
+    - `receipts.jsonl`
+    - `recovery_cursor.json`
+  - `Derived Responsibility Graph` 继续只允许从 `task_contract + receipts + role_sessions + handoffs` 只读派生，不得落成第二个可写图文件。
+  - `Mission Console` 当前对外最小解释块应稳定为：
+    - `contract summary`
+    - `latest accepted receipt`
+    - `latest artifact ref`
+    - `recovery state`
+    - `responsibility summary`
+- `当前代码回写`
+  - `surface_meta` 已开始把三块 surface 收口成：
+    - `workspace -> mission index`
+    - `manage_center -> contract studio`
+    - `single_flow -> run console`
+  - `mission_console` 投影已进入 `status / workspace / single-flow` payload。
 - `出关门槛`
   - manager/operator/end-user 三个视图都从同一 receipt/contract truth 派生，责任图只读不写。
 
