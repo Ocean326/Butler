@@ -3299,8 +3299,12 @@ class ButlerFlowTests(unittest.TestCase):
             rc = app.status(args)
             self.assertEqual(rc, 0)
             self.assertTrue((flow_dir / "workflow_state.json").exists())
+            self.assertTrue((flow_dir / "task_contract.json").exists())
+            task_contract = self._read_json(flow_dir / "task_contract.json")
+            self.assertEqual(task_contract["task_contract_id"], "task_contract_flow_legacy_status")
             output = app._stdout.getvalue()
             self.assertIn("workflow_id=flow_legacy_status", output)
+            self.assertIn("task_contract_id=task_contract_flow_legacy_status", output)
             self.assertIn("status=paused", output)
 
     def test_display_degrades_to_plain_for_non_tty_streams(self) -> None:
@@ -3321,7 +3325,9 @@ class ButlerFlowTests(unittest.TestCase):
                 goal="ship catalog",
                 guard_condition="done",
             )
-            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True):
+            with mock.patch.object(flow_shell, "cli_provider_available", return_value=True), mock.patch.object(
+                flow_runtime, "cli_provider_available", return_value=True
+            ):
                 prepared = app.prepare_new_flow(args)
             state = prepared.flow_state
             self.assertEqual(state.get("launch_mode"), "flow")
@@ -3329,6 +3335,13 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(state.get("workflow_kind"), PROJECT_LOOP_KIND)
             self.assertEqual(state.get("execution_mode"), "medium")
             self.assertEqual(state.get("execution_context"), "repo_bound")
+            self.assertEqual(state.get("task_contract_id"), f"task_contract_{state.get('workflow_id')}")
+            task_contract = self._read_json(prepared.flow_path / "task_contract.json")
+            definition = self._read_json(prepared.flow_path / "flow_definition.json")
+            self.assertEqual(task_contract["task_contract_id"], state.get("task_contract_id"))
+            self.assertEqual(task_contract["goal"], "ship catalog")
+            self.assertEqual(definition["task_contract_id"], state.get("task_contract_id"))
+            self.assertEqual(dict(definition.get("task_contract_summary") or {}).get("goal"), "ship catalog")
 
     def test_prepare_new_flow_rejects_high_execution_level(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

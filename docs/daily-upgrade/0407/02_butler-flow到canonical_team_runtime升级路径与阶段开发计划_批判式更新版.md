@@ -377,3 +377,73 @@ Butler Flow 当前更准确的目标不是“继续把 workbench 做大”，而
   - `implementation plan`
 - `Why This Pass Stops Here`
   - 继续讨论不会再带来同等级增益。剩余关键不确定性已经变成：映射表怎么写、receipt spine 怎么落、恢复验收怎么证伪。这些都需要下一轮实施计划与 working slice，而不是更多理论辩论。
+
+## 14. 0407 Implementation Update（P0 + P1）
+
+### 14.1 本轮已落地对象
+
+本轮已把第一波实现推进到代码侧，当前已成立的最小对象是：
+
+- `task_contract.json`
+  - 当前 instance 级任务真源
+- `task_contract_id`
+  - 当前贯穿 `new / resume / status / exec receipt / workspace / single flow` 的主键
+- `task_contract_summary`
+  - 当前 projection 统一消费的 contract 摘要
+
+当前代码口径已经不是 “flow definition 自己就是任务”，而是：
+
+- `task_contract.json`
+  - truth owner
+- `flow_definition.json`
+  - materialized contract snapshot + launch/runtime defaults
+- `workflow_state.json`
+  - runtime state + recovery cache
+
+### 14.2 本轮实际改动
+
+本轮已完成：
+
+1. 新增 `butler_main/products/butler_flow/task_contract.py`
+   - 负责最小 contract 组装与 summary 规范化
+2. 在 `state.py` 补齐：
+   - `task_contract_path()`
+   - `read_task_contract()`
+   - `write_task_contract()`
+   - `migrate_legacy_flow_to_task_contract()`
+3. 在 `app.py` 接线：
+   - `_save_flow_state()` 写入 contract
+   - `_save_flow_definition()` 写入 `task_contract_id + task_contract_summary`
+   - `new / resume / status` 显式外显 `task_contract_id`
+   - `flow_exec_receipt` 预埋 contract refs
+4. 在 `surface` 接线：
+   - `workspace` / `single flow` / detail payload 带 `task_contract` 与 `task_contract_summary`
+   - `FlowSummaryDTO` 当前可直接从 contract 摘要讲清任务，而不是只依赖 runtime prose
+
+### 14.3 当前仍保留的 compat
+
+这轮没有激进到直接删掉 runtime 里的旧字段，当前明确保留：
+
+- `workflow_state.goal`
+- `workflow_state.guard_condition`
+- `flow_definition.goal`
+- `flow_definition.guard_condition`
+
+但这些字段现在都应视为 compat cache / snapshot，而不是主真源。
+
+### 14.4 本轮验证通过的 slice
+
+当前已通过的直接验证是：
+
+- 新建 flow 会物化 `task_contract.json`
+- legacy 状态读取会补落 contract
+- `workspace` / `single flow` / TUI summary 能外显 `task_contract_id + task_contract_summary`
+- `chat_cli_runner` 未被这轮 contract 接线回归打坏
+
+### 14.5 下一轮 replan 裁决
+
+进入下一轮前，当前建议固定为：
+
+1. `P2` 先从 `flow_exec_receipt + task_contract_summary` 起步，而不是一上来重写全 artifact ledger。
+2. `P3` 先做 `latest accepted receipt` 指针，再谈完整 `rollback/replay`。
+3. `P4` 只引入最小 `AuthorityTransitionReceipt`，不要把 authority 摘要直接膨胀成完整组织内核。

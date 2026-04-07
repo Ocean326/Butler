@@ -189,6 +189,10 @@
   - TTY 下 `new` 固定进入 setup picker；`--plain` 表示走 plain 向导，不是跳过向导
   - `workspace` / single flow 负责 instance runtime；`/manage` 只负责 `builtin + template` shared assets；`/list` 与 `/manage` 同义；`/flows` 仅是迁移提示
   - 若讨论 `Task / Artifact / Ownership / Authority / Policy / Receipt`，先写出现役 `flow_definition / workflow_state / control_profile / flow_exec_receipt / role_sessions / handoffs` 到新对象的单向映射，不能直接并列写第二套账本
+  - 当前 `P0 + P1` 已新增 `task_contract.json`；涉及 butler-flow 任务真源时，先检查：
+    - `task_contract.json`
+    - `flow_definition.json -> task_contract_id / task_contract_summary / truth_owner`
+    - `workflow_state.json` 是否只剩 runtime/recovery cache 语义
   - 若改 `/manage`，优先检查 `build_manage_payload()`、`manage_flow()`、`tui/app.py` 的 transcript-first shell 与 `$asset` suggester，而不是回退到 `flows-list + flows-detail` 的卡片心智
   - 若本轮还涉及根工作区遗留脏改动吸收，优先把旧 compat 路径上的改动移植到 `butler_main/products/butler_flow/`，不要把旧物理路径重新写回 canonical tree
   - `free` 设计链路固定是“setup -> /manage template:new -> template:<id> -> launch instance”，不要再把它写回 `/flows` 设计页

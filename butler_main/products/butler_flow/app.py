@@ -80,6 +80,7 @@ from .state import (
     legacy_flow_dir,
     legacy_flow_state_path,
     legacy_flow_root,
+    migrate_legacy_flow_to_task_contract,
     new_flow_id,
     new_flow_state,
     normalize_control_profile_payload,
@@ -91,10 +92,12 @@ from .state import (
     read_manage_pending_action,
     read_manage_session,
     read_flow_state,
+    read_task_contract,
     read_json,
     resolve_flow_dir,
     resolve_flow_workspace_root,
     safe_int,
+    task_contract_path,
     template_asset_root,
     write_bundle_sources,
     write_compiled_supervisor_knowledge,
@@ -103,8 +106,10 @@ from .state import (
     write_manage_session,
     append_manage_turn,
     clear_manage_pending_action,
+    write_task_contract,
     write_json_atomic,
 )
+from .task_contract import build_task_contract, build_task_contract_summary
 from .version import BUTLER_FLOW_VERSION
 
 
@@ -192,10 +197,12 @@ class FlowApp:
 
     def _build_exec_receipt(self, *, flow_path: Path, flow_state: dict[str, Any], return_code: int) -> FlowExecReceiptV1:
         last_codex_metadata = dict(dict(flow_state.get("last_codex_receipt") or {}).get("metadata") or {})
+        task_contract = read_task_contract(flow_path)
         return {
             "receipt_id": f"flow_exec_receipt_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid4().hex[:8]}",
             "kind": "flow_exec_receipt",
             "flow_id": str(flow_state.get("workflow_id") or "").strip(),
+            "task_contract_id": str(task_contract.get("task_contract_id") or flow_state.get("task_contract_id") or "").strip(),
             "workflow_kind": str(flow_state.get("workflow_kind") or "").strip(),
             "status": str(flow_state.get("status") or "failed").strip() or "failed",
             "terminal": True,
@@ -210,6 +217,7 @@ class FlowApp:
             "role_pack_id": str(flow_state.get("role_pack_id") or "").strip(),
             "execution_context": str(flow_state.get("execution_context") or "").strip(),
             "execution_workspace_root": str(last_codex_metadata.get("execution_workspace_root") or "").strip(),
+            "task_contract_summary": build_task_contract_summary(task_contract),
             "attempt_count": safe_int(flow_state.get("attempt_count"), 0),
             "codex_session_id": str(flow_state.get("codex_session_id") or "").strip(),
             "summary": str(flow_state.get("last_completion_summary") or "").strip(),
@@ -1293,6 +1301,7 @@ class FlowApp:
                 rows.append(
                     {
                         "flow_id": flow_id,
+                        "task_contract_summary": build_task_contract_summary(read_task_contract(flow_path)),
                         "flow_dir": str(flow_path),
                         "flow_kind": str(flow_state.get("workflow_kind") or "").strip(),
                         "status": str(flow_state.get("status") or "").strip(),
@@ -1339,6 +1348,13 @@ class FlowApp:
             raise FileNotFoundError(f"flow not found: {flow_id}")
         if not state_path.exists():
             self._save_flow_state(flow_path, flow_state)
+        task_contract = read_task_contract(flow_path)
+        if task_contract and not task_contract_path(flow_path).exists():
+            write_task_contract(flow_path, task_contract)
+        flow_definition = read_json(flow_definition_path(flow_path))
+        if not flow_definition:
+            flow_definition = self._save_flow_definition(flow_path, flow_state, task_contract=task_contract)
+        task_contract_summary = build_task_contract_summary(task_contract)
         state_store = FileRuntimeStateStore(flow_path)
         trace_store = FileTraceStore(state_store.traces_dir())
         trace_summary = trace_store.summarize(flow_id)
@@ -1357,6 +1373,9 @@ class FlowApp:
             "flow_dir": str(flow_path),
             "workspace_root": str(workspace_root or "").strip(),
             "flow_state": flow_state,
+            "task_contract": task_contract,
+            "task_contract_summary": task_contract_summary,
+            "flow_definition": flow_definition,
             "role_runtime": extract_role_runtime_summary(flow_state),
             "runtime_snapshot": {
                 "config_state": snapshot.config_state,
@@ -1428,10 +1447,16 @@ class FlowApp:
         flow_state["flow_version"] = str(flow_state.get("flow_version") or BUTLER_FLOW_VERSION).strip() or BUTLER_FLOW_VERSION
         return flow_state
 
-    def _save_flow_definition(self, flow_path: Path, flow_state: dict[str, Any]) -> dict[str, Any]:
+    def _save_flow_definition(self, flow_path: Path, flow_state: dict[str, Any], *, task_contract: dict[str, Any] | None = None) -> dict[str, Any]:
+        task_contract = dict(task_contract or read_task_contract(flow_path) or migrate_legacy_flow_to_task_contract(flow_state))
+        task_contract_summary = build_task_contract_summary(task_contract)
         payload = {
             "definition_id": str(flow_state.get("workflow_id") or flow_path.name).strip(),
             "flow_id": str(flow_state.get("workflow_id") or flow_path.name).strip(),
+            "task_contract_id": str(task_contract.get("task_contract_id") or flow_state.get("task_contract_id") or "").strip(),
+            "task_contract_summary": task_contract_summary,
+            "truth_owner": "task_contract.json",
+            "materialized_from_task_contract": True,
             "label": str(flow_state.get("label") or flow_state.get("workflow_id") or flow_path.name).strip(),
             "description": str(flow_state.get("description") or "").strip(),
             "workflow_kind": str(flow_state.get("workflow_kind") or "").strip(),
@@ -1468,6 +1493,13 @@ class FlowApp:
 
     def _save_flow_state(self, flow_path: Path, flow_state: dict[str, Any]) -> None:
         self._normalize_flow_state_payload(flow_state)
+        task_contract = build_task_contract(
+            flow_state=flow_state,
+            flow_definition=read_json(flow_definition_path(flow_path)),
+            current=read_json(task_contract_path(flow_path)),
+        )
+        flow_state["task_contract_id"] = str(task_contract.get("task_contract_id") or "").strip()
+        write_task_contract(flow_path, task_contract)
         workflow_id = str(flow_state.get("workflow_id") or flow_path.name).strip() or flow_path.name
         bundle_manifest = self._runtime_bundle_manifest(
             workspace_root=str(flow_state.get("workspace_root") or "").strip(),
@@ -1497,7 +1529,7 @@ class FlowApp:
         flow_state["bundle_manifest"] = bundle_manifest
         flow_state["updated_at"] = now_text()
         write_json_atomic(flow_state_path(flow_path), flow_state)
-        self._save_flow_definition(flow_path, flow_state)
+        self._save_flow_definition(flow_path, flow_state, task_contract=task_contract)
 
     def _append_manage_audit(
         self,
@@ -2029,9 +2061,11 @@ class FlowApp:
         interactive_setup = bool(getattr(args, "plain", False)) and _stdin_is_interactive()
         prepared = self.prepare_new_flow(args, interactive_setup=interactive_setup)
         flow_state = prepared.flow_state
+        task_contract = read_task_contract(prepared.flow_path)
         self._display.write(f"[butler-flow] config={prepared.config_path}")
         self._display.write(f"[butler-flow] workspace={prepared.workspace_root}")
         self._display.write(f"[butler-flow] flow_id={flow_state.get('workflow_id')}")
+        self._display.write(f"[butler-flow] task_contract_id={task_contract.get('task_contract_id') or flow_state.get('task_contract_id') or '-'}")
         self._display.write(f"[butler-flow] flow_dir={prepared.flow_path}")
         self._display.write(f"[butler-flow] kind={flow_state.get('workflow_kind')}")
         self._display.write(
@@ -2114,10 +2148,12 @@ class FlowApp:
     def resume(self, args: argparse.Namespace) -> int:
         prepared = self.prepare_resume_flow(args)
         flow_state = prepared.flow_state
+        task_contract = read_task_contract(prepared.flow_path)
         if str(flow_state.get("status") or "").strip() == "completed":
             self._display.write(f"[butler-flow] already completed: {flow_state.get('workflow_id')}")
             return 0
         self._display.write(f"[butler-flow] config={prepared.config_path}")
+        self._display.write(f"[butler-flow] task_contract_id={task_contract.get('task_contract_id') or flow_state.get('task_contract_id') or '-'}")
         if str(flow_state.get("resume_source") or "").strip() == "codex_session_id":
             self._display.write(f"[butler-flow] derived flow_id={flow_state.get('workflow_id')}")
             self._display.write(f"[butler-flow] resuming codex_session_id={flow_state.get('codex_session_id')}")
@@ -2138,8 +2174,10 @@ class FlowApp:
             return 0
         flow_state = dict(payload.get("flow_state") or {})
         flow_definition = dict(payload.get("flow_definition") or {})
+        task_contract_summary = dict(payload.get("task_contract_summary") or {})
         runtime = dict(payload.get("runtime_snapshot") or {})
         self._display.write(f"workflow_id={payload['flow_id']}")
+        self._display.write(f"task_contract_id={task_contract_summary.get('task_contract_id') or flow_state.get('task_contract_id') or '-'}")
         self._display.write(f"flow_dir={payload['flow_dir']}")
         self._display.write(f"kind={flow_state.get('workflow_kind')}")
         self._display.write(f"version={flow_definition.get('version') or flow_state.get('flow_version') or '-'}")
@@ -2175,9 +2213,7 @@ class FlowApp:
         flow_id = self._flow_identity_from_args(workspace_root=workspace_root, args=args)
         if not flow_id:
             raise ValueError("status requires --flow-id or --last")
-        payload = self._flow_status_payload(workspace_root=workspace_root, flow_id=flow_id)
-        payload["flow_definition"] = read_json(flow_definition_path(Path(payload["flow_dir"])))
-        return payload
+        return self._flow_status_payload(workspace_root=workspace_root, flow_id=flow_id)
 
     def manage_flow(self, args: argparse.Namespace) -> int:
         cfg, config_path, workspace_root = self._load_config(getattr(args, "config", None))

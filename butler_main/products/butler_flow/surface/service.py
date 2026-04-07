@@ -74,6 +74,7 @@ def build_workspace_surface(
             flow_state = dict(status_payload.get("flow_state") or {})
             entry.update(
                 {
+                    "task_contract_summary": summary.get("task_contract_summary"),
                     "approval_state": summary.get("approval_state"),
                     "execution_mode": summary.get("execution_mode"),
                     "session_strategy": summary.get("session_strategy"),
@@ -868,6 +869,8 @@ def _detail_payload_from_inspected(
     return {
         "flow_id": flow_id,
         "status": status,
+        "task_contract": dict(status.get("task_contract") or {}),
+        "task_contract_summary": dict(status.get("task_contract_summary") or {}),
         "approval": {
             "approval_state": str(flow_state.get("approval_state") or "").strip() or "not_required",
             "pending_codex_prompt": str(flow_state.get("pending_codex_prompt") or "").strip(),
@@ -939,6 +942,7 @@ def workspace_payload(*, config: str | None, limit: int = 10) -> dict[str, Any]:
             summary = build_flow_summary(status_payload=status, handoffs=handoffs).to_dict()
             entry.update(
                 {
+                    "task_contract_summary": dict(status.get("task_contract_summary") or {}),
                     "approval_state": summary.get("approval_state"),
                     "execution_mode": summary.get("execution_mode"),
                     "session_strategy": summary.get("session_strategy"),
@@ -998,6 +1002,8 @@ def single_flow_payload(*, config: str | None, flow_id: str) -> dict[str, Any]:
     detail_dto = FlowDetailDTO(
         flow_id=flow_id,
         status=status,
+        task_contract=dict(status.get("task_contract") or {}),
+        task_contract_summary=dict(status.get("task_contract_summary") or {}),
         summary=summary,
         step_history=step_history,
         timeline=timeline,

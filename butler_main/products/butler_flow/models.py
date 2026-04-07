@@ -17,6 +17,7 @@ class FlowDecision(TypedDict, total=False):
 
 class FlowState(TypedDict, total=False):
     workflow_id: str
+    task_contract_id: str
     workflow_kind: str
     launch_mode: str
     catalog_flow_id: str
@@ -331,6 +332,7 @@ class FlowExecReceiptV1(TypedDict, total=False):
     receipt_id: str
     kind: str
     flow_id: str
+    task_contract_id: str
     workflow_kind: str
     status: str
     terminal: bool
@@ -345,6 +347,7 @@ class FlowExecReceiptV1(TypedDict, total=False):
     role_pack_id: str
     execution_context: str
     execution_workspace_root: str
+    task_contract_summary: dict[str, Any]
     attempt_count: int
     codex_session_id: str
     summary: str
@@ -370,6 +373,10 @@ class FlowWorkspaceViewV1(TypedDict, total=False):
 class FlowDefinitionV1(TypedDict, total=False):
     definition_id: str
     flow_id: str
+    task_contract_id: str
+    task_contract_summary: dict[str, Any]
+    truth_owner: str
+    materialized_from_task_contract: bool
     workflow_kind: str
     entry_mode: str
     launch_mode: str
@@ -391,6 +398,36 @@ class FlowDefinitionV1(TypedDict, total=False):
     version: str
     created_at: str
     updated_at: str
+
+
+class TaskContractV1(TypedDict, total=False):
+    task_contract_id: str
+    flow_id: str
+    goal: str
+    repo_scope: dict[str, Any]
+    acceptance: dict[str, Any]
+    owner: dict[str, Any]
+    authority: dict[str, Any]
+    policy: dict[str, Any]
+    execution_context: str
+    source_surface: str
+    truth_owner: str
+    materialization: dict[str, Any]
+    created_at: str
+    updated_at: str
+
+
+class TaskContractSummaryV1(TypedDict, total=False):
+    task_contract_id: str
+    goal: str
+    execution_context: str
+    source_surface: str
+    repo_scope: dict[str, Any]
+    acceptance_summary: dict[str, Any]
+    owner_summary: dict[str, Any]
+    authority_summary: dict[str, Any]
+    policy_summary: dict[str, Any]
+    truth_owner: str
 
 
 class FlowManageSessionV1(TypedDict, total=False):

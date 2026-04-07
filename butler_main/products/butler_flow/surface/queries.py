@@ -134,6 +134,7 @@ def build_flow_summary(*, status_payload: dict[str, Any], handoffs: list[dict[st
     if not status:
         status = dict(status_payload or {})
     flow_state = dict(status.get("flow_state") or {})
+    task_contract_summary = dict(status.get("task_contract_summary") or status_payload.get("task_contract_summary") or {})
     latest_judge = dict(flow_state.get("latest_judge_decision") or {})
     last_operator_action = dict(flow_state.get("last_operator_action") or {})
     return FlowSummaryDTO(
@@ -144,6 +145,7 @@ def build_flow_summary(*, status_payload: dict[str, Any], handoffs: list[dict[st
             or status_payload.get("flow_id")
             or ""
         ).strip(),
+        task_contract_id=str(task_contract_summary.get("task_contract_id") or flow_state.get("task_contract_id") or "").strip(),
         label=str(flow_state.get("label") or status.get("label") or "").strip(),
         workflow_kind=str(flow_state.get("workflow_kind") or "").strip(),
         effective_status=str(status.get("effective_status") or flow_state.get("status") or "").strip(),
@@ -153,8 +155,12 @@ def build_flow_summary(*, status_payload: dict[str, Any], handoffs: list[dict[st
         max_phase_attempts=int(flow_state.get("max_phase_attempts") or 0),
         max_runtime_seconds=int(flow_state.get("max_runtime_seconds") or 0),
         runtime_elapsed_seconds=int(flow_state.get("runtime_elapsed_seconds") or 0),
-        goal=str(flow_state.get("goal") or "").strip(),
-        guard_condition=str(flow_state.get("guard_condition") or "").strip(),
+        goal=str(task_contract_summary.get("goal") or flow_state.get("goal") or "").strip(),
+        guard_condition=str(
+            dict(task_contract_summary.get("acceptance_summary") or {}).get("guard_condition")
+            or flow_state.get("guard_condition")
+            or ""
+        ).strip(),
         approval_state=str(flow_state.get("approval_state") or "").strip() or "not_required",
         execution_mode=str(flow_state.get("execution_mode") or "").strip(),
         session_strategy=str(flow_state.get("session_strategy") or "").strip(),
@@ -168,6 +174,7 @@ def build_flow_summary(*, status_payload: dict[str, Any], handoffs: list[dict[st
         latest_token_usage=dict(flow_state.get("latest_token_usage") or {}),
         context_governor=dict(flow_state.get("context_governor") or {}),
         latest_handoff_summary=latest_handoff_summary(handoffs),
+        task_contract_summary=task_contract_summary,
         updated_at=str(flow_state.get("updated_at") or status.get("updated_at") or flow_state.get("created_at") or "").strip(),
     )
 
@@ -243,6 +250,8 @@ def build_flow_detail(*, payload: dict[str, Any]) -> FlowDetailDTO:
     return FlowDetailDTO(
         flow_id=str(row.get("flow_id") or "").strip(),
         status=dict(row.get("status") or {}),
+        task_contract=dict(row.get("task_contract") or {}),
+        task_contract_summary=dict(row.get("task_contract_summary") or {}),
         summary=_coerce_flow_summary(row.get("summary")),
         step_history=[dict(item or {}) for item in list(row.get("step_history") or [])],
         timeline=[dict(item or {}) for item in list(row.get("timeline") or [])],

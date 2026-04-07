@@ -7,6 +7,7 @@ from typing import Any
 @dataclass(frozen=True, slots=True)
 class FlowSummaryDTO:
     flow_id: str = ""
+    task_contract_id: str = ""
     label: str = ""
     workflow_kind: str = ""
     effective_status: str = ""
@@ -31,6 +32,7 @@ class FlowSummaryDTO:
     latest_token_usage: dict[str, Any] = field(default_factory=dict)
     context_governor: dict[str, Any] = field(default_factory=dict)
     latest_handoff_summary: dict[str, Any] = field(default_factory=dict)
+    task_contract_summary: dict[str, Any] = field(default_factory=dict)
     updated_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -112,6 +114,8 @@ class FlowConsoleDTO:
 class FlowDetailDTO:
     flow_id: str = ""
     status: dict[str, Any] = field(default_factory=dict)
+    task_contract: dict[str, Any] = field(default_factory=dict)
+    task_contract_summary: dict[str, Any] = field(default_factory=dict)
     summary: FlowSummaryDTO | dict[str, Any] = field(default_factory=FlowSummaryDTO)
     step_history: list[dict[str, Any]] = field(default_factory=list)
     timeline: list[dict[str, Any]] = field(default_factory=list)

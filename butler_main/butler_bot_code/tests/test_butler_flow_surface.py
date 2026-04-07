@@ -21,6 +21,7 @@ from butler_main.butler_flow.state import (  # noqa: E402
     flow_state_path,
     handoffs_path,
     new_flow_state,
+    task_contract_path,
     write_json_atomic,
 )
 from butler_main.butler_flow.surface import (  # noqa: E402
@@ -287,12 +288,15 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
             payload = flow_surface.single_flow_payload(config=config, flow_id="flow_surface")
 
             self.assertEqual(payload["summary"]["approval_state"], "operator_required")
+            self.assertEqual(payload["summary"]["task_contract_id"], "task_contract_flow_surface")
+            self.assertEqual(payload["task_contract_summary"]["goal"], "ship desktop")
             self.assertEqual(payload["navigator_summary"]["active_role_id"], "planner")
             self.assertEqual(payload["supervisor_view"]["latest_judge_decision"]["decision"], "ADVANCE")
             self.assertEqual(payload["workflow_view"]["artifact_refs"], ["artifact:1:imp"])
             self.assertEqual(payload["role_strip"]["latest_handoff_summary"]["handoff_id"], "handoff-1")
             self.assertEqual([row["event_id"] for row in payload["supervisor_view"]["events"]], ["evt-supervisor"])
             self.assertEqual([row["event_id"] for row in payload["workflow_view"]["events"]], ["evt-workflow"])
+            self.assertTrue(task_contract_path(path).exists())
 
     def test_workspace_payload_enriches_rows_via_surface_service(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -330,6 +334,7 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
             self.assertEqual(row.get("execution_mode"), "medium")
             self.assertEqual(row.get("session_strategy"), "role_bound")
             self.assertEqual(row.get("active_role_id"), "planner")
+            self.assertEqual(dict(row.get("task_contract_summary") or {}).get("task_contract_id"), "task_contract_flow_workspace_surface")
             self.assertEqual(dict(row.get("latest_handoff_summary") or {}).get("handoff_id"), "handoff-2")
             self.assertEqual(dict(row.get("latest_judge_decision") or {}).get("decision"), "RETRY")
             self.assertEqual(dict(row.get("latest_operator_action") or {}).get("action_type"), "pause")

@@ -461,6 +461,8 @@ class ButlerFlowTuiControllerTests(unittest.TestCase):
 
             self.assertEqual(payload["summary"]["effective_status"], "running")
             self.assertEqual(payload["summary"]["effective_phase"], "review")
+            self.assertEqual(payload["summary"]["task_contract_id"], "task_contract_flow_summary")
+            self.assertEqual(dict(payload.get("task_contract_summary") or {}).get("goal"), "ship v1.1")
             self.assertEqual(len(payload["step_history"]), 2)
             self.assertEqual(payload["step_history"][0]["phase"], "plan")
             self.assertEqual(payload["step_history"][1]["decision"], "ADVANCE")

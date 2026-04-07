@@ -52,6 +52,7 @@ from .constants import (
     SESSION_STRATEGY_SHARED,
 )
 from .flow_definition import default_phase_plan, first_phase_id
+from .task_contract import build_task_contract, build_task_contract_summary
 from .version import BUTLER_FLOW_VERSION
 
 
@@ -745,6 +746,10 @@ def flow_definition_path(flow_dir: Path) -> Path:
     return flow_dir / "flow_definition.json"
 
 
+def task_contract_path(flow_dir: Path) -> Path:
+    return flow_dir / "task_contract.json"
+
+
 def role_sessions_path(flow_dir: Path) -> Path:
     return flow_dir / "role_sessions.json"
 
@@ -763,6 +768,40 @@ def design_turns_path(flow_dir: Path) -> Path:
 
 def design_draft_path(flow_dir: Path) -> Path:
     return flow_dir / "design_draft.json"
+
+
+def migrate_legacy_flow_to_task_contract(flow_state: dict[str, Any], flow_definition: dict[str, Any] | None = None) -> dict[str, Any]:
+    if not flow_state and not flow_definition:
+        return {}
+    return build_task_contract(
+        flow_state=dict(flow_state or {}),
+        flow_definition=dict(flow_definition or {}),
+    )
+
+
+def read_task_contract(flow_dir: Path) -> dict[str, Any]:
+    payload = read_json(task_contract_path(flow_dir))
+    if payload:
+        return build_task_contract(
+            flow_state=read_flow_state(flow_dir),
+            flow_definition=read_json(flow_definition_path(flow_dir)),
+            current=payload,
+            source_surface=str(payload.get("source_surface") or "").strip(),
+        )
+    flow_state = read_flow_state(flow_dir)
+    flow_definition = read_json(flow_definition_path(flow_dir))
+    return migrate_legacy_flow_to_task_contract(flow_state, flow_definition)
+
+
+def write_task_contract(flow_dir: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = build_task_contract(
+        flow_state={},
+        flow_definition={},
+        current=dict(payload or {}),
+        source_surface=str(dict(payload or {}).get("source_surface") or "").strip(),
+    )
+    write_json_atomic(task_contract_path(flow_dir), normalized)
+    return normalized
 
 
 def read_flow_state(flow_dir: Path) -> dict[str, Any]:
@@ -926,6 +965,9 @@ def ensure_flow_state_v1(payload: dict[str, Any]) -> dict[str, Any]:
         state["latest_mutation"] = {}
     if "flow_version" not in state:
         state["flow_version"] = BUTLER_FLOW_VERSION
+    if "task_contract_id" not in state:
+        workflow_id = str(state.get("workflow_id") or state.get("flow_id") or "").strip()
+        state["task_contract_id"] = f"task_contract_{workflow_id}" if workflow_id else ""
     pending_prompt = str(state.get("pending_codex_prompt") or "").strip()
     if pending_prompt and not list(state.get("queued_operator_updates") or []):
         state["queued_operator_updates"] = [
@@ -1071,6 +1113,7 @@ def ensure_flow_sidecars(flow_dir: Path, flow_state: dict[str, Any]) -> None:
     artifacts = flow_artifacts_path(flow_dir)
     events = flow_events_path(flow_dir)
     definition = flow_definition_path(flow_dir)
+    contract = task_contract_path(flow_dir)
     role_sessions = role_sessions_path(flow_dir)
     handoffs = handoffs_path(flow_dir)
     runtime_plan = runtime_plan_path(flow_dir)
@@ -1107,11 +1150,16 @@ def ensure_flow_sidecars(flow_dir: Path, flow_state: dict[str, Any]) -> None:
             },
         )
     if not definition.exists():
+        contract_payload = build_task_contract(flow_state=dict(flow_state or {}))
         write_json_atomic(
             definition,
             {
                 "definition_id": str(flow_state.get("workflow_id") or "").strip(),
                 "flow_id": str(flow_state.get("workflow_id") or "").strip(),
+                "task_contract_id": str(contract_payload.get("task_contract_id") or "").strip(),
+                "task_contract_summary": build_task_contract_summary(contract_payload),
+                "truth_owner": "task_contract.json",
+                "materialized_from_task_contract": True,
                 "workflow_kind": str(flow_state.get("workflow_kind") or "").strip(),
                 "entry_mode": str(flow_state.get("entry_mode") or flow_state.get("workflow_kind") or "").strip(),
                 "launch_mode": str(flow_state.get("launch_mode") or "").strip(),
@@ -1133,6 +1181,12 @@ def ensure_flow_sidecars(flow_dir: Path, flow_state: dict[str, Any]) -> None:
                 "updated_at": now_text(),
             },
         )
+    if not contract.exists():
+        contract_payload = build_task_contract(
+            flow_state=dict(flow_state or {}),
+            flow_definition=read_json(definition),
+        )
+        write_json_atomic(contract, contract_payload)
     if not runtime_plan.exists():
         write_json_atomic(
             runtime_plan,
@@ -1281,6 +1335,7 @@ __all__ = [
     "flow_artifacts_path",
     "flow_events_path",
     "flow_definition_path",
+    "task_contract_path",
     "flow_asset_root",
     "handoffs_path",
     "flow_codex_home_dir",
@@ -1312,6 +1367,7 @@ __all__ = [
     "normalize_control_profile_payload",
     "prepare_flow_codex_home",
     "read_flow_state",
+    "read_task_contract",
     "read_json",
     "resolve_flow_workspace_root",
     "safe_int",
@@ -1321,5 +1377,7 @@ __all__ = [
     "write_manage_draft",
     "write_manage_pending_action",
     "write_manage_session",
+    "write_task_contract",
     "write_json_atomic",
+    "migrate_legacy_flow_to_task_contract",
 ]
