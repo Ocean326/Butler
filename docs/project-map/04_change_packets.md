@@ -1,6 +1,6 @@
 # 改前读包
 
-更新时间：2026-04-04
+更新时间：2026-04-07
 状态：现役
 用途：把常见改动压成固定最小读包，避免 agent 自由扩散式读库
 
@@ -10,7 +10,7 @@
 
 1. 仓库根 `README.md`
 2. [docs/README.md](../README.md)
-3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0404/00_当日总纲.md`）
+3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0407/00_当日总纲.md`）
 
 ## `frontdoor`
 
@@ -116,6 +116,8 @@
   - [分层地图](./01_layer_map.md)
   - [功能地图](./02_feature_map.md)
   - [真源矩阵](./03_truth_matrix.md)
+  - [0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](../daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md)
+  - [0407 Butler Flow 到 Canonical Team Runtime 升级路径与阶段开发计划（批判式更新版）](../daily-upgrade/0407/02_butler-flow到canonical_team_runtime升级路径与阶段开发计划_批判式更新版.md)
   - [0403 当日总纲](../daily-upgrade/0403/00_当日总纲.md)
   - [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](../daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
   - [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](../daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
@@ -182,9 +184,11 @@
   - `test_runtime_os_namespace.py`
 - 默认动作：
   - 先确认目标是前台 `butler-flow` CLI，而不是后台 `campaign/orchestrator`
+  - 若目标是 `butler-flow -> canonical team runtime` 升级路径，先把现役对象分成 `truth / runtime-recovery / projection / compat` 四类，再决定是否需要新对象
   - 入口以 `new/resume/exec` 为主；`run/exec run` 仅是兼容别名
   - TTY 下 `new` 固定进入 setup picker；`--plain` 表示走 plain 向导，不是跳过向导
   - `workspace` / single flow 负责 instance runtime；`/manage` 只负责 `builtin + template` shared assets；`/list` 与 `/manage` 同义；`/flows` 仅是迁移提示
+  - 若讨论 `Task / Artifact / Ownership / Authority / Policy / Receipt`，先写出现役 `flow_definition / workflow_state / control_profile / flow_exec_receipt / role_sessions / handoffs` 到新对象的单向映射，不能直接并列写第二套账本
   - 若改 `/manage`，优先检查 `build_manage_payload()`、`manage_flow()`、`tui/app.py` 的 transcript-first shell 与 `$asset` suggester，而不是回退到 `flows-list + flows-detail` 的卡片心智
   - 若本轮还涉及根工作区遗留脏改动吸收，优先把旧 compat 路径上的改动移植到 `butler_main/products/butler_flow/`，不要把旧物理路径重新写回 canonical tree
   - `free` 设计链路固定是“setup -> /manage template:new -> template:<id> -> launch instance”，不要再把它写回 `/flows` 设计页
@@ -352,6 +356,8 @@
   - [Project Map 入口](./README.md)
   - [功能地图](./02_feature_map.md)
   - [真源矩阵](./03_truth_matrix.md)
+  - [0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](../daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md)
+  - [0407 Butler Flow 到 Canonical Team Runtime 升级路径与阶段开发计划（批判式更新版）](../daily-upgrade/0407/02_butler-flow到canonical_team_runtime升级路径与阶段开发计划_批判式更新版.md)
   - [0402 Vibecoding Agent 默认收尾动作与 `vibe-close` 收口](../daily-upgrade/0402/09_vibecoding_agent默认收尾动作与vibe_close收口.md)
   - [0331 根目录归档整理收口](../daily-upgrade/0331/05_根目录归档整理收口.md)
   - [0403 仓库级重构实施稿：三产品 / Platform / Repo Governance](../daily-upgrade/0403/04_仓库级重构实施稿_三产品_platform_repo治理.md)
@@ -360,8 +366,10 @@
   - [concepts/README.md](../concepts/README.md)
 - 默认检查：
   - 当前入口是否仍指向最新日期
+  - 当天正式收口文档是否已把“前置讨论稿 / 最终真源 / 阶段计划”三者分开
   - 历史文档是否被错误列为现役
   - 研究/脑暴材料是否已收敛到 `docs/每日头脑风暴/`，而不是继续写回旧 `docs/每日/`
+  - 若同日存在多份理论稿，是否已明确哪个是当前真源、哪个只是补充/远景
   - 根目录说明是否与实际根目录保留项一致
   - `runtime_os/`、`tools/` 是否被错误写成可直接清理对象
   - `AGENTS.md` 是否仍把 `./tools/vibe-close` 作为 vibecoding 默认收尾动作

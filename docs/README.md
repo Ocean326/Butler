@@ -26,6 +26,8 @@
 4. [功能地图](./project-map/02_feature_map.md)
 5. [真源矩阵](./project-map/03_truth_matrix.md)
 6. [0407 当日总纲](./daily-upgrade/0407/00_当日总纲.md)
+- 补充：[0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](./daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md)
+- 补充：[0407 Butler Flow 到 Canonical Team Runtime 升级路径与阶段开发计划（批判式更新版）](./daily-upgrade/0407/02_butler-flow到canonical_team_runtime升级路径与阶段开发计划_批判式更新版.md)
 - 补充：[0407 CLI Agent Substrate -> Canonical Team Runtime -> Team OS 脑暴收口](./每日头脑风暴/0407/01_CLI_Agent_Substrate到Canonical_Team_Runtime再到Team_OS_脑暴收口.md)
 - 补充：[0407 以 `Task + Artifact` 为真源的 Full-Stack Team OS 草稿](./每日头脑风暴/0407/02_以Task_Artifact为真源的Full_Stack_Team_OS草稿.md)
 6. [0404 当日总纲](./daily-upgrade/0404/00_当日总纲.md)
