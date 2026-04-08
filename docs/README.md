@@ -25,7 +25,10 @@
 3. [分层地图](./project-map/01_layer_map.md)
 4. [功能地图](./project-map/02_feature_map.md)
 5. [真源矩阵](./project-map/03_truth_matrix.md)
-6. [0405 当日总纲](./daily-upgrade/0405/00_当日总纲.md)
+6. [0408 当日总纲](./daily-upgrade/0408/00_当日总纲.md)
+- 补充：[0408 Team 与 Desktop 关系、当前进度与下一条主线](./daily-upgrade/0408/01_team与desktop关系_当前进度与下一条主线.md)
+- 补充：`0408/01` 当前把 `team` 与 `desktop` 的关系正式收口为：`team` 是前台 `butler-flow` 的 runtime 语义，`desktop` 是共享 truth 的 projection shell；当前 `codex/flow-desktop` 仍需先对齐 `main@80d595b` 的 canonical runtime 基线，再进入 `P6 Closure Gate`
+7. [0405 当日总纲](./daily-upgrade/0405/00_当日总纲.md)
 - 补充：0405 当前真源已经把 Butler Flow Desktop 收口为 thread-first workbench：`Manager -> Supervisor -> Agent focus -> Templates`
 - 补充：[0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](./daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)
 - 补充：Desktop 当前现役 payload 已从旧 `workspace / manage / single_flow / detail` 主视图升级为 `thread-home / manager-thread / supervisor-thread / agent-focus / template-team / manager-message`

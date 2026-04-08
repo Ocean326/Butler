@@ -1,6 +1,6 @@
 # 改前读包
 
-更新时间：2026-04-05
+更新时间：2026-04-08
 状态：现役
 用途：把常见改动压成固定最小读包，避免 agent 自由扩散式读库
 
@@ -10,7 +10,7 @@
 
 1. 仓库根 `README.md`
 2. [docs/README.md](../README.md)
-3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0405/00_当日总纲.md`）
+3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0408/00_当日总纲.md`）
 
 ## `frontdoor`
 
@@ -118,6 +118,7 @@
   - [真源矩阵](./03_truth_matrix.md)
   - [0405 当日总纲](../daily-upgrade/0405/00_当日总纲.md)
   - [0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](../daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)
+  - [0408 Team 与 Desktop 关系、当前进度与下一条主线](../daily-upgrade/0408/01_team与desktop关系_当前进度与下一条主线.md)
   - [0403 当日总纲](../daily-upgrade/0403/00_当日总纲.md)
   - [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](../daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
   - [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](../daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
@@ -185,9 +186,12 @@
   - `test_runtime_os_namespace.py`
 - 默认动作：
   - 先确认目标是前台 `butler-flow` CLI，而不是后台 `campaign/orchestrator`
+  - 若问题是在讲 “team 与 desktop 的关系、当前进度、下一条主线”，先读 `0408/01`；若当前分支没有 `0407` 文档目录或对应真源对象，再对照 `main@80d595b`，不要假设 Desktop 分支已经自动带入 canonical runtime 闭环
   - 入口以 `new/resume/exec` 为主；`run/exec run` 仅是兼容别名
   - TTY 下 `new` 固定进入 setup picker；`--plain` 表示走 plain 向导，不是跳过向导
   - `workspace` / single flow 负责 instance runtime；`/manage` 只负责 `builtin + template` shared assets；`/list` 与 `/manage` 同义；`/flows` 仅是迁移提示
+  - 当前 `team` 的默认理解固定为前台 `butler-flow` 上的 runtime 语义，而不是 `Team OS` 或后台控制面对象
+  - 当前 `desktop` 的默认理解固定为 projection shell；任何下一轮 Desktop 工作都应优先服务 `P6 Closure Gate`，不要先扩成独立产品平台
   - 若改 `/manage`，优先检查 `build_manage_payload()`、`manage_flow()`、`tui/app.py` 的 transcript-first shell 与 `$asset` suggester，而不是回退到 `flows-list + flows-detail` 的卡片心智
   - 若本轮还涉及根工作区遗留脏改动吸收，优先把旧 compat 路径上的改动移植到 `butler_main/products/butler_flow/`，不要把旧物理路径重新写回 canonical tree
   - `free` 设计链路固定是“setup -> /manage template:new -> template:<id> -> launch instance”，不要再把它写回 `/flows` 设计页
@@ -216,6 +220,7 @@
 - 若排查 TUI，优先看 `butler_main/products/butler_flow/tui/`、`butler_main/products/butler_flow/events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
   - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
 - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/products/butler_flow/desktop/ + butler_main/products/butler_flow/desktop_bridge.py + butler_main/products/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars；远程/无头环境下优先走手填 `Config Path Fallback`，不要把原生 file dialog 当唯一验证入口
+  - 若这轮目标是 Desktop 下一条主线，优先做真实 workspace fixture、payload 一致性、runtime contract/receipt/recovery 摘要展示、artifact open / toast / preflight / settings 的最小闭环；不要先扩 watch/publish/packaging
   - 若排查 Desktop 是否“已完成”，把验证拆成四层记录：Python bridge 回归、desktop `typecheck/build`、renderer `vitest`、Electron `Playwright` 点击回归；不要把源码编译通过误记成运行时已验证
 - 若目标是当前 thread-first Desktop、`Manager -> Supervisor -> Agent focus` 串联、`History` project threads、`Templates` 单流 team 管理、或 `day/night theme`，先补读 [0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](../daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)；当前 renderer 已不再以旧 `workspace/manage/detail drawer` 为主心智
   - 若这轮还涉及视觉壳层、bridge fallback、history 双 thread 合同或 manager/supervisor 上下文回跳，额外核对 0405 正文中的第二波补充：`thread-home` history 现役是 `manager + supervisor` 双 summary，renderer 不得再用 `flow_id` 猜 thread 身份
