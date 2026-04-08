@@ -17,6 +17,10 @@ if [[ -n "${DISPLAY:-}" && "${FORCE_XVFB:-0}" != "1" ]]; then
   exec "${PLAYWRIGHT_CMD[@]}"
 fi
 
+if [[ "$(uname -s)" == "Darwin" && "${FORCE_XVFB:-0}" != "1" ]]; then
+  exec "${PLAYWRIGHT_CMD[@]}"
+fi
+
 if command -v xvfb-run >/dev/null 2>&1; then
   run_with_xvfb "$(command -v xvfb-run)"
 fi

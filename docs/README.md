@@ -28,6 +28,7 @@
 6. [0408 当日总纲](./daily-upgrade/0408/00_当日总纲.md)
 - 补充：[0408 Butler Desktop 产品形态收口：Manager 对话壳、连续线程与多藏 agent 输出](./daily-upgrade/0408/01_butler-desktop产品形态收口_manager对话壳_连续线程与多藏agent输出.md)
 - 补充：`0408/01` 当前把 Butler Desktop 的正式前台定义收口为 `Manager-facing conversation shell over the canonical team runtime`：前台只保留一个一级对象 `Manager`，`Manager thread` 是单个 mission 的连续表示，`history` 不再独立成页，`supervisor / recovery / studio` 只作为同一条对话中的模式、来源与可钻取子流
+- 补充：`0408/01` 当前也已回写实现落地结果：renderer 已改成单条 `Manager thread` 会话壳，Desktop `vitest + Playwright` 与 Python `desktop_bridge / surface / tui_controller` 合同回归已对齐当前 truth chain
 7. [0407 当日总纲](./daily-upgrade/0407/00_当日总纲.md)
 - 补充：[0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](./daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md)
 - 补充：[0407 Butler Flow 到 Canonical Team Runtime 升级路径与阶段开发计划（批判式更新版）](./daily-upgrade/0407/02_butler-flow到canonical_team_runtime升级路径与阶段开发计划_批判式更新版.md)

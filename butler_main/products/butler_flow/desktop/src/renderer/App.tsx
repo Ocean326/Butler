@@ -2,13 +2,11 @@ import { KeyboardEvent, startTransition, useEffect, useState } from "react";
 import { useAtom } from "jotai";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, FolderSearch, RefreshCcw } from "lucide-react";
-import type { SingleFlowPayload, SurfaceMetaDTO } from "../shared/dto";
 import { electronApi } from "./lib/electron-api";
 import { WorkbenchShell } from "./components/app-shell/WorkbenchShell";
-import { ManageCenterShell } from "./components/manage/ManageCenterShell";
 import { FlowRail } from "./components/navigation/FlowRail";
-import { activePageAtom, actionDraftAtom, detailTabAtom, statusMessageAtom } from "./state/atoms/ui";
 import { selectedManageAssetIdAtom } from "./state/atoms/manage";
+import { actionDraftAtom, conversationLensAtom, statusMessageAtom } from "./state/atoms/ui";
 import { configPathAtom, selectedFlowIdAtom } from "./state/atoms/workbench";
 import { useFlow } from "./state/queries/use-flow";
 import { useHome } from "./state/queries/use-home";
@@ -20,91 +18,19 @@ function normalizeConfigPath(value: string): string {
   return String(value || "").trim();
 }
 
-function surfaceTitle(meta: SurfaceMetaDTO | undefined, fallback: string): string {
-  return String(meta?.display_title || meta?.title || fallback).trim() || fallback;
-}
-
-function HomeView({
-  homeTitle,
-  flowTitle,
-  selectedFlowId,
-  onOpenWorkbench,
-  summary
-}: {
-  homeTitle: string;
-  flowTitle: string;
-  selectedFlowId: string;
-  onOpenWorkbench: () => void;
-  summary?: SingleFlowPayload["navigator_summary"];
-}) {
-  return (
-    <div className="home-shell">
-      <section className="hero-panel">
-        <div>
-          <p className="panel-kicker">{homeTitle}</p>
-          <h2>{summary?.goal || "Focus the next live flow"}</h2>
-          <p className="topbar-copy">
-            Butler Desktop keeps the contract, latest accepted progress, and recovery cues visible. Pick a flow on the left,
-            then open the run console when you want the live execution lane.
-          </p>
-        </div>
-        <button className="ui-button ui-button-primary" disabled={!selectedFlowId} onClick={onOpenWorkbench} type="button">
-          Open {flowTitle}
-        </button>
-      </section>
-
-      <section className="home-grid">
-        <div className="panel-shell">
-          <header className="panel-header compact">
-            <div>
-              <p className="panel-kicker">Current Focus</p>
-              <h2>{summary?.flow_id || "No flow selected"}</h2>
-            </div>
-          </header>
-          <div className="drawer-stack">
-            <div className="kv-row">
-              <span>Status</span>
-              <strong>{summary?.effective_status || "—"}</strong>
-            </div>
-            <div className="kv-row">
-              <span>Phase</span>
-              <strong>{summary?.effective_phase || "—"}</strong>
-            </div>
-            <div className="kv-row">
-              <span>Active Role</span>
-              <strong>{summary?.active_role_id || "—"}</strong>
-            </div>
-            <div className="kv-row">
-              <span>Approval</span>
-              <strong>{summary?.approval_state || "—"}</strong>
-            </div>
-          </div>
-        </div>
-        <div className="panel-shell">
-          <header className="panel-header compact">
-            <div>
-              <p className="panel-kicker">Projection Rules</p>
-              <h2>Truth-first surface</h2>
-            </div>
-          </header>
-          <ul className="manage-list-plain">
-            <li>Renderer reads only the bridge output, never raw sidecars.</li>
-            <li>Contract, receipt, and recovery truth stay canonical; the UI stays projection-only.</li>
-            <li>Actions route back through the foreground runtime, then the run console refreshes.</li>
-          </ul>
-        </div>
-      </section>
-    </div>
-  );
+function firstToken(value: string): string {
+  return String(value || "")
+    .trim()
+    .split(/\s+/)[0]
+    .toLowerCase();
 }
 
 export default function App() {
   const queryClient = useQueryClient();
   const [manualConfigPath, setManualConfigPath] = useState("");
-  const [activePage, setActivePage] = useAtom(activePageAtom);
-  const [detailTab, setDetailTab] = useAtom(detailTabAtom);
   const [actionDraft, setActionDraft] = useAtom(actionDraftAtom);
   const [statusMessage, setStatusMessage] = useAtom(statusMessageAtom);
+  const [lens, setLens] = useAtom(conversationLensAtom);
   const [configPath, setConfigPath] = useAtom(configPathAtom);
   const [selectedFlowId, setSelectedFlowId] = useAtom(selectedFlowIdAtom);
   const [selectedManageAssetId, setSelectedManageAssetId] = useAtom(selectedManageAssetIdAtom);
@@ -113,15 +39,13 @@ export default function App() {
     const savedConfig = window.localStorage.getItem(STORAGE_KEY) || "";
     if (savedConfig) {
       setConfigPath(savedConfig);
+      setManualConfigPath(savedConfig);
     }
   }, [setConfigPath]);
 
   const homeQuery = useHome(configPath);
   const flowQuery = useFlow(configPath, selectedFlowId);
-  const manageQuery = useManage(configPath, activePage === "manage");
-  const homeTitle = surfaceTitle(homeQuery.data?.surface_meta, "Mission Index");
-  const flowTitle = surfaceTitle(flowQuery.data?.surface_meta, "Run Console");
-  const manageTitle = surfaceTitle(manageQuery.data?.surface_meta, "Contract Studio");
+  const manageQuery = useManage(configPath, Boolean(configPath));
 
   useEffect(() => {
     const firstFlowId = String(homeQuery.data?.flows.items?.[0]?.flow_id || "").trim();
@@ -180,7 +104,7 @@ export default function App() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["desktop", "home"] }),
       queryClient.invalidateQueries({ queryKey: ["desktop", "flow"] }),
-      queryClient.invalidateQueries({ queryKey: ["desktop", "manage"] })
+      queryClient.invalidateQueries({ queryKey: ["desktop", "manage"] }),
     ]);
   }
 
@@ -192,12 +116,10 @@ export default function App() {
       configPath,
       flowId: selectedFlowId,
       type,
-      instruction
+      instruction,
     });
     setStatusMessage(`Action applied: ${String(payload.action_type || type)}`);
-    if (instruction) {
-      setActionDraft("");
-    }
+    setActionDraft("");
     await refreshAll();
   }
 
@@ -205,29 +127,71 @@ export default function App() {
     const result = await electronApi.openArtifact({ target });
     if (!result.opened) {
       setStatusMessage(`Artifact open failed: ${result.reason || "unknown"}`);
+      return;
     }
+    setStatusMessage(`Artifact opened: ${target}`);
   }
 
-  const selectedSummary = flowQuery.data?.navigator_summary;
+  async function submitComposer(): Promise<void> {
+    const draft = actionDraft.trim();
+    if (!draft) {
+      return;
+    }
+    const command = firstToken(draft);
+    if (command.startsWith("/")) {
+      switch (command) {
+        case "/pause":
+          await performAction("pause");
+          return;
+        case "/resume":
+          await performAction("resume");
+          return;
+        case "/retry":
+          await performAction("retry_current_phase");
+          return;
+        case "/studio":
+          setLens("studio");
+          setActionDraft("");
+          setStatusMessage("Studio lens activated in the Manager thread.");
+          return;
+        case "/recovery":
+          setLens("recovery");
+          setActionDraft("");
+          setStatusMessage("Recovery lens activated in the Manager thread.");
+          return;
+        case "/mission":
+          setLens("mission");
+          setActionDraft("");
+          setStatusMessage("Mission lens activated in the Manager thread.");
+          return;
+        case "/open": {
+          const target = String(flowQuery.data?.latest_artifact_ref || "").trim();
+          if (!target) {
+            setStatusMessage("There is no latest artifact to open yet.");
+            return;
+          }
+          setActionDraft("");
+          await openArtifact(target);
+          return;
+        }
+        default:
+          setStatusMessage("Unknown command. Try /pause, /resume, /retry, /studio, /recovery, /mission, or /open.");
+          return;
+      }
+    }
+    await performAction("append_instruction", draft);
+  }
 
   return (
     <div className="desktop-root">
       <FlowRail
-        activePage={activePage}
         configPath={configPath}
-        flowTitle={flowTitle}
-        manageTitle={manageTitle}
         payload={homeQuery.data}
         selectedFlowId={selectedFlowId}
-        onPageChange={(page) =>
-          startTransition(() => {
-            setActivePage(page);
-          })
-        }
         onSelectFlow={(flowId) =>
           startTransition(() => {
             setSelectedFlowId(flowId);
-            setActivePage("flow");
+            setLens("mission");
           })
         }
         onChooseConfig={() => void chooseConfig()}
@@ -236,8 +200,8 @@ export default function App() {
       <main className="desktop-main">
         <header className="global-header">
           <div className="global-header-copy">
-            <span>Runtime visible</span>
-            <strong>{configPath || "Select a config to start the desktop runtime."}</strong>
+            <span>Desktop Runtime</span>
+            <strong>{configPath || "Select a config to attach the Manager-thread runtime."}</strong>
           </div>
           <div className="global-header-actions">
             <button className="ui-button ui-button-secondary" onClick={() => void chooseConfig()} type="button">
@@ -257,8 +221,8 @@ export default function App() {
               <AlertCircle size={34} />
               <h2>Attach a Butler config first</h2>
               <p>
-                The desktop runtime reads live mission-index, run-console, and contract-studio payloads through the Python bridge. Select a
-                `butler_bot.json` or equivalent config to continue.
+                Butler Desktop renders mission threads through the Python bridge. Attach a `butler_bot.json` or equivalent config to load the
+                Manager-thread shell.
               </p>
               <button className="ui-button ui-button-primary" onClick={() => void chooseConfig()} type="button">
                 Select Butler Config
@@ -291,47 +255,29 @@ export default function App() {
               </div>
             </div>
           </section>
-        ) : null}
-
-        {configPath && activePage === "home" ? (
-          <HomeView
-            homeTitle={homeTitle}
-            flowTitle={flowTitle}
-            selectedFlowId={selectedFlowId}
-            onOpenWorkbench={() => setActivePage("flow")}
-            summary={selectedSummary}
-          />
-        ) : null}
-
-        {configPath && activePage === "flow" ? (
+        ) : (
           <WorkbenchShell
             payload={flowQuery.data}
+            managePayload={manageQuery.data}
             loading={flowQuery.isLoading}
-            surfaceTitle={flowTitle}
+            lens={lens}
             actionDraft={actionDraft}
+            selectedAssetId={selectedManageAssetId}
             onActionDraftChange={setActionDraft}
-            onAppendInstruction={() => void performAction("append_instruction", actionDraft)}
+            onSubmitComposer={() => void submitComposer()}
             onPause={() => void performAction("pause")}
             onResume={() => void performAction("resume")}
             onRetry={() => void performAction("retry_current_phase")}
             onRefresh={(options) => flowQuery.refetch(options)}
-            detailTab={detailTab}
-            onDetailTabChange={setDetailTab}
+            onLensChange={setLens}
+            onSelectAsset={setSelectedManageAssetId}
             onOpenArtifact={(target) => void openArtifact(target)}
           />
-        ) : null}
-
-        {configPath && activePage === "manage" ? (
-          <ManageCenterShell
-            payload={manageQuery.data}
-            selectedAssetId={selectedManageAssetId}
-            onSelectAsset={setSelectedManageAssetId}
-            surfaceTitle={manageTitle}
-          />
-        ) : null}
+        )}
 
         {homeQuery.error ? <div className="status-toast error">Home load failed: {String(homeQuery.error.message)}</div> : null}
         {flowQuery.error ? <div className="status-toast error">Flow load failed: {String(flowQuery.error.message)}</div> : null}
+        {manageQuery.error ? <div className="status-toast error">Studio load failed: {String(manageQuery.error.message)}</div> : null}
         {statusMessage ? <div className="status-toast">{statusMessage}</div> : null}
       </main>
     </div>

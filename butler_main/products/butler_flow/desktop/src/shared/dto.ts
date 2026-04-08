@@ -12,6 +12,8 @@ export interface SurfaceMetaDTO {
 
 export interface FlowSummaryDTO {
   flow_id: string;
+  task_contract_id?: string;
+  label?: string;
   workflow_kind: string;
   effective_status: FlowStatus;
   effective_phase: string;
@@ -35,6 +37,16 @@ export interface FlowSummaryDTO {
   latest_token_usage: Record<string, unknown>;
   context_governor: Record<string, unknown>;
   latest_handoff_summary: Record<string, unknown>;
+  task_contract_summary?: Record<string, unknown>;
+  owner_summary?: Record<string, unknown>;
+  authority_summary?: Record<string, unknown>;
+  policy_summary?: Record<string, unknown>;
+  responsibility_summary?: Record<string, unknown>;
+  latest_receipt_summary?: Record<string, unknown>;
+  latest_governance_receipt_summary?: Record<string, unknown>;
+  latest_artifact_ref?: string;
+  accepted_receipt_count?: number;
+  recovery_state?: string;
   updated_at: string;
 }
 
@@ -54,6 +66,19 @@ export interface TimelineEvent {
 }
 
 export interface FlowDetailDTO {
+  flow_id?: string;
+  surface_meta?: SurfaceMetaDTO;
+  status?: Record<string, unknown>;
+  task_contract?: Record<string, unknown>;
+  task_contract_summary?: Record<string, unknown>;
+  governance_summary?: Record<string, unknown>;
+  mission_console?: Record<string, unknown>;
+  latest_receipt_summary?: Record<string, unknown>;
+  latest_governance_receipt_summary?: Record<string, unknown>;
+  latest_artifact_ref?: string;
+  accepted_receipt_count?: number;
+  recovery_cursor?: Record<string, unknown>;
+  recovery_state?: string;
   summary: FlowSummaryDTO;
   step_history: Array<Record<string, unknown>>;
   timeline: TimelineEvent[];
@@ -61,6 +86,7 @@ export interface FlowDetailDTO {
   actions: Array<Record<string, unknown>>;
   artifacts: Array<Record<string, unknown>>;
   handoffs: Array<Record<string, unknown>>;
+  receipts?: Record<string, unknown>;
   flow_definition: Record<string, unknown>;
   runtime_snapshot: Record<string, unknown>;
 }

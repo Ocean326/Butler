@@ -67,7 +67,12 @@ class ButlerFlowDesktopBridgeTests(unittest.TestCase):
 
             payload = json.loads(buffer.getvalue())
             self.assertEqual(exit_code, 0)
-            self.assertEqual(payload["flows"]["items"][0]["flow_id"], "flow_desktop_bridge")
+            row = payload["flows"]["items"][0]
+            self.assertEqual(row["flow_id"], "flow_desktop_bridge")
+            self.assertEqual(row["task_contract_summary"]["task_contract_id"], "task_contract_flow_desktop_bridge")
+            self.assertEqual(row["mission_console"]["derived_responsibility_graph"]["graph_kind"], "derived_responsibility_graph")
+            self.assertEqual(row["governance_summary"]["ledger_owner"], "receipts.jsonl")
+            self.assertEqual(row["recovery_state"], "reseed_same_contract")
 
     def test_flow_command_emits_single_flow_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -83,6 +88,10 @@ class ButlerFlowDesktopBridgeTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload["flow_id"], "flow_desktop_bridge")
             self.assertEqual(payload["workflow_view"]["artifact_refs"], ["artifact://desktop/workbench"])
+            self.assertEqual(payload["mission_console"]["derived_responsibility_graph"]["active_role_id"], "implementer")
+            self.assertEqual(payload["governance_summary"]["ledger_owner"], "receipts.jsonl")
+            self.assertEqual(payload["recovery_cursor"]["task_contract_id"], "task_contract_flow_desktop_bridge")
+            self.assertEqual(payload["latest_receipt_summary"]["status"], "accepted")
 
 
 if __name__ == "__main__":

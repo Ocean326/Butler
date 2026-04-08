@@ -10,7 +10,7 @@
 
 1. 仓库根 `README.md`
 2. [docs/README.md](../README.md)
-3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0407/00_当日总纲.md`）
+3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0408/00_当日总纲.md`）
 
 ## `frontdoor`
 
@@ -256,8 +256,9 @@
   - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份规划文档确认技术基座，再按 `0408/01` 确认最新产品形态：当前真源仍是前台 `butler-flow` CLI、contract/receipt/recovery sidecars 与现役 shared surface，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳继续使用 `Electron + React + TypeScript + Jotai`，但前台壳应向 `Manager-facing conversation shell` 演化，而不是继续放大多页 workbench
 - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/products/butler_flow/desktop/ + butler_main/products/butler_flow/desktop_bridge.py + butler_main/products/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars；远程/无头环境下优先走手填 `Config Path Fallback`，不要把原生 file dialog 当唯一验证入口
   - 再确认当前前台一级对象只有 `Manager`：左侧应是 thread continuity，右侧应是单条 Manager 主对话；`recovery / studio / supervisor` 不应再升成左栏主导航
+  - 当前 0408 已把这版壳真实落到 renderer、e2e 与 Python contract tests；若改 Desktop 真源切片，至少同步回归 `test_butler_flow_desktop_bridge.py`、`test_butler_flow_surface.py`、`test_butler_flow_tui_controller.py`
   - 若排查 Desktop 是否“已完成”，把验证拆成四层记录：Python bridge 回归、desktop `typecheck/build`、renderer `vitest`、Electron `Playwright` 点击回归；不要把源码编译通过误记成运行时已验证
-- 若跑 Desktop e2e，优先直接用 `cd butler_main/products/butler_flow/desktop && npm run test:e2e`；当前脚本会先 `build`，再优先使用现有 `DISPLAY`，无图形时自动尝试 `xvfb-run`
+- 若跑 Desktop e2e，优先直接用 `cd butler_main/products/butler_flow/desktop && npm run test:e2e`；当前脚本会先 `build`，有 `DISPLAY` 时直跑、macOS 无 `DISPLAY` 时也直跑 Playwright Electron，其他无头环境自动尝试 `xvfb-run`
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
   - 最后补跑 `tools/butler-flow ... --help`、`butler-flow --help` 与 `python -m butler_main --help`
   - 若目标是系统级 CLI，再补跑 `./tools/install-butler-flow` 并确认 `command -v butler-flow`

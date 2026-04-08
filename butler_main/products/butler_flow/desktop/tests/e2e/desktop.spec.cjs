@@ -26,7 +26,7 @@ async function expectDesktopApiReady(window) {
 }
 
 test.describe("Butler Desktop Electron", () => {
-  test("launches, attaches config by path, and opens the workbench", async () => {
+  test("launches, attaches config by path, and opens the manager thread", async () => {
     const { app, window } = await launchApp();
     try {
       await expect(window).toHaveTitle(/Butler Desktop/);
@@ -34,26 +34,27 @@ test.describe("Butler Desktop Electron", () => {
       await window.getByLabel("Config Path Fallback").fill(configPath);
       await window.getByRole("button", { name: "Attach Path" }).click();
       await expect(window.getByText(`Config attached: ${configPath}`)).toBeVisible();
-      await expect(window.getByRole("button", { name: /flow_mock_desktop/i })).toBeVisible();
+      await expect(window.getByRole("button", { name: /Ship Butler Desktop/i })).toBeVisible();
 
-      await window.getByRole("button", { name: /flow_mock_desktop/i }).click();
-      await expect(window.getByRole("heading", { name: "Ship Butler Desktop" })).toBeVisible();
-      await expect(window.getByRole("button", { name: "Pause" })).toBeVisible();
+      await window.getByRole("button", { name: /Ship Butler Desktop/i }).click();
+      await expect(window.getByRole("heading", { name: "Ship Butler Desktop", level: 2 })).toBeVisible();
+      await expect(window.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
     } finally {
       await app.close();
     }
   });
 
-  test("navigates to contract studio after config attach", async () => {
+  test("switches to the studio lens inside the same thread", async () => {
     const { app, window } = await launchApp();
     try {
       await expectDesktopApiReady(window);
       await window.getByLabel("Config Path Fallback").fill(configPath);
       await window.getByRole("button", { name: "Attach Path" }).click();
-      await window.getByRole("button", { name: "Contract Studio" }).click();
+      await window.getByRole("button", { name: /Ship Butler Desktop/i }).click();
+      await window.getByRole("button", { name: "Studio", exact: true }).click();
 
-      await expect(window.getByRole("heading", { name: "Contracts, assets, and guidance" })).toBeVisible();
-      await expect(window.getByRole("heading", { name: "Desktop Shell V1" })).toBeVisible();
+      await expect(window.getByText("Desktop Shell V1").first()).toBeVisible();
+      await expect(window.getByText(/Promote the shell only after bridge and real payloads render cleanly/i).first()).toBeVisible();
     } finally {
       await app.close();
     }

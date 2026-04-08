@@ -1,7 +1,7 @@
 # 0408 Butler Desktop 产品形态收口：Manager 对话壳、连续线程与多藏 agent 输出
 
 日期：2026-04-08
-状态：当前真源 / docs-only
+状态：当前真源 / code+docs landed
 所属层级：Product Surface，辅触 L1 `Agent Execution Runtime`
 定位：把最近一轮关于 Butler Desktop UI、交互逻辑、与 `canonical team runtime` 关系的讨论收口成当前正式产品定义
 
@@ -258,6 +258,49 @@ Desktop 不是新的真源层，也不是新的 team kernel。
    - 以给 Manager 下达协调、追问、追加、暂停/恢复意图为主
 3. 恢复或 studio 上下文
    - 仍是同一输入框
+
+## 7. 0408 实现回写
+
+本轮已按上面的产品定义，把 Butler Desktop 的现役壳真实落进代码，而不是继续停在文档阶段。
+
+已落地的代码收口：
+
+1. renderer 主壳改成同一条 `Manager thread`
+   - `App.tsx` 不再按 `home / flow / manage` 切页
+   - `FlowRail.tsx` 左侧只保留 thread continuity
+   - `WorkbenchShell.tsx` 右侧改成单对话页 + compact header + lens switcher + agent drilldown
+2. UI 状态从 page-nav 改成 lens
+   - `mission / studio / recovery` 现在只是同一条线程里的 mode
+   - `supervisor / workflow / studio / recovery` 输出默认摘要化，点击后进入 drilldown stream
+3. DTO 对齐当前 truth chain
+   - Desktop shared DTO 已补齐 `task_contract_summary / mission_console / latest_receipt_summary / latest_artifact_ref / recovery_state / governance_summary / recovery_cursor`
+   - renderer 继续只读 bridge payload，不直接读 raw sidecars
+4. 验证链同步收口
+   - renderer `vitest` 已改成 manager-thread 新交互
+   - Electron `Playwright` 已改成新标题/新 selector
+   - `run-playwright-with-display.sh` 已补 macOS 无 `DISPLAY` 直跑口径
+   - Python `desktop_bridge / surface / tui_controller` 测试已补投影合同断言
+
+对应实现文件：
+
+- `butler_main/products/butler_flow/desktop/src/renderer/App.tsx`
+- `butler_main/products/butler_flow/desktop/src/renderer/components/navigation/FlowRail.tsx`
+- `butler_main/products/butler_flow/desktop/src/renderer/components/app-shell/WorkbenchShell.tsx`
+- `butler_main/products/butler_flow/desktop/src/shared/dto.ts`
+- `butler_main/products/butler_flow/desktop/tests/e2e/desktop.spec.cjs`
+- `butler_main/products/butler_flow/desktop/scripts/run-playwright-with-display.sh`
+- `butler_main/butler_bot_code/tests/test_butler_flow_desktop_bridge.py`
+- `butler_main/butler_bot_code/tests/test_butler_flow_surface.py`
+- `butler_main/butler_bot_code/tests/test_butler_flow_tui_controller.py`
+
+## 8. 当前完成态
+
+截至 2026-04-08，本专题的当前完成态是：
+
+- Butler Desktop 已不再是 `multi-page workbench` 原型
+- 它已成为一版可运行、可测试的 `Manager-facing conversation shell`
+- 它继续建立在 `canonical team runtime` 的 contract/receipt/recovery/governance truth chain 之上
+- Desktop 自己仍然只是 projection shell，不拥有第二真源
    - 只是当前 mode 与 suggestions 改变
 
 ## 7. Desktop 读取什么，不读取什么
@@ -337,4 +380,3 @@ Desktop 当前不应直接拥有或新增：
 4. 其他 agent 输出默认折叠，但可点击进入完整详细输出流。
 5. 顶部信息条只显示必要 contract/receipt/recovery 摘要与操作。
 6. Desktop 继续只消费 runtime truth chain，不反向创造新的 truth owner。
-
