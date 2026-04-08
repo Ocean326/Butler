@@ -1,6 +1,6 @@
 # 改前读包
 
-更新时间：2026-04-07
+更新时间：2026-04-08
 状态：现役
 用途：把常见改动压成固定最小读包，避免 agent 自由扩散式读库
 
@@ -116,6 +116,8 @@
   - [分层地图](./01_layer_map.md)
   - [功能地图](./02_feature_map.md)
   - [真源矩阵](./03_truth_matrix.md)
+  - [0408 当日总纲](../daily-upgrade/0408/00_当日总纲.md)
+  - [0408 Butler Desktop 产品形态收口：Manager 对话壳、连续线程与多藏 agent 输出](../daily-upgrade/0408/01_butler-desktop产品形态收口_manager对话壳_连续线程与多藏agent输出.md)
   - [0407 Canonical Team Runtime 最终收口：任务产物真源、治理真源与升级门槛](../daily-upgrade/0407/01_canonical_team_runtime最终收口_任务产物真源与升级门槛.md)
   - [0407 Butler Flow 到 Canonical Team Runtime 升级路径与阶段开发计划（批判式更新版）](../daily-upgrade/0407/02_butler-flow到canonical_team_runtime升级路径与阶段开发计划_批判式更新版.md)
   - [0403 当日总纲](../daily-upgrade/0403/00_当日总纲.md)
@@ -207,6 +209,11 @@
     - 上述 surface 只做 projection，不得回写第二套 mission truth
     - `mission_console` 与 `derived_responsibility_graph` 只允许从 `task_contract + receipts + recovery_cursor + role_sessions + handoffs` 派生
     - 旧 `workspace / history / flows / manage_center / single_flow` 只保 compat alias；`manage` 与 `list` 继续是现役入口
+  - 若目标转到 Butler Desktop 前端形态，当前主口径已经不是 `multi-page workbench`，而是 `Manager-facing conversation shell over the canonical team runtime`
+    - 左侧只承接 `Manager thread` 列表；`history` 只是 thread continuity，不再是独立 surface
+    - 右侧主区域是同一条 `Manager` 主对话；`supervisor / recovery / studio` 只作为模式、发言来源与可钻取子流
+    - 默认姿态是“多藏”：非 Manager 的 agent 输出必须先摘要/折叠，再允许点击进入完整输出流
+    - Desktop 继续只读取 `mission_console / task_contract_summary / latest_receipt_summary / latest_artifact_ref / recovery_state / governance_summary / derived_responsibility_graph`，不得补第二套 mission/team truth
   - 当前 `status / workspace / single-flow / TUI` 默认会外显：
     - `latest_receipt_summary`
     - `latest_artifact_ref`
@@ -246,8 +253,9 @@
   - 当前还新增 `exec`：最后一行固定 `flow_exec_receipt`，退出码按 flow 终态收口
   - TTY 下优先核对是否正确进入 Textual launcher / attached run screen；若未进入，再检查 `requirements-cli.txt`、终端宽度与 `--plain`
 - 若排查 TUI，优先看 `butler_main/products/butler_flow/tui/`、`butler_main/products/butler_flow/events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
-  - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
+  - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份规划文档确认技术基座，再按 `0408/01` 确认最新产品形态：当前真源仍是前台 `butler-flow` CLI、contract/receipt/recovery sidecars 与现役 shared surface，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳继续使用 `Electron + React + TypeScript + Jotai`，但前台壳应向 `Manager-facing conversation shell` 演化，而不是继续放大多页 workbench
 - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/products/butler_flow/desktop/ + butler_main/products/butler_flow/desktop_bridge.py + butler_main/products/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars；远程/无头环境下优先走手填 `Config Path Fallback`，不要把原生 file dialog 当唯一验证入口
+  - 再确认当前前台一级对象只有 `Manager`：左侧应是 thread continuity，右侧应是单条 Manager 主对话；`recovery / studio / supervisor` 不应再升成左栏主导航
   - 若排查 Desktop 是否“已完成”，把验证拆成四层记录：Python bridge 回归、desktop `typecheck/build`、renderer `vitest`、Electron `Playwright` 点击回归；不要把源码编译通过误记成运行时已验证
 - 若跑 Desktop e2e，优先直接用 `cd butler_main/products/butler_flow/desktop && npm run test:e2e`；当前脚本会先 `build`，再优先使用现有 `DISPLAY`，无图形时自动尝试 `xvfb-run`
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG
