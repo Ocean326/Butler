@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { DESKTOP_CHANNELS } from "../main/ipc/channels";
-import type { ButlerDesktopApi } from "../shared/ipc";
+import type { ButlerDesktopApi, ManagerMessageStreamEvent } from "../shared/ipc";
 
 const api: ButlerDesktopApi = {
   getHome: (options) => ipcRenderer.invoke(DESKTOP_CHANNELS.getHome, options),
@@ -15,6 +15,14 @@ const api: ButlerDesktopApi = {
   getTemplateTeam: (options) => ipcRenderer.invoke(DESKTOP_CHANNELS.getTemplateTeam, options),
   getDefaultConfigPath: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getDefaultConfigPath),
   sendManagerMessage: (payload) => ipcRenderer.invoke(DESKTOP_CHANNELS.sendManagerMessage, payload),
+  sendManagerMessageStream: (payload) => ipcRenderer.invoke(DESKTOP_CHANNELS.sendManagerMessageStream, payload),
+  onManagerMessageEvent: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: ManagerMessageStreamEvent) => listener(payload);
+    ipcRenderer.on(DESKTOP_CHANNELS.managerMessageStreamEvent, handler);
+    return () => {
+      ipcRenderer.removeListener(DESKTOP_CHANNELS.managerMessageStreamEvent, handler);
+    };
+  },
   performAction: (payload) => ipcRenderer.invoke(DESKTOP_CHANNELS.performAction, payload),
   chooseConfigPath: () => ipcRenderer.invoke(DESKTOP_CHANNELS.chooseConfigPath),
   openArtifact: (request) => ipcRenderer.invoke(DESKTOP_CHANNELS.openArtifact, request)

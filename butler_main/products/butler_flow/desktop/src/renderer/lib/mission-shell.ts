@@ -1,6 +1,17 @@
 import type { ThreadBlockDTO, ThreadHomeDTO, ThreadSummaryDTO } from "../../shared/dto";
 
-export type ConversationMode = "mission" | "runtime" | "studio";
+export type ShellMessageRole = "user" | "manager";
+export type ShellMessageStatus = "ready" | "streaming" | "error";
+
+export interface ShellMessage {
+  id: string;
+  role: ShellMessageRole;
+  body: string;
+  createdAt: string;
+  meta: string;
+  title?: string;
+  status?: ShellMessageStatus;
+}
 
 export function normalizeConfigPath(value: string): string {
   return String(value || "").trim();
@@ -52,20 +63,6 @@ function isSupervisorSummary(summary: ThreadSummaryDTO): boolean {
 
 export function blockMeta(block: ThreadBlockDTO): string[] {
   return [block.kind, block.phase || "", ...(block.tags || [])].filter(Boolean);
-}
-
-export function narratorLens(kind: string, fallback: ConversationMode): string {
-  const token = String(kind || "").trim();
-  if (["team", "team_draft", "launch", "requirements", "opening", "idea"].includes(token)) {
-    return "manager";
-  }
-  if (["overview", "policy", "contract", "team_template"].includes(token)) {
-    return "studio";
-  }
-  if (["decision", "artifact", "progress", "start", "role_brief"].includes(token)) {
-    return "runtime";
-  }
-  return fallback;
 }
 
 export function buildManagerThreads(home: ThreadHomeDTO | undefined): ThreadSummaryDTO[] {
@@ -125,28 +122,59 @@ export function isHistoricalStatus(status: string): boolean {
   return ["completed", "failed", "archived", "cancelled"].includes(String(status || "").trim().toLowerCase());
 }
 
-export function composerLabel(mode: ConversationMode, isNewThread: boolean): string {
+function normalizeMessageBody(value: unknown, fallback = ""): string {
+  const token = formatValue(value);
+  return token || fallback;
+}
+
+export function buildConversationMessages(blocks: ThreadBlockDTO[] = []): ShellMessage[] {
+  const messages: ShellMessage[] = [];
+
+  for (const block of blocks) {
+    const instruction = normalizeMessageBody(block.payload?.instruction);
+    const response =
+      normalizeMessageBody(block.payload?.response) ||
+      normalizeMessageBody(block.payload?.message) ||
+      normalizeMessageBody(block.payload?.draft, block.summary) ||
+      block.summary;
+    const meta = [block.kind, ...(block.tags || [])].filter(Boolean).join(" · ") || "manager";
+
+    if (instruction) {
+      messages.push({
+        id: `${block.block_id}:user`,
+        role: "user",
+        body: instruction,
+        createdAt: block.created_at,
+        meta: "request"
+      });
+    }
+
+    if (response) {
+      messages.push({
+        id: `${block.block_id}:manager`,
+        role: "manager",
+        title: block.title || undefined,
+        body: response,
+        createdAt: block.created_at,
+        meta,
+        status: block.status === "attention" ? "error" : "ready"
+      });
+    }
+  }
+
+  return messages;
+}
+
+export function composerLabel(isNewThread: boolean): string {
   if (isNewThread) {
     return "Start with Manager";
-  }
-  if (mode === "runtime") {
-    return "Guide the runtime through Manager";
-  }
-  if (mode === "studio") {
-    return "Edit contract or policy through Manager";
   }
   return "Continue with Manager";
 }
 
-export function composerPlaceholder(mode: ConversationMode, isNewThread: boolean): string {
+export function composerPlaceholder(isNewThread: boolean): string {
   if (isNewThread) {
     return "例如：/start 一个 Butler Desktop 升级 mission，先帮我收敛需求、验收和团队分工。";
-  }
-  if (mode === "runtime") {
-    return "例如：/pause、/resume，或继续告诉 Manager 当前阶段该如何推进。";
-  }
-  if (mode === "studio") {
-    return "例如：更新 contract、policy、role guidance，或要求 Manager 重新整理验收口径。";
   }
   return "继续和 Manager 协调 mission、追加需求、改验收、或发起下一轮工作。";
 }

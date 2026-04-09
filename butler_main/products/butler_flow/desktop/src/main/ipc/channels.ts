@@ -11,6 +11,8 @@ export const DESKTOP_CHANNELS = {
   getTemplateTeam: "desktop:get-template-team",
   getDefaultConfigPath: "desktop:get-default-config-path",
   sendManagerMessage: "desktop:send-manager-message",
+  sendManagerMessageStream: "desktop:send-manager-message-stream",
+  managerMessageStreamEvent: "desktop:manager-message-stream-event",
   performAction: "desktop:perform-action",
   chooseConfigPath: "desktop:choose-config-path",
   openArtifact: "desktop:open-artifact"

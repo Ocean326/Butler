@@ -1,38 +1,22 @@
 import { FormEvent, KeyboardEvent, startTransition, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import type { ManagerMessageStreamEvent } from "../shared/ipc";
 import { electronApi, isDesktopBridgeAvailable } from "./lib/electron-api";
-import {
-  AgentDetailSheet,
-  BridgeMissingState,
-  DesktopRail,
-  EmptyAttachState,
-  MissionShell,
-  type MissionStatusTone
-} from "./components/mission-shell/MissionShell";
+import { BridgeMissingState, DesktopRail, EmptyAttachState, MissionShell, type MissionStatusTone } from "./components/mission-shell/MissionShell";
 import {
   autoResizeTextarea,
+  buildConversationMessages,
   buildManagerThreads,
   composerLabel,
   composerPlaceholder,
   formatValue,
-  isHistoricalStatus,
   normalizeConfigPath,
-  type ConversationMode
+  type ShellMessage
 } from "./lib/mission-shell";
-import {
-  useAgentFocus,
-  useManagerThread,
-  useSupervisorThread,
-  useTemplateTeam,
-  useThreadHome
-} from "./state/queries/use-thread-workbench";
+import { useManagerThread, useThreadHome } from "./state/queries/use-thread-workbench";
 
 const CONFIG_STORAGE_KEY = "butler.desktop.configPath";
 const THEME_STORAGE_KEY = "butler.desktop.theme";
-
-type DetailState =
-  | { kind: "none" }
-  | { kind: "agent"; flowId: string; roleId: string };
 
 function queryErrorText(scope: string, error: unknown): string {
   const token = String((error as Error)?.message || error || "").trim();
@@ -42,19 +26,18 @@ function queryErrorText(scope: string, error: unknown): string {
 export default function App() {
   const queryClient = useQueryClient();
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const streamRequestIdRef = useRef("");
+  const transientManagerMessageIdRef = useRef("");
   const [manualConfigPath, setManualConfigPath] = useState("");
   const [configPath, setConfigPath] = useState("");
   const [startupConfigResolved, setStartupConfigResolved] = useState(false);
   const [theme, setTheme] = useState<"day" | "night">("night");
   const [managerSessionId, setManagerSessionId] = useState("");
   const [isComposingNewThread, setIsComposingNewThread] = useState(false);
-  const [mode, setMode] = useState<ConversationMode>("mission");
-  const [templateAssetId, setTemplateAssetId] = useState("");
-  const [detailState, setDetailState] = useState<DetailState>({ kind: "none" });
   const [messageDraft, setMessageDraft] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [sendingManagerMessage, setSendingManagerMessage] = useState(false);
-  const [expandedBlocks, setExpandedBlocks] = useState<Record<string, boolean>>({});
+  const [transientMessages, setTransientMessages] = useState<ShellMessage[]>([]);
   const bridgeAvailable = isDesktopBridgeAvailable();
 
   useEffect(() => {
@@ -114,21 +97,11 @@ export default function App() {
 
   useEffect(() => {
     autoResizeTextarea(composerRef.current);
-  }, [messageDraft, mode, isComposingNewThread]);
+  }, [messageDraft, isComposingNewThread]);
 
   const homeQuery = useThreadHome(configPath, bridgeAvailable);
   const activeManagerSessionId = isComposingNewThread ? "" : managerSessionId;
   const managerQuery = useManagerThread(configPath, activeManagerSessionId, bridgeAvailable);
-  const linkedFlowId = String(managerQuery.data?.linked_flow_id || managerQuery.data?.thread.flow_id || "").trim();
-  const queriedFlowId = detailState.kind === "agent" ? detailState.flowId : linkedFlowId;
-  const supervisorQuery = useSupervisorThread(configPath, queriedFlowId, bridgeAvailable && Boolean(queriedFlowId));
-  const agentQuery = useAgentFocus(
-    configPath,
-    detailState.kind === "agent" ? detailState.flowId : "",
-    detailState.kind === "agent" ? detailState.roleId : "",
-    bridgeAvailable && detailState.kind === "agent"
-  );
-  const templateQuery = useTemplateTeam(configPath, templateAssetId, bridgeAvailable && mode === "studio" && Boolean(templateAssetId));
 
   useEffect(() => {
     if (isComposingNewThread || managerSessionId) {
@@ -141,18 +114,88 @@ export default function App() {
   }, [homeQuery.data, isComposingNewThread, managerSessionId]);
 
   useEffect(() => {
-    if (templateAssetId) {
+    if (!bridgeAvailable) {
       return;
     }
-    const firstTemplate = homeQuery.data?.templates?.[0];
-    const firstTemplateId = String(firstTemplate?.thread_id || "").replace(/^template:/, "");
-    if (firstTemplateId) {
-      setTemplateAssetId(firstTemplateId);
-    }
-  }, [homeQuery.data, templateAssetId]);
+    return electronApi.onManagerMessageEvent((event) => {
+      if (!streamRequestIdRef.current || event.requestId !== streamRequestIdRef.current) {
+        return;
+      }
+      if (event.type === "chunk") {
+        setTransientMessages((current) =>
+          current.map((message) =>
+            message.id === transientManagerMessageIdRef.current
+              ? {
+                  ...message,
+                  body: `${message.body}${event.chunkText || ""}`,
+                  status: "streaming"
+                }
+              : message
+          )
+        );
+        return;
+      }
+      if (event.type === "failed") {
+        streamRequestIdRef.current = "";
+        setSendingManagerMessage(false);
+        setStatusMessage(event.error || "Manager stream failed.");
+        setTransientMessages((current) =>
+          current.map((message) =>
+            message.id === transientManagerMessageIdRef.current
+              ? {
+                  ...message,
+                  body: event.error || message.body || "Manager stream failed.",
+                  status: "error"
+                }
+              : message
+          )
+        );
+        return;
+      }
+      if (event.type === "completed") {
+        void finalizeStream(event);
+      }
+    });
+  }, [bridgeAvailable, queryClient]);
 
   async function invalidateDesktopQueries(): Promise<void> {
     await queryClient.invalidateQueries({ queryKey: ["desktop"] });
+  }
+
+  async function finalizeStream(event: ManagerMessageStreamEvent): Promise<void> {
+    const finalResult = event.finalResult;
+    const finalText = formatValue(finalResult?.message?.response || finalResult?.thread?.latest_response || "Manager updated.");
+
+    setTransientMessages((current) =>
+      current.map((message) =>
+        message.id === transientManagerMessageIdRef.current
+          ? {
+              ...message,
+              body: message.body || finalText,
+              status: "ready"
+            }
+          : message
+      )
+    );
+
+    const nextManagerSessionId = String(finalResult?.manager_session_id || "").trim();
+    await invalidateDesktopQueries();
+
+    startTransition(() => {
+      if (nextManagerSessionId) {
+        setManagerSessionId(nextManagerSessionId);
+      }
+      setIsComposingNewThread(false);
+      setMessageDraft("");
+      setTransientMessages([]);
+    });
+
+    streamRequestIdRef.current = "";
+    transientManagerMessageIdRef.current = "";
+    setSendingManagerMessage(false);
+
+    const launchedFlowId = String(finalResult?.launched_flow?.flow_id || "").trim();
+    setStatusMessage(launchedFlowId ? `Manager launched ${launchedFlowId}` : "");
   }
 
   async function applyConfigAttachment(nextConfigPath: string, notice: string): Promise<void> {
@@ -162,28 +205,13 @@ export default function App() {
       setManualConfigPath(nextConfigPath);
       setManagerSessionId("");
       setIsComposingNewThread(false);
-      setMode("mission");
-      setTemplateAssetId("");
-      setDetailState({ kind: "none" });
       setMessageDraft("");
-      setExpandedBlocks({});
+      setTransientMessages([]);
     });
     setStatusMessage(notice);
+    streamRequestIdRef.current = "";
+    transientManagerMessageIdRef.current = "";
     await invalidateDesktopQueries();
-  }
-
-  function currentBlockExpanded(blockId: string, expandedByDefault: boolean): boolean {
-    if (blockId in expandedBlocks) {
-      return Boolean(expandedBlocks[blockId]);
-    }
-    return expandedByDefault;
-  }
-
-  function toggleBlock(blockId: string): void {
-    setExpandedBlocks((current) => ({
-      ...current,
-      [blockId]: !(blockId in current ? current[blockId] : true)
-    }));
   }
 
   async function chooseConfig(): Promise<void> {
@@ -225,112 +253,32 @@ export default function App() {
     void attachConfigPath(manualConfigPath);
   }
 
-  async function refreshAll(): Promise<void> {
-    if (!bridgeAvailable) {
-      setStatusMessage("Desktop bridge unavailable. Refresh is disabled in browser-only mode.");
-      return;
-    }
-    try {
-      await invalidateDesktopQueries();
-      setStatusMessage("Mission shell refreshed.");
-    } catch (error) {
-      setStatusMessage(`Refresh failed: ${String((error as Error)?.message || error)}`);
-    }
-  }
-
-  async function performFlowAction(type: string): Promise<void> {
-    if (!bridgeAvailable) {
-      setStatusMessage("Desktop bridge unavailable. Runtime actions require Electron.");
-      return;
-    }
-    if (!linkedFlowId) {
-      return;
-    }
-    try {
-      const payload = await electronApi.performAction({
-        configPath,
-        flowId: linkedFlowId,
-        type
-      });
-      await invalidateDesktopQueries();
-      setStatusMessage(`Action applied: ${String(payload.action_type || type)}`);
-    } catch (error) {
-      setStatusMessage(`Runtime action failed: ${String((error as Error)?.message || error)}`);
-    }
-  }
-
-  async function openArtifact(target: string): Promise<void> {
-    if (!bridgeAvailable) {
-      setStatusMessage("Desktop bridge unavailable. Artifact open requires Electron.");
-      return;
-    }
-    try {
-      const result = await electronApi.openArtifact({ target });
-      if (!result.opened) {
-        setStatusMessage(`Artifact open failed: ${result.reason || "unknown"}`);
-      }
-    } catch (error) {
-      setStatusMessage(`Artifact open failed: ${String((error as Error)?.message || error)}`);
-    }
-  }
-
   function openThread(nextManagerThread: { manager_session_id: string }): void {
     const targetManagerSessionId = String(nextManagerThread.manager_session_id || "").trim();
     if (!targetManagerSessionId) {
       return;
     }
+    streamRequestIdRef.current = "";
+    transientManagerMessageIdRef.current = "";
     startTransition(() => {
       setIsComposingNewThread(false);
       setManagerSessionId(targetManagerSessionId);
-      setMode("mission");
-      setDetailState({ kind: "none" });
       setMessageDraft("");
-      setExpandedBlocks({});
+      setTransientMessages([]);
     });
     setStatusMessage("");
   }
 
   function openNewThread(): void {
+    streamRequestIdRef.current = "";
+    transientManagerMessageIdRef.current = "";
     startTransition(() => {
       setIsComposingNewThread(true);
       setManagerSessionId("");
-      setMode("mission");
-      setDetailState({ kind: "none" });
       setMessageDraft("");
-      setExpandedBlocks({});
+      setTransientMessages([]);
     });
     setStatusMessage("");
-  }
-
-  function handleActionTarget(target: string): void {
-    const token = String(target || "").trim();
-    if (!token) {
-      return;
-    }
-    if (token.startsWith("flow:")) {
-      startTransition(() => {
-        setMode("runtime");
-      });
-      return;
-    }
-    if (token.startsWith("role:") && linkedFlowId) {
-      const roleId = token.slice("role:".length);
-      startTransition(() => {
-        setMode("runtime");
-        setDetailState({ kind: "agent", flowId: linkedFlowId, roleId });
-      });
-      return;
-    }
-    if (token.startsWith("artifact:")) {
-      void openArtifact(token.slice("artifact:".length));
-      return;
-    }
-    if (token.startsWith("template:")) {
-      startTransition(() => {
-        setTemplateAssetId(token.slice("template:".length));
-        setMode("studio");
-      });
-    }
   }
 
   async function sendManagerMessage(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -340,39 +288,59 @@ export default function App() {
       setStatusMessage("Desktop bridge unavailable. Manager message can only be sent from Electron.");
       return;
     }
-    if (!instruction || !configPath) {
+    if (!instruction || !configPath || sendingManagerMessage) {
       return;
     }
+
+    const stamp = `${Date.now()}`;
+    const userMessageId = `stream:${stamp}:user`;
+    const managerMessageId = `stream:${stamp}:manager`;
+    transientManagerMessageIdRef.current = managerMessageId;
+    setTransientMessages([
+      {
+        id: userMessageId,
+        role: "user",
+        body: instruction,
+        createdAt: "",
+        meta: "request",
+        status: "ready"
+      },
+      {
+        id: managerMessageId,
+        role: "manager",
+        body: "",
+        createdAt: "",
+        meta: "streaming",
+        title: "Manager",
+        status: "streaming"
+      }
+    ]);
     setSendingManagerMessage(true);
+    setStatusMessage("");
+
     try {
-      const result = await electronApi.sendManagerMessage({
+      const result = await electronApi.sendManagerMessageStream({
         configPath,
         instruction,
         managerSessionId: isComposingNewThread ? "" : managerSessionId,
         manageTarget: isComposingNewThread ? "new" : undefined
       });
-      const nextManagerSessionId = String(result.manager_session_id || "").trim();
-      await invalidateDesktopQueries();
-      startTransition(() => {
-        if (nextManagerSessionId) {
-          setManagerSessionId(nextManagerSessionId);
-          setIsComposingNewThread(false);
-        }
-        setMessageDraft("");
-      });
-      const launchedFlowId = String(result.launched_flow?.flow_id || "").trim();
-      if (launchedFlowId) {
-        startTransition(() => {
-          setMode("runtime");
-        });
-        setStatusMessage(`Mission started: ${launchedFlowId}`);
-      } else {
-        setStatusMessage(formatValue(result.message?.response || "Manager updated."));
-      }
+      streamRequestIdRef.current = result.requestId;
     } catch (error) {
-      setStatusMessage(`Manager message failed: ${String((error as Error)?.message || error)}`);
-    } finally {
+      streamRequestIdRef.current = "";
       setSendingManagerMessage(false);
+      setStatusMessage(`Manager stream failed: ${String((error as Error)?.message || error)}`);
+      setTransientMessages((current) =>
+        current.map((message) =>
+          message.id === managerMessageId
+            ? {
+                ...message,
+                body: String((error as Error)?.message || error || "Manager stream failed."),
+                status: "error"
+              }
+            : message
+        )
+      );
     }
   }
 
@@ -383,48 +351,25 @@ export default function App() {
   }
 
   const threadRows = buildManagerThreads(homeQuery.data);
-  const activeThreads = threadRows.filter((summary) => !isHistoricalStatus(summary.status));
-  const historyThreads = threadRows.filter((summary) => isHistoricalStatus(summary.status));
   const currentThread = managerQuery.data?.thread;
   const currentTitle = isComposingNewThread
-    ? "New mission"
+    ? "New thread"
     : currentThread?.title || threadRows.find((summary) => summary.manager_session_id === managerSessionId)?.title || "Manager";
   const currentSubtitle = isComposingNewThread
-    ? "Start with Manager, then let the runtime take over when you are ready."
-    : mode === "runtime"
-      ? supervisorQuery.data?.thread.subtitle || currentThread?.subtitle || "Runtime updates stay inside the same conversation."
-      : mode === "studio"
-        ? templateQuery.data?.thread.subtitle || "Edit contract and policy without leaving the mission thread."
-        : currentThread?.subtitle || "The mission stays continuous through one Manager thread.";
-  const runtimeAvailable = Boolean(linkedFlowId);
-  const studioAvailable = Boolean(templateAssetId || homeQuery.data?.templates?.length);
-  const currentThreadStatus = currentThread?.status || (isComposingNewThread ? "draft" : "active");
+    ? "从空白 Manager thread 开始，先把目标说清楚。"
+    : currentThread?.subtitle || "沿着同一条 Manager conversation 继续往前。";
+  const currentThreadStatus = isComposingNewThread ? "draft" : currentThread?.status || "active";
   const managerBlocks = managerQuery.data?.blocks || [];
-  const runtimeBlocks = supervisorQuery.data?.blocks || [];
-  const studioBlocks = templateQuery.data?.blocks || [];
-  const runtimeStatus = String(supervisorQuery.data?.summary.effective_status || "").trim();
-  const runtimePhase = String(supervisorQuery.data?.summary.effective_phase || "").trim();
-  const activeRole = String(supervisorQuery.data?.summary.active_role_id || "").trim();
-  const canPause = runtimeAvailable && runtimeStatus === "running";
-  const canResume = runtimeAvailable && runtimeStatus === "paused";
-  const managerLabel = composerLabel(mode, isComposingNewThread);
-  const managerPlaceholder = composerPlaceholder(mode, isComposingNewThread);
+  const conversationMessages = [...buildConversationMessages(managerBlocks), ...transientMessages];
+  const managerLabel = composerLabel(isComposingNewThread);
+  const managerPlaceholder = composerPlaceholder(isComposingNewThread);
   const workspaceRoot = String(homeQuery.data?.preflight.workspace_root || "").trim();
-  const templateCount = homeQuery.data?.templates?.length || 0;
-  const surfaceBusy =
-    homeQuery.isFetching ||
-    managerQuery.isFetching ||
-    (mode === "runtime" && supervisorQuery.isFetching) ||
-    (mode === "studio" && templateQuery.isFetching) ||
-    (detailState.kind === "agent" && agentQuery.isFetching);
+  const surfaceBusy = homeQuery.isFetching || (!isComposingNewThread && managerQuery.isFetching);
 
   const surfaceErrorMessage =
     [
       homeQuery.error ? queryErrorText("Thread home", homeQuery.error) : "",
-      managerQuery.error ? queryErrorText("Manager thread", managerQuery.error) : "",
-      mode === "runtime" && supervisorQuery.error ? queryErrorText("Runtime surface", supervisorQuery.error) : "",
-      mode === "studio" && templateQuery.error ? queryErrorText("Studio surface", templateQuery.error) : "",
-      detailState.kind === "agent" && agentQuery.error ? queryErrorText("Agent detail", agentQuery.error) : ""
+      managerQuery.error ? queryErrorText("Manager thread", managerQuery.error) : ""
     ].find(Boolean) || "";
 
   const shellStatusMessage = surfaceErrorMessage || statusMessage;
@@ -438,9 +383,12 @@ export default function App() {
       return (
         <section className="empty-state-shell">
           <div className="empty-state-card">
-            <div className="empty-state-badge">Butler Desktop</div>
+            <div className="empty-state-badge">
+              <SparkleStub />
+              <span>Butler Desktop</span>
+            </div>
             <h2>正在连接默认 Config</h2>
-            <p>启动时会自动挂载仓库里的默认 Butler config，然后直接进入 mission shell。</p>
+            <p>启动时会自动挂载仓库里的默认 Butler config，然后直接进入最小 Manager shell。</p>
           </div>
         </section>
       );
@@ -458,55 +406,20 @@ export default function App() {
     }
     return (
       <MissionShell
-        activeRole={activeRole}
-        canPause={canPause}
-        canResume={canResume}
         composerLabel={managerLabel}
         composerPlaceholder={managerPlaceholder}
         composerRef={composerRef}
-        currentBlockExpanded={(block) => currentBlockExpanded(block.block_id, Boolean(block.expanded_by_default))}
+        conversationMessages={conversationMessages}
         currentSubtitle={currentSubtitle}
         currentThreadStatus={currentThreadStatus}
         currentTitle={currentTitle}
-        isComposingNewThread={isComposingNewThread}
-        linkedFlowId={linkedFlowId}
-        managerBlocks={managerBlocks}
-        managerStage={String(managerQuery.data?.manager_stage || "").trim()}
         messageDraft={messageDraft}
-        mode={mode}
-        onActionTarget={handleActionTarget}
-        onChooseConfig={() => void chooseConfig()}
         onMessageDraftChange={setMessageDraft}
-        onModeChange={(nextMode) => startTransition(() => setMode(nextMode))}
-        onPause={() => void performFlowAction("pause")}
-        onRefresh={() => void refreshAll()}
-        onResume={() => void performFlowAction("resume")}
-        onRoleSelect={(roleId) => {
-          if (!linkedFlowId) {
-            return;
-          }
-          startTransition(() => {
-            setDetailState({ kind: "agent", flowId: linkedFlowId, roleId });
-            setMode("runtime");
-          });
-        }}
-        onSelectAsset={(assetId) => startTransition(() => setTemplateAssetId(assetId))}
-        onSendMessage={(event) => void sendManagerMessage(event)}
-        onSwitchTheme={switchTheme}
-        onToggleBlock={toggleBlock}
-        runtimeAvailable={runtimeAvailable}
-        runtimeBlocks={runtimeBlocks}
-        runtimePhase={runtimePhase}
+        onSendMessage={(submitEvent) => void sendManagerMessage(submitEvent)}
         sendingManagerMessage={sendingManagerMessage}
         statusMessage={shellStatusMessage}
         statusTone={shellStatusTone}
-        studioAvailable={studioAvailable}
-        studioBlocks={studioBlocks}
-        supervisorPayload={supervisorQuery.data}
         surfaceBusy={surfaceBusy}
-        templateCount={templateCount}
-        templatePayload={templateQuery.data}
-        theme={theme}
       />
     );
   }
@@ -514,33 +427,24 @@ export default function App() {
   return (
     <div className="desktop-root" data-theme={theme}>
       <DesktopRail
-        activeThreads={activeThreads}
+        activeManagerSessionId={managerSessionId}
         bridgeAvailable={bridgeAvailable}
         configPath={configPath}
-        currentFlowId={linkedFlowId}
-        historyThreads={historyThreads}
         home={homeQuery.data}
-        homeLoading={homeQuery.isFetching}
+        homeLoading={homeQuery.isLoading}
         isComposingNewThread={isComposingNewThread}
-        managerSessionId={managerSessionId}
-        mode={mode}
         onOpenNewThread={openNewThread}
         onOpenThread={openThread}
-        templateCount={templateCount}
+        onSwitchTheme={switchTheme}
         theme={theme}
+        threadRows={threadRows}
         workspaceRoot={workspaceRoot}
       />
-
       <main className="desktop-main">{renderMainContent()}</main>
-
-      <AgentDetailSheet
-        expandedBlocks={expandedBlocks}
-        onActionTarget={handleActionTarget}
-        onClose={() => setDetailState({ kind: "none" })}
-        onToggle={toggleBlock}
-        open={detailState.kind === "agent"}
-        payload={agentQuery.data}
-      />
     </div>
   );
+}
+
+function SparkleStub() {
+  return <span aria-hidden>*</span>;
 }

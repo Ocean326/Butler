@@ -45,6 +45,24 @@ export interface DesktopDefaultConfigResult {
   configPath?: string;
 }
 
+export type ManagerMessageStreamEventType = "started" | "chunk" | "completed" | "failed";
+
+export interface ManagerMessageStreamStart {
+  requestId: string;
+}
+
+export interface ManagerMessageStreamEvent {
+  requestId: string;
+  type: ManagerMessageStreamEventType;
+  managerSessionId?: string;
+  chunkText?: string;
+  finalResult?: ManagerMessageResult;
+  error?: string;
+  timestamp?: string;
+}
+
+export type ManagerMessageStreamListener = (event: ManagerMessageStreamEvent) => void;
+
 export interface ButlerDesktopApi {
   getHome(options?: DesktopRequestOptions): Promise<WorkspacePayload>;
   getFlow(options: DesktopFlowRequest): Promise<SingleFlowPayload>;
@@ -58,6 +76,8 @@ export interface ButlerDesktopApi {
   getTemplateTeam(options?: TemplateTeamRequest): Promise<TemplateTeamDTO>;
   getDefaultConfigPath(): Promise<DesktopDefaultConfigResult>;
   sendManagerMessage(payload: ManagerMessagePayload): Promise<ManagerMessageResult>;
+  sendManagerMessageStream(payload: ManagerMessagePayload): Promise<ManagerMessageStreamStart>;
+  onManagerMessageEvent(listener: ManagerMessageStreamListener): () => void;
   performAction(payload: DesktopActionPayload): Promise<Record<string, unknown>>;
   chooseConfigPath(): Promise<DesktopChooseConfigResult>;
   openArtifact(request: DesktopArtifactOpenRequest): Promise<{ opened: boolean; reason?: string }>;

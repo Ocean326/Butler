@@ -14,9 +14,11 @@ import type {
   ThreadHomeDTO,
   WorkspacePayload
 } from "../../shared/dto";
+import type { ManagerMessageStreamEvent, ManagerMessageStreamStart } from "../../shared/ipc";
 import { MockFlowWorkbenchAdapter } from "./mock-flow-workbench-adapter";
 
 const execFileAsync = promisify(execFile);
+const MANAGER_STREAM_CHUNK_SIZE = 180;
 
 interface FlowWorkbenchAdapterOptions {
   repoRoot: string;
@@ -192,6 +194,75 @@ export class FlowWorkbenchAdapter {
       args.push("--manager-session-id", payload.managerSessionId);
     }
     return this.invokeBridge<ManagerMessageResult>(args);
+  }
+
+  private chunkManagerResponse(text: string): string[] {
+    const token = String(text || "").trim();
+    if (!token) {
+      return [];
+    }
+    const chunks: string[] = [];
+    for (let index = 0; index < token.length; index += MANAGER_STREAM_CHUNK_SIZE) {
+      chunks.push(token.slice(index, index + MANAGER_STREAM_CHUNK_SIZE));
+    }
+    return chunks;
+  }
+
+  private managerResponseText(result: ManagerMessageResult): string {
+    const payload = result.message || {};
+    const messageText = String(payload.response || payload.message || "").trim();
+    if (messageText) {
+      return messageText;
+    }
+    const latestResponse = String(result.thread?.latest_response || "").trim();
+    if (latestResponse) {
+      return latestResponse;
+    }
+    const flowSummary = String(result.launched_flow?.summary || result.launched_flow?.flow_id || "").trim();
+    return flowSummary || "Manager updated.";
+  }
+
+  async streamManagerMessage(
+    payload: ManagerMessagePayload,
+    requestId: string,
+    emit: (event: ManagerMessageStreamEvent) => void
+  ): Promise<ManagerMessageStreamStart> {
+    emit({
+      requestId,
+      type: "started",
+      managerSessionId: payload.managerSessionId,
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      const finalResult = await this.sendManagerMessage(payload);
+      for (const chunkText of this.chunkManagerResponse(this.managerResponseText(finalResult))) {
+        emit({
+          requestId,
+          type: "chunk",
+          managerSessionId: finalResult.manager_session_id,
+          chunkText,
+          timestamp: new Date().toISOString()
+        });
+      }
+      emit({
+        requestId,
+        type: "completed",
+        managerSessionId: finalResult.manager_session_id,
+        finalResult,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      emit({
+        requestId,
+        type: "failed",
+        managerSessionId: payload.managerSessionId,
+        error: String((error as Error)?.message || error || "Manager stream failed."),
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return { requestId };
   }
 
   async performAction(payload: DesktopActionPayload): Promise<Record<string, unknown>> {

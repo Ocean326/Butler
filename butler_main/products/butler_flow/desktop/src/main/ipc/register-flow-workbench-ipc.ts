@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { dialog, ipcMain, shell } from "electron";
 import type { BrowserWindow } from "electron";
@@ -58,6 +59,13 @@ export function registerFlowWorkbenchIpc(
   });
   ipcMain.handle(DESKTOP_CHANNELS.sendManagerMessage, async (_event, payload) => {
     return adapter.sendManagerMessage(payload);
+  });
+  ipcMain.handle(DESKTOP_CHANNELS.sendManagerMessageStream, async (event, payload) => {
+    const requestId = randomUUID();
+    void adapter.streamManagerMessage(payload, requestId, (streamEvent) => {
+      event.sender.send(DESKTOP_CHANNELS.managerMessageStreamEvent, streamEvent);
+    });
+    return { requestId };
   });
   ipcMain.handle(DESKTOP_CHANNELS.performAction, async (_event, payload) => {
     return adapter.performAction(payload);

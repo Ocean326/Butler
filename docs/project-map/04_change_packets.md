@@ -117,6 +117,7 @@
   - [功能地图](./02_feature_map.md)
   - [真源矩阵](./03_truth_matrix.md)
   - [0409 Butler Desktop Codex 式 Manager Thread 前端升级计划与实施稿](../daily-upgrade/0409/01_butler-desktop_codex式manager-thread前端升级.md)
+  - [0410 Butler Desktop 最小 Manager Shell 与流式对话收口](../daily-upgrade/0410/01_butler-desktop_最小manager-shell与流式对话收口.md)
   - [0405 当日总纲](../daily-upgrade/0405/00_当日总纲.md)
   - [0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](../daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)
   - [0408 Team 与 Desktop 关系、当前进度与下一条主线](../daily-upgrade/0408/01_team与desktop关系_当前进度与下一条主线.md)
@@ -222,6 +223,7 @@
   - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
 - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/products/butler_flow/desktop/ + butler_main/products/butler_flow/desktop_bridge.py + butler_main/products/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars；远程/无头环境下优先走手填 `Config Path Fallback`，不要把原生 file dialog 当唯一验证入口
   - 若这轮目标是 Desktop 前端升级或视觉收口，先读 `0409/01`；当前前台一级对象只保留 `Manager`，左侧应理解为 `New thread + Active / History` 的连续 thread rail，右侧应理解为统一的 mission conversation shell，`Runtime / Studio` 只作为同一主对话里的轻模式
+  - 若这轮目标是“先关掉无关面，只保留最小 Manager shell 做增量开发”，优先读 `0410/01`；当前现役允许把 renderer 临时收窄成“左 rail history + 右侧 Manager conversation”，并通过 `manager-message-stream` IPC 为主对话补最小流式输出，但不得改 shared surface truth owner
   - `0409` 当前 renderer 的现役代码落点已进一步收口为 `desktop/src/renderer/App.tsx + components/mission-shell/MissionShell.tsx + lib/mission-shell.ts + state/queries/use-thread-workbench.ts`；旧 `WorkbenchShell / ManageCenterShell / FlowRail / DetailDrawer / SupervisorStream / WorkflowStrip` 已退役，不要继续在这些旧壳上叠改
   - 若这轮目标是“启动即用”，先看 `desktop/src/main/index.ts`、`desktop/src/main/ipc/register-flow-workbench-ipc.ts`、`desktop/src/preload/index.ts`、`desktop/src/shared/ipc.ts` 与 `desktop/src/renderer/App.tsx`；当前现役口径是启动时固定优先自动挂载仓库内 `butler_main/butler_bot_code/configs/butler_bot.json`，默认路径不可用时才退回手动 attach
   - 若这轮目标是 Desktop 下一条主线，优先做真实 workspace fixture、payload 一致性、runtime contract/receipt/recovery 摘要展示、artifact open / toast / preflight / settings 的最小闭环；不要先扩 watch/publish/packaging

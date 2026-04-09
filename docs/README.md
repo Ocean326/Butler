@@ -25,7 +25,10 @@
 3. [分层地图](./project-map/01_layer_map.md)
 4. [功能地图](./project-map/02_feature_map.md)
 5. [真源矩阵](./project-map/03_truth_matrix.md)
-6. [0409 当日总纲](./daily-upgrade/0409/00_当日总纲.md)
+6. [0410 当日总纲](./daily-upgrade/0410/00_当日总纲.md)
+- 补充：[0410 Butler Desktop 最小 Manager Shell 与流式对话收口](./daily-upgrade/0410/01_butler-desktop_最小manager-shell与流式对话收口.md)
+- 补充：`0410/01` 当前把 Desktop renderer 临时收窄成“左 rail history + 右侧 Manager conversation”的最小前端起点，并把 manager message 增补为最小流式 IPC；runtime/studio/agent detail 暂时退出主路径，但 shared surface truth owner 不变
+7. [0409 当日总纲](./daily-upgrade/0409/00_当日总纲.md)
 - 补充：[0409 Butler Desktop Codex 式 Manager Thread 前端升级计划与实施稿](./daily-upgrade/0409/01_butler-desktop_codex式manager-thread前端升级.md)
 - 补充：`0409/01` 当前把 Butler Desktop 的前台产品形态正式收口为 `Manager` 单主语的 mission conversation shell：左侧只保 `New thread + Active / History` thread continuity，右侧统一为同一条主对话，`Runtime / Studio` 只作为轻模式内联浮现
 - 补充：`0409/01` 同日第二波继续把 Butler Desktop 补到更成熟的桌面壳：renderer 已拆成 `MissionShell` 组件树与统一 query 策略，并把 linked `manager + supervisor` history continuity 固定为 `manager -> supervisor`，对应 Python surface 回归已补齐
