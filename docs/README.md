@@ -29,6 +29,7 @@
 - 补充：[0409 Butler Desktop Codex 式 Manager Thread 前端升级计划与实施稿](./daily-upgrade/0409/01_butler-desktop_codex式manager-thread前端升级.md)
 - 补充：`0409/01` 当前把 Butler Desktop 的前台产品形态正式收口为 `Manager` 单主语的 mission conversation shell：左侧只保 `New thread + Active / History` thread continuity，右侧统一为同一条主对话，`Runtime / Studio` 只作为轻模式内联浮现
 - 补充：`0409/01` 同日第二波继续把 Butler Desktop 补到更成熟的桌面壳：renderer 已拆成 `MissionShell` 组件树与统一 query 策略，并把 linked `manager + supervisor` history continuity 固定为 `manager -> supervisor`，对应 Python surface 回归已补齐
+- 补充：`0409/01` 同日还把 Desktop 启动口径收口为“默认即用”：启动时固定优先自动挂载仓库内 `butler_main/butler_bot_code/configs/butler_bot.json`，默认路径不可用时才退回手动 attach
 - 补充：[0409 Root `AGENTS.md` 轻量化重写与本地 agent 协议收口](./daily-upgrade/0409/02_root_AGENTS轻量化重写与本地agent协议收口.md)
 - 补充：`0409/02` 当前把根 `AGENTS.md` 的现役定位收口为“只服务仓库内本地 agent 的轻量路由协议”；网页端入口继续归根 `README.md`，repo contract 仍只认显式绑定
 7. [0408 当日总纲](./daily-upgrade/0408/00_当日总纲.md)
