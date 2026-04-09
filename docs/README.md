@@ -28,6 +28,8 @@
 6. [0409 当日总纲](./daily-upgrade/0409/00_当日总纲.md)
 - 补充：[0409 Butler Desktop Codex 式 Manager Thread 前端升级计划与实施稿](./daily-upgrade/0409/01_butler-desktop_codex式manager-thread前端升级.md)
 - 补充：`0409/01` 当前把 Butler Desktop 的前台产品形态正式收口为 `Manager` 单主语的 mission conversation shell：左侧只保 `New thread + Active / History` thread continuity，右侧统一为同一条主对话，`Runtime / Studio` 只作为轻模式内联浮现
+- 补充：[0409 Root `AGENTS.md` 轻量化重写与本地 agent 协议收口](./daily-upgrade/0409/02_root_AGENTS轻量化重写与本地agent协议收口.md)
+- 补充：`0409/02` 当前把根 `AGENTS.md` 的现役定位收口为“只服务仓库内本地 agent 的轻量路由协议”；网页端入口继续归根 `README.md`，repo contract 仍只认显式绑定
 7. [0408 当日总纲](./daily-upgrade/0408/00_当日总纲.md)
 - 补充：[0408 Team 与 Desktop 关系、当前进度与下一条主线](./daily-upgrade/0408/01_team与desktop关系_当前进度与下一条主线.md)
 - 补充：`0408/01` 当前把 `team` 与 `desktop` 的关系正式收口为：`team` 是前台 `butler-flow` 的 runtime 语义，`desktop` 是共享 truth 的 projection shell；当前 `codex/flow-desktop` 仍需先对齐 `main@80d595b` 的 canonical runtime 基线，再进入 `P6 Closure Gate`
@@ -120,6 +122,7 @@
 12. 然后按 [改前读包](./project-map/04_change_packets.md) 命中目标专题
 13. 若是跨链路排查或系统级升级，补读 [系统级审计与并行升级协议](./project-map/06_system_audit_and_upgrade_loop.md)
 - 补充：若目标是 agent 默认工作流、文档回写协议、或 vibecoding 的 git / worktree 收口，补读 [0402 Vibecoding Agent 默认收尾动作与 vibe-close 收口](./daily-upgrade/0402/09_vibecoding_agent默认收尾动作与vibe_close收口.md)
+- 补充：若目标是根 `AGENTS.md`、本地 agent 读包 fallback、或 repo contract 显式绑定边界，补读 [0409 Root `AGENTS.md` 轻量化重写与本地 agent 协议收口](./daily-upgrade/0409/02_root_AGENTS轻量化重写与本地agent协议收口.md)、[0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](./daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md) 与 [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](./daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
 - 补充：若目标是 GitHub / ChatGPT 网页端如何理解仓库入口与系统说明，补读 [0402 GitHub / ChatGPT 网页端阅读入口增强](./daily-upgrade/0402/10_github_chatgpt网页端阅读入口增强.md)
 - 补充：若目标是前台 `butler-flow` 长流恢复、实例级静态资产修复、`doctor` 临时角色或 `resume/no-rollout` 自愈链路，补读 [0402 Butler Flow Doctor 恢复角色与实例级静态资产修复](./daily-upgrade/0402/12_butler-flow_doctor恢复角色与实例级静态资产修复.md)
 14. 只有需要长期背景时，再进入 [`concepts/`](./concepts/README.md)

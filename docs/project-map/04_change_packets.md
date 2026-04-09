@@ -364,14 +364,22 @@
   - [Project Map 入口](./README.md)
   - [功能地图](./02_feature_map.md)
   - [真源矩阵](./03_truth_matrix.md)
+  - [0409 Root `AGENTS.md` 轻量化重写与本地 agent 协议收口](../daily-upgrade/0409/02_root_AGENTS轻量化重写与本地agent协议收口.md)
   - [0402 Vibecoding Agent 默认收尾动作与 `vibe-close` 收口](../daily-upgrade/0402/09_vibecoding_agent默认收尾动作与vibe_close收口.md)
   - [0331 根目录归档整理收口](../daily-upgrade/0331/05_根目录归档整理收口.md)
   - [0403 仓库级重构实施稿：三产品 / Platform / Repo Governance](../daily-upgrade/0403/04_仓库级重构实施稿_三产品_platform_repo治理.md)
   - [仓库级重构远景规划（产品 / Platform / Repo Governance 版）](../远景草稿/仓库级重构.md)
   - [文档生命周期](./05_doc_lifecycle.md)
   - [concepts/README.md](../concepts/README.md)
+- 若目标涉及根 `AGENTS.md`、本地 agent 协议、`vibe-close` 收尾或 repo contract 误读，补读：
+  - [0403 Butler Flow Codex 执行根隔离与 `repo_bound` 裁决](../daily-upgrade/0403/01_butler-flow_Codex执行根隔离与repo_bound裁决.md)
+  - [0403 Butler Flow supervisor 控制画像与 agents-flow 治理升级](../daily-upgrade/0403/02_butler-flow_supervisor控制画像与agents-flow治理升级.md)
 - 默认检查：
   - 当前入口是否仍指向最新日期
+  - `AGENTS.md` 是否仍保持“本地 agent 轻量协议”，而不是重新膨胀成长手册
+  - `AGENTS.md` 是否继续把深功能真源指向 `project-map/` 与 `daily-upgrade/`
+  - `AGENTS.md` 是否明确 repo contract 需要显式绑定，而不是暗示 ambient authority
+  - `AGENTS.md` 的日更读取规则是否带 fallback，而不是假设当天 `00_当日总纲.md` 必然存在
   - 历史文档是否被错误列为现役
   - 研究/脑暴材料是否已收敛到 `docs/每日头脑风暴/`，而不是继续写回旧 `docs/每日/`
   - 根目录说明是否与实际根目录保留项一致

@@ -47,18 +47,18 @@ def _bootstrap_repo(root: Path) -> None:
 
 
 class VibeCloseAnalysisTests(unittest.TestCase):
-    def test_docs_and_tools_closeout_escalates_to_system_when_planned(self) -> None:
+    def test_agent_protocol_and_vibe_close_docs_only_system_when_planned(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _bootstrap_repo(root)
-            (root / "tools").mkdir()
-            (root / "tools" / "README.md").write_text("# tools\n", encoding="utf-8")
+            (root / "butler_main").mkdir()
+            (root / "butler_main" / "vibe_close.py").write_text("# docs governance tool\n", encoding="utf-8")
             (root / "AGENTS.md").write_text("# agents updated\n", encoding="utf-8")
 
             analysis = vibe_close.analyze_repo(root, topic="closeout", planned=True, today=date(2026, 4, 2))
 
         self.assertEqual(analysis.change_level, "system")
-        self.assertTrue(analysis.requires_worktree)
+        self.assertFalse(analysis.requires_worktree)
         self.assertIn("docs/project-map/03_truth_matrix.md", analysis.doc_targets)
         self.assertEqual(analysis.suggested_commit_type, "chore")
 
@@ -79,12 +79,12 @@ class VibeCloseAnalysisTests(unittest.TestCase):
 
 
 class VibeCloseApplyTests(unittest.TestCase):
-    def test_apply_system_closeout_creates_branch_and_worktree_then_returns_to_main(self) -> None:
+    def test_apply_docs_only_system_commits_without_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _bootstrap_repo(root)
-            (root / "tools").mkdir()
-            (root / "tools" / "vibe-close").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+            (root / "butler_main").mkdir()
+            (root / "butler_main" / "vibe_close.py").write_text("# updated closeout\n", encoding="utf-8")
             (root / "AGENTS.md").write_text("# updated protocol\n", encoding="utf-8")
 
             result = vibe_close.apply_closeout(
@@ -98,16 +98,47 @@ class VibeCloseApplyTests(unittest.TestCase):
 
             current_branch = _git(root, "branch", "--show-current")
             worktree_list = _git(root, "worktree", "list")
-            head_subject = _git(root, "log", "--oneline", "-1", "chore/agent-closeout")
+            head_subject = _git(root, "log", "--oneline", "-1", "main")
 
         self.assertTrue(result.commit_created)
         self.assertEqual(result.branch_before, "main")
         self.assertEqual(result.branch_after, "main")
-        self.assertEqual(result.commit_branch, "chore/agent-closeout")
+        self.assertEqual(result.commit_branch, "main")
+        self.assertFalse(result.worktree_created)
+        self.assertIn("chore: update agent closeout", head_subject)
+        self.assertEqual(current_branch, "main")
+        self.assertNotIn("agent-closeout", worktree_list)
+
+    def test_apply_system_closeout_creates_branch_and_worktree_then_returns_to_main(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _bootstrap_repo(root)
+            chat_dir = root / "butler_main" / "chat"
+            chat_dir.mkdir(parents=True)
+            (chat_dir / "router.py").write_text("ROUTER = 1\n", encoding="utf-8")
+            (root / "AGENTS.md").write_text("# updated protocol\n", encoding="utf-8")
+
+            result = vibe_close.apply_closeout(
+                root,
+                topic="agent-closeout",
+                summary="update agent closeout",
+                commit_type="chore",
+                push=False,
+                planned=True,
+            )
+
+            current_branch = _git(root, "branch", "--show-current")
+            worktree_list = _git(root, "worktree", "list")
+            head_subject = _git(root, "log", "--oneline", "-1", result.commit_branch)
+
+        self.assertTrue(result.commit_created)
+        self.assertEqual(result.branch_before, "main")
+        self.assertEqual(result.branch_after, "main")
+        self.assertEqual(result.commit_branch, "feat/agent-closeout")
         self.assertTrue(result.worktree_created)
         self.assertIn("chore: update agent closeout", head_subject)
         self.assertEqual(current_branch, "main")
-        self.assertIn("chore/agent-closeout", worktree_list)
+        self.assertIn(result.commit_branch, worktree_list)
 
 
 class VibeCloseCliTests(unittest.TestCase):
