@@ -1,6 +1,6 @@
 # 改前读包
 
-更新时间：2026-04-08
+更新时间：2026-04-09
 状态：现役
 用途：把常见改动压成固定最小读包，避免 agent 自由扩散式读库
 
@@ -10,7 +10,7 @@
 
 1. 仓库根 `README.md`
 2. [docs/README.md](../README.md)
-3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0408/00_当日总纲.md`）
+3. 当天 `docs/daily-upgrade/<MMDD>/00_当日总纲.md`（当前为 `0409/00_当日总纲.md`）
 
 ## `frontdoor`
 
@@ -116,6 +116,7 @@
   - [分层地图](./01_layer_map.md)
   - [功能地图](./02_feature_map.md)
   - [真源矩阵](./03_truth_matrix.md)
+  - [0409 Butler Desktop Codex 式 Manager Thread 前端升级计划与实施稿](../daily-upgrade/0409/01_butler-desktop_codex式manager-thread前端升级.md)
   - [0405 当日总纲](../daily-upgrade/0405/00_当日总纲.md)
   - [0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](../daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)
   - [0408 Team 与 Desktop 关系、当前进度与下一条主线](../daily-upgrade/0408/01_team与desktop关系_当前进度与下一条主线.md)
@@ -220,9 +221,10 @@
 - 若排查 TUI，优先看 `butler_main/products/butler_flow/tui/`、`butler_main/products/butler_flow/events.py` 与 `FlowRuntime` 的 `FlowUiEvent` 接线
   - 若讨论 Butler-flow Desktop/TUI 双轨、shared surface 抽取、Desktop 壳技术选型、Proma 复用边界或执行主计划，先按 `0402` 两份新文档确认：当前规划只以前台 `butler-flow` CLI、sidecars 与现役 TUI payload 为真源，不再引入 `campaign/orchestrator` 的 `mission / branch` 线；Desktop 壳优先吸收 Proma 的 `Electron + React + TypeScript + Jotai` 外壳与通用 UI 包装，但不直接搬 `Proma main/lib` 的 Agent 编排层
 - 若目标已经进入 Butler Desktop 实作，先确认当前现役代码落点已经是 `butler_main/products/butler_flow/desktop/ + butler_main/products/butler_flow/desktop_bridge.py + butler_main/products/butler_flow/surface/`；renderer 只能经由 preload + IPC + bridge 访问 payload，不能直接读 raw sidecars；远程/无头环境下优先走手填 `Config Path Fallback`，不要把原生 file dialog 当唯一验证入口
+  - 若这轮目标是 Desktop 前端升级或视觉收口，先读 `0409/01`；当前前台一级对象只保留 `Manager`，左侧应理解为 `New thread + Active / History` 的连续 thread rail，右侧应理解为统一的 mission conversation shell，`Runtime / Studio` 只作为同一主对话里的轻模式
   - 若这轮目标是 Desktop 下一条主线，优先做真实 workspace fixture、payload 一致性、runtime contract/receipt/recovery 摘要展示、artifact open / toast / preflight / settings 的最小闭环；不要先扩 watch/publish/packaging
   - 若排查 Desktop 是否“已完成”，把验证拆成四层记录：Python bridge 回归、desktop `typecheck/build`、renderer `vitest`、Electron `Playwright` 点击回归；不要把源码编译通过误记成运行时已验证
-- 若目标是当前 thread-first Desktop、`Manager -> Supervisor -> Agent focus` 串联、`History` project threads、`Templates` 单流 team 管理、或 `day/night theme`，先补读 [0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](../daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)；当前 renderer 已不再以旧 `workspace/manage/detail drawer` 为主心智
+- 若目标是当前 Desktop 的历史代码基线、`thread-home / manager-thread / supervisor-thread / agent-focus / template-team` 这套旧 renderer contract，先补读 [0405 Butler Flow Desktop 线程化工作台与 Manager-Supervisor 串联落地](../daily-upgrade/0405/01_butler-flow_desktop线程化工作台与manager-supervisor串联落地.md)；但当前产品壳真源已经升级为 `0409` 的 manager conversation shell，不要再把 `Supervisor / Templates / Agent focus` 当一级页面心智
   - 若这轮还涉及视觉壳层、bridge fallback、history 双 thread 合同或 manager/supervisor 上下文回跳，额外核对 0405 正文中的第二波补充：`thread-home` history 现役是 `manager + supervisor` 双 summary，renderer 不得再用 `flow_id` 猜 thread 身份
 - 若跑 Desktop e2e，优先直接用 `cd butler_main/products/butler_flow/desktop && npm run test:e2e`；当前脚本会先 `build`，再优先使用现有 `DISPLAY`，无图形时自动尝试 `xvfb-run`
   - 若改模板启动或 managed flow materialization，先核对 `flow_definition.json` 是否与 `workflow_state.json` 同步、phase plan 是否仍为 ordered plan 而非任意 DAG

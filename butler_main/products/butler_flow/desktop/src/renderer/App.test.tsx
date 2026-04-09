@@ -417,7 +417,7 @@ describe("Desktop App", () => {
     expect(api.chooseConfigPath).toHaveBeenCalledTimes(1);
   });
 
-  it("attaches a config path manually and renders manager as the default page", async () => {
+  it("attaches a config path manually and renders the manager conversation shell by default", async () => {
     const api = buildApi();
     window.butlerDesktop = api;
     const user = userEvent.setup();
@@ -431,30 +431,10 @@ describe("Desktop App", () => {
     });
     expect(await screen.findByRole("heading", { name: "Desktop 线程工作台" })).toBeInTheDocument();
     expect(screen.getByText(`Config attached: ${CONFIG_PATH}`)).toBeInTheDocument();
-    expect(document.querySelector(".manager-surface")).toBeInTheDocument();
-    expect(document.querySelector(".manager-dock")).toBeInTheDocument();
-  });
-
-  it("renders the manager composer as a dock after the thread stream", async () => {
-    const api = buildApi();
-    window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
-    window.butlerDesktop = api;
-
-    renderDesktopApp(<App />);
-
-    const surface = await waitFor(() => {
-      const node = document.querySelector(".manager-surface");
-      expect(node).toBeTruthy();
-      return node as HTMLElement;
-    });
-    const dock = await waitFor(() => {
-      const node = document.querySelector(".manager-dock");
-      expect(node).toBeTruthy();
-      return node as HTMLElement;
-    });
-
-    expect(surface.lastElementChild).toBe(dock);
-    expect(dock.closest(".thread-stream-panel")).toBeNull();
+    expect(screen.getByText("Mission narrator")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New thread" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mission" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /templates 模板/i })).not.toBeInTheDocument();
   });
 
   it("caps manager composer growth to one third of the viewport", async () => {
@@ -490,15 +470,15 @@ describe("Desktop App", () => {
     });
   });
 
-  it("opens a blank manager thread from New Flow and sends the first prompt with manageTarget=new", async () => {
+  it("opens a blank manager thread and sends the first prompt with manageTarget=new", async () => {
     const api = buildApi();
     window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
     window.butlerDesktop = api;
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: /new flow 新建/i }));
-    expect(await screen.findByRole("heading", { name: "新建 Flow" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "New thread" }));
+    expect(await screen.findByRole("heading", { name: "New mission" })).toBeInTheDocument();
 
     await user.type(await screen.findByLabelText("Start with Manager"), "从空白 manager thread 开始");
     await user.click(screen.getByRole("button", { name: /send to manager/i }));
@@ -513,7 +493,7 @@ describe("Desktop App", () => {
     });
   });
 
-  it("sends a manager message and jumps into supervisor when flow is launched", async () => {
+  it("sends a manager message and switches to runtime mode inside the same shell when flow launches", async () => {
     const api = buildApi();
     window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
     window.butlerDesktop = api;
@@ -534,74 +514,45 @@ describe("Desktop App", () => {
         manageTarget: undefined
       });
     });
-    expect(await screen.findByRole("heading", { name: "Butler Flow Desktop" })).toBeInTheDocument();
+    expect(await screen.findByText("Mission started: flow_mock_desktop")).toBeInTheDocument();
+    expect(await screen.findByText("Runtime Lens")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
   });
 
-  it("opens templates from the rail", async () => {
+  it("opens studio mode from the top controls and keeps it inside the same mission shell", async () => {
     const api = buildApi();
     window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
     window.butlerDesktop = api;
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: /templates 模板/i }));
+    const studioButton = await screen.findByRole("button", { name: "Studio" });
+    await waitFor(() => {
+      expect(studioButton).not.toBeDisabled();
+    });
+    await user.click(studioButton);
 
-    expect(await screen.findByRole("heading", { name: "Desktop Shell Template" })).toBeInTheDocument();
+    expect(await screen.findByText("Studio Lens")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Desktop 线程工作台" })).toBeInTheDocument();
     expect(screen.getByText("管理模板与默认 team。")).toBeInTheDocument();
   });
 
-  it("opens history as a Butler-native project thread list", async () => {
+  it("opens runtime mode and drills into an agent detail sheet without leaving the main thread shell", async () => {
     const api = buildApi();
     window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
     window.butlerDesktop = api;
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: /threads 历史/i }));
+    await user.click(await screen.findByRole("button", { name: "Runtime" }));
 
-    expect(await screen.findByRole("heading", { name: "Project Threads" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /Desktop 线程工作台/i })).not.toHaveLength(0);
-    expect(screen.getAllByRole("button", { name: /Butler Flow Desktop/i })).not.toHaveLength(0);
-  });
-
-  it("opens launched manager history rows as manager threads even when they carry flow ids", async () => {
-    const api = buildApi();
-    window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
-    window.butlerDesktop = api;
-    const user = userEvent.setup();
-
-    renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: /threads 历史/i }));
-    const flowButtons = screen.getAllByRole("button", { name: /Butler Flow Desktop/i });
-    await user.click(flowButtons[flowButtons.length - 1]);
-    expect(await screen.findByRole("heading", { name: "Butler Flow Desktop" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /threads 历史/i }));
-    const managerButtons = screen.getAllByRole("button", { name: /Desktop 线程工作台/i });
-    await user.click(managerButtons[managerButtons.length - 1]);
-
-    expect(await screen.findByRole("heading", { name: "Desktop 线程工作台" })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(api.getManagerThread).toHaveBeenCalledWith({
-        configPath: CONFIG_PATH,
-        managerSessionId: "manager-session-1"
-      });
-    });
-  });
-
-  it("enters agent focus from supervisor role chips", async () => {
-    const api = buildApi();
-    window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
-    window.butlerDesktop = api;
-    const user = userEvent.setup();
-
-    renderDesktopApp(<App />);
-    await user.click(await screen.findByRole("button", { name: /Butler Flow Desktop/i }));
+    expect(await screen.findByText("Runtime Lens")).toBeInTheDocument();
     const implementerButtons = await screen.findAllByRole("button", { name: /implementer/i });
     await user.click(implementerButtons[implementerButtons.length - 1]);
 
-    expect(await screen.findByRole("heading", { name: "implementer · focus" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /back to supervisor/i })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Agent detail" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "implementer · focus" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close agent detail" })).toBeInTheDocument();
   });
 
   it("toggles theme and persists the latest choice", async () => {
@@ -618,11 +569,9 @@ describe("Desktop App", () => {
     expect(screen.getByRole("button", { name: "Night" })).toBeInTheDocument();
   });
 
-  it("keeps manager context aligned when opening a supervisor thread from history", async () => {
+  it("keeps the left rail focused on manager threads and opens alternate history in the same shell", async () => {
     const alternateManagerSessionId = "manager-session-2";
-    const alternateFlowId = "flow_visual_refresh";
     const alternateManagerTitle = "视觉升级 Manager 线程";
-    const alternateSupervisorTitle = "Visual Refresh Flow";
 
     const api = buildApi({
       getThreadHome: vi.fn().mockResolvedValue({
@@ -671,15 +620,15 @@ describe("Desktop App", () => {
             tags: ["managed_flow"]
           },
           {
-            thread_id: `flow:${alternateFlowId}`,
+            thread_id: "flow:flow_visual_refresh",
             thread_kind: "supervisor",
-            title: alternateSupervisorTitle,
+            title: "Visual Refresh Flow",
             subtitle: "Supervisor for the visual refresh",
             status: "running",
             created_at: "2026-04-05 12:30:00",
             updated_at: "2026-04-05 15:00:00",
             manager_session_id: alternateManagerSessionId,
-            flow_id: alternateFlowId,
+            flow_id: "flow_visual_refresh",
             active_role_id: "implementer",
             current_phase: "implement",
             badge: "operator_required",
@@ -700,15 +649,15 @@ describe("Desktop App", () => {
               created_at: "2026-04-05 12:00:00",
               updated_at: "2026-04-05 15:00:00",
               manager_session_id: alternateManagerSessionId,
-              flow_id: alternateFlowId,
+              flow_id: "flow_visual_refresh",
               active_role_id: "",
               current_phase: "delivery",
               badge: "managed_flow",
               tags: ["managed_flow"]
             },
             manager_session_id: alternateManagerSessionId,
-            manage_target: `instance:${alternateFlowId}`,
-            active_manage_target: `instance:${alternateFlowId}`,
+            manage_target: "instance:flow_visual_refresh",
+            active_manage_target: "instance:flow_visual_refresh",
             manager_stage: "delivery",
             confirmation_scope: "",
             blocks: [
@@ -726,77 +675,10 @@ describe("Desktop App", () => {
             draft: {},
             pending_action: {},
             latest_response: "继续视觉升级。",
-            linked_flow_id: alternateFlowId
+            linked_flow_id: "flow_visual_refresh"
           });
         }
         return buildApi().getManagerThread({ managerSessionId });
-      }),
-      getSupervisorThread: vi.fn().mockImplementation(({ flowId }) => {
-        if (flowId === alternateFlowId) {
-          return Promise.resolve({
-            thread: {
-              thread_id: `flow:${alternateFlowId}`,
-              thread_kind: "supervisor",
-              title: alternateSupervisorTitle,
-              subtitle: "Supervisor for the visual refresh",
-              status: "running",
-              created_at: "2026-04-05 12:30:00",
-              updated_at: "2026-04-05 15:00:00",
-              manager_session_id: alternateManagerSessionId,
-              flow_id: alternateFlowId,
-              active_role_id: "implementer",
-              current_phase: "implement",
-              badge: "operator_required",
-              tags: ["managed_flow"]
-            },
-            flow_id: alternateFlowId,
-            summary: {
-              flow_id: alternateFlowId,
-              label: alternateSupervisorTitle,
-              workflow_kind: "managed_flow",
-              effective_status: "running",
-              effective_phase: "implement",
-              attempt_count: 1,
-              max_attempts: 8,
-              max_phase_attempts: 4,
-              max_runtime_seconds: 1800,
-              runtime_elapsed_seconds: 120,
-              goal: "Ship the visual refresh",
-              guard_condition: "verified",
-              approval_state: "operator_required",
-              execution_mode: "medium",
-              session_strategy: "role_bound",
-              active_role_id: "implementer",
-              role_pack_id: "coding_flow",
-              last_judge: "ADVANCE",
-              latest_judge_decision: {},
-              last_operator_action: "",
-              latest_operator_action: {},
-              queued_operator_updates: [],
-              latest_token_usage: {},
-              context_governor: {},
-              latest_handoff_summary: {},
-              updated_at: "2026-04-05 15:00:00"
-            },
-            blocks: [],
-            role_strip: {
-              active_role_id: "implementer",
-              role_sessions: {},
-              pending_handoffs: [],
-              recent_handoffs: [],
-              latest_handoff_summary: {},
-              latest_role_handoffs: {},
-              role_chips: [{ role_id: "implementer", state: "active", is_active: true }],
-              roles: [],
-              execution_mode: "medium",
-              session_strategy: "role_bound",
-              role_pack_id: "coding_flow"
-            },
-            operator_rail: {},
-            latest_handoff: {}
-          });
-        }
-        return buildApi().getSupervisorThread({ flowId });
       })
     });
     window.localStorage.setItem("butler.desktop.configPath", CONFIG_PATH);
@@ -804,12 +686,12 @@ describe("Desktop App", () => {
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: /threads 历史/i }));
-    const flowButtons = screen.getAllByRole("button", { name: /visual refresh flow/i });
-    await user.click(flowButtons[flowButtons.length - 1]);
-    expect(await screen.findByRole("heading", { name: alternateSupervisorTitle })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /threads 历史/i })).not.toBeInTheDocument();
+    const threadButtons = await screen.findAllByRole("button", { name: /manager 线程/i });
+    expect(threadButtons.length).toBeGreaterThanOrEqual(1);
 
-    await user.click(screen.getByRole("button", { name: /manager 管理台/i }));
+    await user.click(await screen.findByRole("button", { name: /视觉升级 manager 线程/i }));
     expect(await screen.findByRole("heading", { name: alternateManagerTitle })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /visual refresh flow/i })).not.toBeInTheDocument();
   });
 });
