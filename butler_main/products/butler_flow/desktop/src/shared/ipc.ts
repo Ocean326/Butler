@@ -41,6 +41,10 @@ export interface DesktopChooseConfigResult {
   configPath?: string;
 }
 
+export interface DesktopDefaultConfigResult {
+  configPath?: string;
+}
+
 export interface ButlerDesktopApi {
   getHome(options?: DesktopRequestOptions): Promise<WorkspacePayload>;
   getFlow(options: DesktopFlowRequest): Promise<SingleFlowPayload>;
@@ -52,6 +56,7 @@ export interface ButlerDesktopApi {
   getSupervisorThread(options: DesktopFlowRequest): Promise<SupervisorThreadDTO>;
   getAgentFocus(options: AgentFocusRequest): Promise<AgentFocusDTO>;
   getTemplateTeam(options?: TemplateTeamRequest): Promise<TemplateTeamDTO>;
+  getDefaultConfigPath(): Promise<DesktopDefaultConfigResult>;
   sendManagerMessage(payload: ManagerMessagePayload): Promise<ManagerMessageResult>;
   performAction(payload: DesktopActionPayload): Promise<Record<string, unknown>>;
   chooseConfigPath(): Promise<DesktopChooseConfigResult>;

@@ -13,6 +13,7 @@ const api: ButlerDesktopApi = {
   getSupervisorThread: (options) => ipcRenderer.invoke(DESKTOP_CHANNELS.getSupervisorThread, options),
   getAgentFocus: (options) => ipcRenderer.invoke(DESKTOP_CHANNELS.getAgentFocus, options),
   getTemplateTeam: (options) => ipcRenderer.invoke(DESKTOP_CHANNELS.getTemplateTeam, options),
+  getDefaultConfigPath: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getDefaultConfigPath),
   sendManagerMessage: (payload) => ipcRenderer.invoke(DESKTOP_CHANNELS.sendManagerMessage, payload),
   performAction: (payload) => ipcRenderer.invoke(DESKTOP_CHANNELS.performAction, payload),
   chooseConfigPath: () => ipcRenderer.invoke(DESKTOP_CHANNELS.chooseConfigPath),

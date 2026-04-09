@@ -9,6 +9,7 @@ export const DESKTOP_CHANNELS = {
   getSupervisorThread: "desktop:get-supervisor-thread",
   getAgentFocus: "desktop:get-agent-focus",
   getTemplateTeam: "desktop:get-template-team",
+  getDefaultConfigPath: "desktop:get-default-config-path",
   sendManagerMessage: "desktop:send-manager-message",
   performAction: "desktop:perform-action",
   chooseConfigPath: "desktop:choose-config-path",

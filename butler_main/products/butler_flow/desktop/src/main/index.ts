@@ -8,11 +8,18 @@ function resolveRepoRoot(): string {
   return path.resolve(__dirname, "../../../../..");
 }
 
+function resolveDefaultConfigPath(repoRoot: string): string {
+  return path.resolve(repoRoot, "butler_main/butler_bot_code/configs/butler_bot.json");
+}
+
 async function bootstrap(): Promise<void> {
   await app.whenReady();
+  const repoRoot = resolveRepoRoot();
   const mainWindow = createMainWindow();
-  const adapter = new FlowWorkbenchAdapter({ repoRoot: resolveRepoRoot() });
-  registerFlowWorkbenchIpc(mainWindow, adapter);
+  const adapter = new FlowWorkbenchAdapter({ repoRoot });
+  registerFlowWorkbenchIpc(mainWindow, adapter, {
+    defaultConfigPath: resolveDefaultConfigPath(repoRoot)
+  });
 
   app.on("activate", () => {
     if (mainWindow.isDestroyed()) {

@@ -44,6 +44,7 @@ export default function App() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [manualConfigPath, setManualConfigPath] = useState("");
   const [configPath, setConfigPath] = useState("");
+  const [startupConfigResolved, setStartupConfigResolved] = useState(false);
   const [theme, setTheme] = useState<"day" | "night">("night");
   const [managerSessionId, setManagerSessionId] = useState("");
   const [isComposingNewThread, setIsComposingNewThread] = useState(false);
@@ -57,16 +58,59 @@ export default function App() {
   const bridgeAvailable = isDesktopBridgeAvailable();
 
   useEffect(() => {
-    const savedConfig = window.localStorage.getItem(CONFIG_STORAGE_KEY) || "";
-    if (savedConfig) {
-      setConfigPath(savedConfig);
-      setManualConfigPath(savedConfig);
-    }
     const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (savedTheme === "day" || savedTheme === "night") {
       setTheme(savedTheme);
     }
-  }, []);
+    if (!bridgeAvailable) {
+      setStartupConfigResolved(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function bootstrapConfig(): Promise<void> {
+      try {
+        const result = await electronApi.getDefaultConfigPath();
+        const defaultConfigPath = normalizeConfigPath(result.configPath || "");
+        if (cancelled) {
+          return;
+        }
+        if (defaultConfigPath) {
+          window.localStorage.setItem(CONFIG_STORAGE_KEY, defaultConfigPath);
+          setConfigPath(defaultConfigPath);
+          setManualConfigPath(defaultConfigPath);
+          return;
+        }
+
+        const savedConfig = normalizeConfigPath(window.localStorage.getItem(CONFIG_STORAGE_KEY) || "");
+        if (savedConfig) {
+          setConfigPath(savedConfig);
+          setManualConfigPath(savedConfig);
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        const savedConfig = normalizeConfigPath(window.localStorage.getItem(CONFIG_STORAGE_KEY) || "");
+        if (savedConfig) {
+          setConfigPath(savedConfig);
+          setManualConfigPath(savedConfig);
+        }
+        setStatusMessage(`Default config attach failed: ${String((error as Error)?.message || error)}`);
+      } finally {
+        if (!cancelled) {
+          setStartupConfigResolved(true);
+        }
+      }
+    }
+
+    void bootstrapConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bridgeAvailable]);
 
   useEffect(() => {
     autoResizeTextarea(composerRef.current);
@@ -389,6 +433,17 @@ export default function App() {
   function renderMainContent() {
     if (!bridgeAvailable) {
       return <BridgeMissingState />;
+    }
+    if (!startupConfigResolved) {
+      return (
+        <section className="empty-state-shell">
+          <div className="empty-state-card">
+            <div className="empty-state-badge">Butler Desktop</div>
+            <h2>正在连接默认 Config</h2>
+            <p>启动时会自动挂载仓库里的默认 Butler config，然后直接进入 mission shell。</p>
+          </div>
+        </section>
+      );
     }
     if (!configPath) {
       return (

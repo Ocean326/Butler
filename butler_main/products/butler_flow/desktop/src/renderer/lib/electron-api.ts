@@ -25,6 +25,7 @@ export const electronApi: ButlerDesktopApi = {
   getSupervisorThread: (options) => requireDesktopBridge().getSupervisorThread(options),
   getAgentFocus: (options) => requireDesktopBridge().getAgentFocus(options),
   getTemplateTeam: (options) => requireDesktopBridge().getTemplateTeam(options),
+  getDefaultConfigPath: () => requireDesktopBridge().getDefaultConfigPath(),
   sendManagerMessage: (payload) => requireDesktopBridge().sendManagerMessage(payload),
   performAction: (payload) => requireDesktopBridge().performAction(payload),
   chooseConfigPath: () => requireDesktopBridge().chooseConfigPath(),

@@ -6,6 +6,7 @@ import App from "./App";
 import { renderDesktopApp } from "../test/render-app";
 
 const CONFIG_PATH = "/tmp/butler/butler_bot.json";
+const DEFAULT_CONFIG_PATH = "/Users/ocean/Documents/Playground/SuperButler/butler_main/butler_bot_code/configs/butler_bot.json";
 
 function buildApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDesktopApi {
   return {
@@ -377,6 +378,9 @@ function buildApi(overrides: Partial<ButlerDesktopApi> = {}): ButlerDesktopApi {
       ok: true,
       action_type: "pause"
     }),
+    getDefaultConfigPath: vi.fn().mockResolvedValue({
+      configPath: CONFIG_PATH
+    }),
     chooseConfigPath: vi.fn().mockResolvedValue({
       canceled: false,
       configPath: CONFIG_PATH
@@ -406,24 +410,46 @@ describe("Desktop App", () => {
 
   it("invokes the native config picker from the empty state", async () => {
     const api = buildApi({
+      getDefaultConfigPath: vi.fn().mockResolvedValue({ configPath: "" }),
       chooseConfigPath: vi.fn().mockResolvedValue({ canceled: true })
     });
     window.butlerDesktop = api;
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: /选择 config/i }));
+    await user.click(await screen.findByRole("button", { name: /选择 config/i }));
 
     expect(api.chooseConfigPath).toHaveBeenCalledTimes(1);
   });
 
-  it("attaches a config path manually and renders the manager conversation shell by default", async () => {
-    const api = buildApi();
+  it("auto-attaches the repo default config and renders the manager conversation shell on launch", async () => {
+    const api = buildApi({
+      getDefaultConfigPath: vi.fn().mockResolvedValue({ configPath: DEFAULT_CONFIG_PATH })
+    });
+    window.butlerDesktop = api;
+
+    renderDesktopApp(<App />);
+
+    await waitFor(() => {
+      expect(api.getDefaultConfigPath).toHaveBeenCalledTimes(1);
+      expect(api.getThreadHome).toHaveBeenCalledWith({ configPath: DEFAULT_CONFIG_PATH });
+    });
+    expect(await screen.findByRole("heading", { name: "Desktop 线程工作台" })).toBeInTheDocument();
+    expect(screen.getByText("Mission narrator")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New thread" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mission" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /templates 模板/i })).not.toBeInTheDocument();
+  });
+
+  it("still allows manual attachment when the repo default config is unavailable", async () => {
+    const api = buildApi({
+      getDefaultConfigPath: vi.fn().mockResolvedValue({ configPath: "" })
+    });
     window.butlerDesktop = api;
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.type(screen.getByLabelText("Config Path Fallback"), CONFIG_PATH);
+    await user.type(await screen.findByLabelText("Config Path Fallback"), CONFIG_PATH);
     await user.click(screen.getByRole("button", { name: "Attach Path" }));
 
     await waitFor(() => {
@@ -431,10 +457,6 @@ describe("Desktop App", () => {
     });
     expect(await screen.findByRole("heading", { name: "Desktop 线程工作台" })).toBeInTheDocument();
     expect(screen.getByText(`Config attached: ${CONFIG_PATH}`)).toBeInTheDocument();
-    expect(screen.getByText("Mission narrator")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "New thread" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Mission" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /templates 模板/i })).not.toBeInTheDocument();
   });
 
   it("caps manager composer growth to one third of the viewport", async () => {
@@ -562,7 +584,7 @@ describe("Desktop App", () => {
     const user = userEvent.setup();
 
     renderDesktopApp(<App />);
-    await user.click(screen.getByRole("button", { name: "Day" }));
+    await user.click(await screen.findByRole("button", { name: "Day" }));
 
     expect(window.localStorage.getItem("butler.desktop.theme")).toBe("day");
     expect(document.querySelector(".desktop-root")).toHaveAttribute("data-theme", "day");

@@ -1,9 +1,18 @@
+import fs from "node:fs";
 import { dialog, ipcMain, shell } from "electron";
 import type { BrowserWindow } from "electron";
 import { DESKTOP_CHANNELS } from "./channels";
 import { FlowWorkbenchAdapter } from "../adapters/flow-workbench-adapter";
 
-export function registerFlowWorkbenchIpc(window: BrowserWindow, adapter: FlowWorkbenchAdapter): void {
+interface DesktopIpcOptions {
+  defaultConfigPath?: string;
+}
+
+export function registerFlowWorkbenchIpc(
+  window: BrowserWindow,
+  adapter: FlowWorkbenchAdapter,
+  options: DesktopIpcOptions = {}
+): void {
   ipcMain.handle(DESKTOP_CHANNELS.getHome, async (_event, options?: { configPath?: string }) => {
     return adapter.getHome(options?.configPath);
   });
@@ -39,6 +48,13 @@ export function registerFlowWorkbenchIpc(window: BrowserWindow, adapter: FlowWor
   );
   ipcMain.handle(DESKTOP_CHANNELS.getTemplateTeam, async (_event, options?: { configPath?: string; assetId?: string }) => {
     return adapter.getTemplateTeam(options?.configPath, options?.assetId);
+  });
+  ipcMain.handle(DESKTOP_CHANNELS.getDefaultConfigPath, async () => {
+    const configPath = String(options.defaultConfigPath || "").trim();
+    if (!configPath || !fs.existsSync(configPath)) {
+      return { configPath: "" };
+    }
+    return { configPath };
   });
   ipcMain.handle(DESKTOP_CHANNELS.sendManagerMessage, async (_event, payload) => {
     return adapter.sendManagerMessage(payload);

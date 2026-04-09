@@ -357,6 +357,10 @@
    - `DetailDrawer.tsx`
    - `SupervisorStream.tsx`
    - `WorkflowStrip.tsx`
+10. `butler_main/products/butler_flow/desktop/src/{main,preload,shared}/`
+    - 新增 “默认 config 路径” IPC
+    - 启动时由主进程把仓库固定默认值暴露给 renderer
+    - renderer 首屏初始化优先自动挂载该路径，不再要求用户每次手动 attach
 
 ## 11. 同日第二波：成熟桌面壳与 projection hardening
 
@@ -371,6 +375,9 @@
    - 本轮仍然没有引入 Desktop 私有 truth
    - Desktop 继续只消费 `preload + IPC + python bridge` 提供的 shared surface
    - `manage_chat / manage_flow / supervisor runtime` 的真语义不在 renderer 内重写
+4. 启动体验继续收口
+   - Desktop 现在默认直接进入可用态，而不是先停在“请选择 config”
+   - 固定默认值只落在 desktop projection 壳，不改变 Butler config/truth 的归属
 
 ## 12. 已执行验证
 
@@ -379,6 +386,7 @@
 3. `cd butler_main/products/butler_flow/desktop && npm run test:renderer`
 4. `cd butler_main/products/butler_flow/desktop && npm run build`
 5. `./.venv/bin/python -m pytest butler_main/butler_bot_code/tests/test_butler_flow_surface.py butler_main/butler_bot_code/tests/test_butler_flow_desktop_bridge.py -q`
+6. `cd butler_main/products/butler_flow/desktop && npm run build`
 
 补记：
 
