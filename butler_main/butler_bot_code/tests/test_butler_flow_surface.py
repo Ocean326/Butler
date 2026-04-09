@@ -453,9 +453,11 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
 
             manager_rows = [item for item in home["history"] if item["thread_kind"] == "manager"]
             supervisor_rows = [item for item in home["history"] if item["thread_kind"] == "supervisor"]
+            linked_history = [item["thread_kind"] for item in home["history"] if item.get("flow_id") == "flow_linked_history"]
 
             self.assertEqual(len(manager_rows), 1)
             self.assertEqual(len(supervisor_rows), 1)
+            self.assertEqual(linked_history, ["manager", "supervisor"])
             self.assertEqual(manager_rows[0]["flow_id"], "flow_linked_history")
             self.assertEqual(supervisor_rows[0]["flow_id"], "flow_linked_history")
             self.assertEqual(supervisor_rows[0]["manager_session_id"], "manager_session_1")

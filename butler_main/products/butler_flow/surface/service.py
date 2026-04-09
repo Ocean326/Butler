@@ -353,12 +353,15 @@ def _flow_summary_as_thread(summary: dict[str, Any], *, manager_session_id: str 
     )
 
 
+def _summary_sort_time(summary: dict[str, Any]) -> str:
+    return str(summary.get("updated_at") or summary.get("created_at") or "").strip()
+
+
 def thread_home_payload(*, config: str | None, limit: int = 20) -> dict[str, Any]:
     snapshot = launcher_snapshot(config=config)
     preflight = dict(snapshot.get("preflight") or {})
     workspace_root = str(preflight.get("workspace_root") or "").strip()
     session_rows = list_manage_sessions(workspace_root, limit=max(1, int(limit or 20))) if workspace_root else []
-    history: list[dict[str, Any]] = []
     manager_history: list[dict[str, Any]] = []
     manager_session_by_flow_id: dict[str, str] = {}
     for row in session_rows:
@@ -372,21 +375,47 @@ def thread_home_payload(*, config: str | None, limit: int = 20) -> dict[str, Any
         if flow_id:
             manager_session_by_flow_id[flow_id] = manager_session_id
         manager_history.append(summary)
-        history.append(summary)
 
+    supervisor_history: list[dict[str, Any]] = []
     flows = list((workspace_payload(config=config, limit=limit).get("flows") or {}).get("items") or [])
     for row in flows:
         flow_id = str(row.get("flow_id") or "").strip()
         if not flow_id:
             continue
-        history.append(
+        supervisor_history.append(
             _flow_summary_as_thread(
                 dict(row or {}),
                 manager_session_id=manager_session_by_flow_id.get(flow_id, ""),
             )
         )
 
-    history.sort(key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""), reverse=True)
+    linked_supervisors_by_flow_id = {
+        str(item.get("flow_id") or "").strip(): item
+        for item in supervisor_history
+        if str(item.get("flow_id") or "").strip()
+    }
+    used_supervisor_flow_ids: set[str] = set()
+    bundles: list[tuple[str, list[dict[str, Any]]]] = []
+
+    for summary in manager_history:
+        flow_id = str(summary.get("flow_id") or "").strip()
+        linked_supervisor = linked_supervisors_by_flow_id.get(flow_id) if flow_id else None
+        rows = [summary]
+        bundle_time = _summary_sort_time(summary)
+        if linked_supervisor:
+            rows.append(linked_supervisor)
+            used_supervisor_flow_ids.add(flow_id)
+            bundle_time = max(bundle_time, _summary_sort_time(linked_supervisor))
+        bundles.append((bundle_time, rows))
+
+    for summary in supervisor_history:
+        flow_id = str(summary.get("flow_id") or "").strip()
+        if flow_id and flow_id in used_supervisor_flow_ids:
+            continue
+        bundles.append((_summary_sort_time(summary), [summary]))
+
+    bundles.sort(key=lambda item: item[0], reverse=True)
+    history = [row for _, rows in bundles for row in rows]
 
     manage_surface = manage_center_payload(config=config, limit=limit)
     template_rows = []

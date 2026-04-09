@@ -3,7 +3,7 @@
 日期：2026-04-09
 状态：已落代码 / 已验收 / 当前真源
 所属层级：Product Surface（主） / L1 `Agent Execution Runtime`（辅）
-定位：把当前 Butler Desktop 从 `0405` 的 thread-first workbench，收口成更接近 Codex 的 `Manager` 单主语 conversation shell
+定位：把当前 Butler Desktop 从 `0405` 的 thread-first workbench，收口成更接近 Codex 的 `Manager` 单主语 conversation shell，并在同日第二波补到更成熟的桌面壳与 projection continuity
 
 关联：
 
@@ -20,7 +20,7 @@
 | 目标功能 | 把 Desktop 前端升级成更接近 Codex 的 `Manager` conversation shell，同时保留 Butler runtime truth 与桥接边界。 |
 | 所属层级 | Product Surface 主落，辅触前台 `butler-flow` 的 runtime 投影读取。 |
 | 当前真源文档 | `0409/00`、本稿、`0408/01_team与desktop关系...`、`0405/01_butler-flow_desktop线程化工作台...`。 |
-| 计划查看的代码与测试 | `desktop/src/renderer/{App.tsx,styles/*.css}`、`desktop/src/shared/dto.ts`、`desktop/src/main/adapters/mock-flow-workbench-adapter.ts`、`desktop/src/renderer/App.test.tsx`、desktop `typecheck / vitest / build`。 |
+| 计划查看的代码与测试 | `desktop/src/renderer/{App.tsx,components/mission-shell/*,lib/mission-shell.ts,state/queries/use-thread-workbench.ts,styles/*.css}`、`surface/service.py`、`butler_bot_code/tests/test_butler_flow_surface.py`、desktop `typecheck / vitest / build`、Python `surface/desktop_bridge` 回归。 |
 
 ## 1. 产品定义
 
@@ -327,24 +327,62 @@
 本轮实际代码已落在：
 
 1. `butler_main/products/butler_flow/desktop/src/renderer/App.tsx`
-   - 把多页 `view` 模型改成单一 Manager conversation shell
-   - 左 rail 改成 `New thread + Active / History`
-   - `Mission / Runtime / Studio` 改成主对话内轻模式
-   - `Supervisor / Agent / Template` 不再做一级页面
-2. `butler_main/products/butler_flow/desktop/src/renderer/styles/workbench.css`
+   - 不再承载整页 UI 细节，而是只负责 state container、bridge 接线、query invalidation 和 action orchestration
+   - 把 “能跑但很重的单文件壳” 收口成可维护的桌面入口
+2. `butler_main/products/butler_flow/desktop/src/renderer/components/mission-shell/MissionShell.tsx`
+   - 提取 rail / mission header / thread body / inline block / composer / agent detail sheet
+   - 让 Manager conversation shell 真正成为稳定组件树，而不是临时拼接页
+3. `butler_main/products/butler_flow/desktop/src/renderer/lib/mission-shell.ts`
+   - 统一 thread continuity 组装、composer 文案、mode 语义、block meta、时间与路径压缩策略
+   - 让 UI 判断逻辑从 React 组件中抽离
+4. `butler_main/products/butler_flow/desktop/src/renderer/state/queries/use-thread-workbench.ts`
+   - 统一 React Query 默认值：`refetchOnWindowFocus=false`、`retry=1`、轻量 `staleTime/gcTime`
+   - 把 `home` 和 thread 细流轮询拆成不同 cadence，减少成熟桌面壳里的抖动感和无意义刷新
+5. `butler_main/products/butler_flow/desktop/src/renderer/styles/workbench.css`
    - 视觉壳从多卡片工作台改成更克制的 Codex 式 conversation layout
    - 顶栏变薄
    - thread list 更紧凑
    - message / inline strip / detail sheet 更轻
-3. `butler_main/products/butler_flow/desktop/src/renderer/App.test.tsx`
-   - 回归测试已切到新的产品形态与交互路径
+6. `butler_main/products/butler_flow/desktop/src/renderer/styles/globals.css`
+   - 同步收口 day/night token、基础布局与桌面级留白
+7. `butler_main/products/butler_flow/surface/service.py`
+   - `thread_home_payload()` 对 linked `manager + supervisor` history 做 bundle 排序
+   - 现役合同固定为：同一 linked flow 中 `manager` 必须先于 `supervisor`，同时整个 bundle 仍按最近活动时间排序
+8. `butler_main/butler_bot_code/tests/test_butler_flow_surface.py`
+   - 新增 linked history 顺序回归：`["manager", "supervisor"]`
+9. 已删除旧的多页 workbench 壳组件：
+   - `WorkbenchShell.tsx`
+   - `ManageCenterShell.tsx`
+   - `FlowRail.tsx`
+   - `DetailDrawer.tsx`
+   - `SupervisorStream.tsx`
+   - `WorkflowStrip.tsx`
 
-## 11. 已执行验证
+## 11. 同日第二波：成熟桌面壳与 projection hardening
+
+1. renderer 成熟化
+   - 第一波已经完成“产品心智收口”，第二波继续完成“实现壳层收口”
+   - 目标不是 demo 页，而是更接近成熟桌面 app 的稳定 shell
+2. projection continuity 补强
+   - Manager-first shell 的前提，不只是视觉上突出 `Manager`
+   - 还要求 history 投影在 linked flow 上保持连续、稳定、可预期
+   - 因此本轮把 shared surface 的 `thread_home` history 排序补成 bundle 合同，而不是在 renderer 里做猜测性修补
+3. 边界保持不变
+   - 本轮仍然没有引入 Desktop 私有 truth
+   - Desktop 继续只消费 `preload + IPC + python bridge` 提供的 shared surface
+   - `manage_chat / manage_flow / supervisor runtime` 的真语义不在 renderer 内重写
+
+## 12. 已执行验证
 
 1. `git diff --check`
 2. `cd butler_main/products/butler_flow/desktop && npm run typecheck`
 3. `cd butler_main/products/butler_flow/desktop && npm run test:renderer`
 4. `cd butler_main/products/butler_flow/desktop && npm run build`
+5. `./.venv/bin/python -m pytest butler_main/butler_bot_code/tests/test_butler_flow_surface.py butler_main/butler_bot_code/tests/test_butler_flow_desktop_bridge.py -q`
+
+补记：
+
+- desktop `build` 过程仍会打印 Node/Vite 的 CJS/ES module warning，但退出码为 `0`，当前不构成阻塞
 
 当前未执行：
 
