@@ -5,7 +5,8 @@ import { registerFlowWorkbenchIpc } from "./ipc/register-flow-workbench-ipc";
 import { createMainWindow } from "./window";
 
 function resolveRepoRoot(): string {
-  return path.resolve(__dirname, "../../../../..");
+  // The compiled Electron main process lives under desktop/dist/main.
+  return path.resolve(__dirname, "../../../../../..");
 }
 
 function resolveDefaultConfigPath(repoRoot: string): string {
