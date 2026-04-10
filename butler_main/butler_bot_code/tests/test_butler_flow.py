@@ -30,7 +30,7 @@ from butler_main.butler_flow import cli as flow_cli  # noqa: E402
 from butler_main.butler_flow.compiler import build_flow_board, build_role_board, build_turn_task_packet, compile_packet  # noqa: E402
 from butler_main.butler_flow.manage_agent import build_manage_chat_prompt, normalize_manage_chat_draft_payload, normalize_manage_chat_result, select_manage_chat_skill  # noqa: E402
 from butler_main.runtime_os.process_runtime import ExecutionReceipt  # noqa: E402
-from butler_main.butler_flow.state import FileRuntimeStateStore, ensure_flow_sidecars, manage_session_dir  # noqa: E402
+from butler_main.butler_flow.state import FileRuntimeStateStore, ensure_flow_sidecars, manage_codex_home_dir, manage_session_dir  # noqa: E402
 from butler_main.butler_flow.role_runtime import current_role_prompt  # noqa: E402
 from butler_main.butler_flow import runtime as flow_runtime  # noqa: E402
 
@@ -391,11 +391,14 @@ class ButlerFlowTests(unittest.TestCase):
                     )
                 )
             payload = json.loads(app._stdout.getvalue())
+            expected_codex_home = str(manage_codex_home_dir(root))
             self.assertEqual(len(runner.calls), 2)
             self.assertEqual(runner.calls[0]["runtime_request"]["codex_mode"], "resume")
             self.assertEqual(runner.calls[0]["runtime_request"]["codex_session_id"], "manager-thread-old")
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_home"], expected_codex_home)
             self.assertEqual(runner.calls[1]["runtime_request"]["codex_mode"], "exec")
             self.assertEqual(runner.calls[1]["runtime_request"]["codex_session_id"], "")
+            self.assertEqual(runner.calls[1]["runtime_request"]["codex_home"], expected_codex_home)
             self.assertEqual(payload["parse_status"], "ok")
             self.assertEqual(payload["manager_session_id"], "manager-thread-fresh")
             self.assertTrue(payload["session_recovery"]["applied"])
@@ -473,6 +476,7 @@ class ButlerFlowTests(unittest.TestCase):
             self.assertEqual(len(runner.calls), 1)
             self.assertEqual(payload["parse_status"], "failed")
             self.assertFalse(payload["session_recovery"]["applied"])
+            self.assertEqual(runner.calls[0]["runtime_request"]["codex_home"], str(manage_codex_home_dir(root)))
 
     def test_manage_chat_requires_existing_pending_action_for_commit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -699,11 +703,14 @@ class ButlerFlowTests(unittest.TestCase):
             pending = self._read_json(session_root / "pending_action.json")
             self.assertEqual(payload["parse_status"], "failed")
             self.assertTrue(payload["session_recovery"]["applied"])
-            self.assertIn("timeout waiting for child process to exit", payload["response"])
+            self.assertIn("解析失败", payload["response"])
+            self.assertNotIn("timeout waiting for child process to exit", payload["response"])
             self.assertIn("timeout waiting for child process to exit", payload["raw_reply"])
             self.assertEqual(pending["preview"], "如果你认可这版模板草稿，我就更新 template。")
             self.assertEqual(turns[-1]["parse_status"], "failed")
             self.assertTrue(turns[-1]["session_recovery"]["applied"])
+            self.assertIn("解析失败", turns[-1]["response"])
+            self.assertNotIn("timeout waiting for child process to exit", turns[-1]["response"])
             self.assertIn("timeout waiting for child process to exit", turns[-1]["session_recovery"]["initial_raw_reply"])
 
     def test_project_loop_defaults_to_medium_role_bound_control_profile(self) -> None:

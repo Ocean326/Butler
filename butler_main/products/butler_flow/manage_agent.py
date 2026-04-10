@@ -9,6 +9,7 @@ from butler_main.agents_os.execution.cli_runner import cli_provider_available
 
 from .constants import EXECUTION_CONTEXT_ISOLATED
 from .flow_definition import coerce_workflow_kind, normalize_phase_plan, resolve_phase_plan
+from .runtime import flow_codex_config_overrides
 from .state import (
     asset_bundle_root,
     normalize_control_profile_payload,
@@ -16,6 +17,7 @@ from .state import (
     normalize_source_items,
     normalize_supervisor_profile_payload,
     now_text,
+    prepare_manage_codex_home,
 )
 
 
@@ -557,20 +559,27 @@ def _compile_manager_references(skill_id: str) -> list[dict[str, str]]:
 
 def _manage_chat_runtime_request(
     *,
+    cfg: dict[str, Any],
+    workspace_root: str,
     flow_state: dict[str, Any] | None,
     manage_target: str,
     manager_session_id: str = "",
 ) -> dict[str, Any]:
-    return {
+    request = {
         "cli": "codex",
         "_disable_runtime_fallback": True,
         "workflow_id": str((flow_state or {}).get("workflow_id") or manage_target or "butler_flow.manage_chat").strip(),
         "agent_id": "butler_flow.manager_chat",
         "codex_mode": "resume" if str(manager_session_id or "").strip() else "exec",
         "codex_session_id": str(manager_session_id or "").strip(),
+        "codex_home": str(prepare_manage_codex_home(workspace_root)),
         "execution_context": EXECUTION_CONTEXT_ISOLATED,
         "execution_scope_id": str(manager_session_id or manage_target or "butler_flow.manage_chat").strip(),
     }
+    overrides = flow_codex_config_overrides(cfg)
+    if overrides:
+        request["config_overrides"] = overrides
+    return request
 
 
 def _is_manage_chat_resume_recoverable(receipt: Any, *, raw_reply: str) -> bool:
@@ -1511,8 +1520,11 @@ def normalize_manage_chat_result(
     normalized_raw_reply = str(raw_reply or result.get("raw_reply") or "").strip()
     normalized_error_text = str(error_text or result.get("error_text") or "").strip()
     response = str(result.get("response") or result.get("answer") or result.get("summary") or "").strip()
-    if normalized_parse_status != "ok" and normalized_raw_reply:
-        response = normalized_raw_reply
+    if normalized_parse_status != "ok":
+        if normalized_parse_status == "empty":
+            response = "Manager 本轮没有返回可展示的回复，请直接重试。"
+        else:
+            response = "Manager 本轮回复解析失败；原始输出已保留用于恢复与排障，请直接重试或继续下一条指令。"
     if not response:
         response = "Manager chat completed."
     action = str(result.get("action") or "none").strip().lower()
@@ -1679,6 +1691,8 @@ def run_manage_chat_agent(
         selected_skill=selected_skill,
     )
     runtime_request = _manage_chat_runtime_request(
+        cfg=cfg,
+        workspace_root=workspace_root,
         flow_state=flow_state,
         manage_target=manage_target,
         manager_session_id=manager_session_id,
@@ -1705,6 +1719,8 @@ def run_manage_chat_agent(
             300,
             cfg,
             _manage_chat_runtime_request(
+                cfg=cfg,
+                workspace_root=workspace_root,
                 flow_state=flow_state,
                 manage_target=manage_target,
                 manager_session_id="",

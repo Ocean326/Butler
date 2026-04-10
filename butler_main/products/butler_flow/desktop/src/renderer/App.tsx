@@ -355,15 +355,13 @@ export default function App() {
   const currentTitle = isComposingNewThread
     ? "New thread"
     : currentThread?.title || threadRows.find((summary) => summary.manager_session_id === managerSessionId)?.title || "Manager";
-  const currentSubtitle = isComposingNewThread
-    ? "从空白 Manager thread 开始，先把目标说清楚。"
-    : currentThread?.subtitle || "沿着同一条 Manager conversation 继续往前。";
   const currentThreadStatus = isComposingNewThread ? "draft" : currentThread?.status || "active";
   const managerBlocks = managerQuery.data?.blocks || [];
   const conversationMessages = [...buildConversationMessages(managerBlocks), ...transientMessages];
   const managerLabel = composerLabel(isComposingNewThread);
   const managerPlaceholder = composerPlaceholder(isComposingNewThread);
   const workspaceRoot = String(homeQuery.data?.preflight.workspace_root || "").trim();
+  const currentWorkspacePath = workspaceRoot || configPath;
   const surfaceBusy = homeQuery.isFetching || (!isComposingNewThread && managerQuery.isFetching);
 
   const surfaceErrorMessage =
@@ -410,9 +408,9 @@ export default function App() {
         composerPlaceholder={managerPlaceholder}
         composerRef={composerRef}
         conversationMessages={conversationMessages}
-        currentSubtitle={currentSubtitle}
         currentThreadStatus={currentThreadStatus}
         currentTitle={currentTitle}
+        currentWorkspacePath={currentWorkspacePath}
         messageDraft={messageDraft}
         onMessageDraftChange={setMessageDraft}
         onSendMessage={(submitEvent) => void sendManagerMessage(submitEvent)}
@@ -428,8 +426,6 @@ export default function App() {
     <div className="desktop-root" data-theme={theme}>
       <DesktopRail
         activeManagerSessionId={managerSessionId}
-        bridgeAvailable={bridgeAvailable}
-        configPath={configPath}
         home={homeQuery.data}
         homeLoading={homeQuery.isLoading}
         isComposingNewThread={isComposingNewThread}
@@ -438,7 +434,6 @@ export default function App() {
         onSwitchTheme={switchTheme}
         theme={theme}
         threadRows={threadRows}
-        workspaceRoot={workspaceRoot}
       />
       <main className="desktop-main">{renderMainContent()}</main>
     </div>

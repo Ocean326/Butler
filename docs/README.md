@@ -28,6 +28,7 @@
 6. [0410 当日总纲](./daily-upgrade/0410/00_当日总纲.md)
 - 补充：[0410 Butler Desktop 最小 Manager Shell 与流式对话收口](./daily-upgrade/0410/01_butler-desktop_最小manager-shell与流式对话收口.md)
 - 补充：`0410/01` 当前把 Desktop renderer 临时收窄成“左 rail history + 右侧 Manager conversation”的最小前端起点，并把 manager message 增补为最小流式 IPC；runtime/studio/agent detail 暂时退出主路径，但 shared surface truth owner 不变
+- 补充：`0410/01` 同日继续把最小 shell 收成更接近 Codex 的静态骨架：右侧 header 只保留题目 / 工作目录 / 状态，对话列与 composer 同宽居中、composer 常驻底侧，左侧 history cards 收成两行轻卡；同时把 manager parse-failed 的 raw Codex 日志从 Desktop 对话正文里剥离，只保留紧凑失败说明与 `parse_status/raw_reply` 诊断链
 7. [0409 当日总纲](./daily-upgrade/0409/00_当日总纲.md)
 - 补充：[0409 Butler Desktop Codex 式 Manager Thread 前端升级计划与实施稿](./daily-upgrade/0409/01_butler-desktop_codex式manager-thread前端升级.md)
 - 补充：`0409/01` 当前把 Butler Desktop 的前台产品形态正式收口为 `Manager` 单主语的 mission conversation shell：左侧只保 `New thread + Active / History` thread continuity，右侧统一为同一条主对话，`Runtime / Studio` 只作为轻模式内联浮现

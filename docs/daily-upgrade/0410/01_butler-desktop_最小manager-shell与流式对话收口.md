@@ -98,6 +98,44 @@ Desktop 当前新增最小 manager stream 能力：
 
 当前这层 stream 的目标是让右侧主对话成立，而不是定义新的 runtime 真语义。
 
+### 2.4 Codex 式静态布局再收口
+
+在最小 shell 成立后，本轮继续把静态骨架往 Codex 方向收紧：
+
+- 左 rail history cards 改成两行轻卡，只保留题目、时间、状态
+- 右侧 header 只保留题目、工作目录、状态
+- 对话列与 composer 同宽居中，composer 常驻底侧
+- Manager 输出占满对话列宽，用户消息右对齐并压到约 3/4 宽
+
+这轮目标不是新增功能，而是先把“第一眼像一个会长期使用的对话产品”这件事做稳。
+
+### 2.5 parse-failed 聊天正文净化
+
+这轮同时修了一个真实产品 bug：
+
+- 过去 manager parse-failed 时，`normalize_manage_chat_result()` 会把 raw non-JSON reply 直接写进 `response`
+- `surface/service.py` 又会把 `response / error_text` 直接投影成 Desktop manager block
+- 结果是 Desktop 会把 `failed to open state db`、plugin sync/network error 等原始 Codex 日志显示成聊天正文
+
+当前现役收口改为：
+
+1. 新生成的 parse-failed turn：
+   - `response / summary` 统一改成紧凑失败说明
+   - `raw_reply / parse_status / session_recovery.initial_raw_reply` 继续保留
+2. 已落盘的旧脏 turn：
+   - surface 投影时也会二次净化，不再把旧 raw log 直接显示到 Desktop 对话
+
+因此这轮不是纯前端遮挡，而是 manager surface 的真实语义修复。
+
+补充根因裁决：
+
+- 当前发现 manager chat 与 flow runtime 之前并不对称
+- flow runtime 已经会给 Codex 准备 workspace-local `codex_home`
+- manager chat 则直接落回全局 `~/.codex`
+- 当全局 `~/.codex/state_5.sqlite` 与本机 Codex 版本出现 migration 差异时，就会在 manager chat 首轮直接吐出 `failed to open state db` 等原始日志，最终触发 parse failure
+
+因此本轮还补上了 manager chat 的独立 `codex_home` 与 flow 同步的 MCP disable overrides，避免它继续吃全局状态与远程 MCP 噪声。
+
 ## 3. 代码落点
 
 本轮代码主要落在：
@@ -121,6 +159,14 @@ Desktop 当前新增最小 manager stream 能力：
    - 复用现有 send 能力生成最小 stream 事件
 9. `desktop/src/renderer/App.test.tsx`
    - 改成最小 Manager shell 的 renderer 回归
+10. `butler_main/products/butler_flow/manage_agent.py`
+   - parse-failed 时不再把 raw non-JSON reply 塞回用户可见 `response`
+11. `butler_main/products/butler_flow/surface/service.py`
+   - manager turn 投影时统一净化 parse-failed 正文，并保留 `raw_reply`
+12. `butler_main/butler_bot_code/tests/test_butler_flow.py`
+   - 回归 parse-failed 持久化与 pending_action 保留
+13. `butler_main/butler_bot_code/tests/test_butler_flow_surface.py`
+   - 回归旧脏 turn 在 Desktop surface 中不会再显示原始 Codex 日志
 
 ## 4. 验收与验证
 
@@ -132,6 +178,7 @@ Desktop 当前新增最小 manager stream 能力：
 4. 发送消息后，能看到真实 started/chunk/completed 驱动的流式更新。
 5. 黑/日模式继续保留。
 6. 这轮没有把 Desktop 改成新的 truth owner。
+7. 旧 manager thread 中若含 parse-failed turn，Desktop 聊天正文也不能再直接显示 raw Codex 日志。
 
 已执行验证：
 
@@ -139,3 +186,6 @@ Desktop 当前新增最小 manager stream 能力：
 2. `cd butler_main/products/butler_flow/desktop && npm run typecheck`
 3. `cd butler_main/products/butler_flow/desktop && npm run test:renderer`
 4. `cd butler_main/products/butler_flow/desktop && npm run build`
+5. `./.venv/bin/pytest butler_main/butler_bot_code/tests/test_butler_flow.py -k parse_failure_preserves_pending_action`
+6. `./.venv/bin/pytest butler_main/butler_bot_code/tests/test_butler_flow_surface.py`
+7. 重启 `butler_main/products/butler_flow/desktop` Electron Desktop 复验运行态

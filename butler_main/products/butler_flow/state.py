@@ -295,6 +295,10 @@ def manage_session_root(workspace: str | Path) -> Path:
     return flow_asset_root(workspace) / "manage_sessions"
 
 
+def manage_codex_home_dir(workspace: str | Path) -> Path:
+    return manage_session_root(workspace) / "_codex_home"
+
+
 def manage_session_dir(workspace: str | Path, manager_session_id: str) -> Path:
     token = str(manager_session_id or "").strip()
     if not token:
@@ -1322,6 +1326,17 @@ def prepare_flow_codex_home(flow_dir: Path) -> Path:
     return target_root
 
 
+def prepare_manage_codex_home(workspace: str | Path) -> Path:
+    source_root = system_codex_home()
+    target_root = manage_codex_home_dir(workspace)
+    target_root.mkdir(parents=True, exist_ok=True)
+    for filename in FLOW_CODEX_HOME_SYNC_FILES:
+        copy_codex_home_file(source_root / filename, target_root / filename)
+    if not (target_root / "config.toml").exists():
+        (target_root / "config.toml").write_text("", encoding="utf-8")
+    return target_root
+
+
 __all__ = [
     "FileRuntimeStateStore",
     "FileTraceStore",
@@ -1351,6 +1366,7 @@ __all__ = [
     "flow_codex_home_dir",
     "flow_dir",
     "flow_bundle_root",
+    "manage_codex_home_dir",
     "manage_draft_file",
     "manage_pending_action_file",
     "manage_session_dir",
@@ -1378,6 +1394,7 @@ __all__ = [
     "default_control_profile",
     "normalize_control_profile_payload",
     "prepare_flow_codex_home",
+    "prepare_manage_codex_home",
     "read_flow_state",
     "read_json",
     "resolve_flow_workspace_root",

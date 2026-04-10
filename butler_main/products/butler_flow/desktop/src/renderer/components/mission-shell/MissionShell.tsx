@@ -1,5 +1,5 @@
 import type { FormEvent, KeyboardEvent, RefObject } from "react";
-import { AlertCircle, FolderSearch, MessageSquareText, Moon, PlusSquare, Send, Sparkles, SunMedium } from "lucide-react";
+import { AlertCircle, FolderSearch, Moon, PlusSquare, Send, Sparkles, SunMedium } from "lucide-react";
 import type { ThreadHomeDTO, ThreadSummaryDTO } from "../../../shared/dto";
 import { compactPathLabel, shortTime, type ShellMessage } from "../../lib/mission-shell";
 
@@ -94,20 +94,16 @@ function ThreadRow({
       onClick={onClick}
       type="button"
     >
+      <strong className="thread-row-title">{summary.title || "Untitled Manager Thread"}</strong>
       <div className="thread-row-topline">
         <span className="thread-row-time">{shortTime(summary.updated_at || summary.created_at)}</span>
         <span className="thread-row-kicker">{summary.status || "thread"}</span>
       </div>
-      <strong className="thread-row-title">{summary.title || "Untitled Manager Thread"}</strong>
-      <span className="thread-row-subtitle">{summary.subtitle || "Continue with Manager"}</span>
     </button>
   );
 }
 
 interface DesktopRailProps {
-  bridgeAvailable: boolean;
-  configPath: string;
-  workspaceRoot: string;
   theme: "day" | "night";
   threadRows: ThreadSummaryDTO[];
   activeManagerSessionId: string;
@@ -120,9 +116,6 @@ interface DesktopRailProps {
 }
 
 export function DesktopRail({
-  bridgeAvailable,
-  configPath,
-  workspaceRoot,
   theme,
   threadRows,
   activeManagerSessionId,
@@ -139,7 +132,7 @@ export function DesktopRail({
         <div className="rail-brand-copy">
           <span className="rail-brand-kicker">SuperButler</span>
           <strong>Butler Desktop</strong>
-          <span>Manager conversation shell</span>
+          <span>Manager conversation</span>
         </div>
         <button
           aria-label={theme === "day" ? "Switch to night mode" : "Switch to day mode"}
@@ -177,17 +170,6 @@ export function DesktopRail({
           )}
         </div>
       </section>
-
-      <div className="rail-footer">
-        <div className="rail-footer-row">
-          <span>Bridge</span>
-          <strong>{bridgeAvailable ? "Connected" : "Browser only"}</strong>
-        </div>
-        <div className="rail-footer-row">
-          <span>Config</span>
-          <strong title={configPath || workspaceRoot}>{compactPathLabel(configPath || workspaceRoot, "Pending attach")}</strong>
-        </div>
-      </div>
     </aside>
   );
 }
@@ -208,7 +190,7 @@ function ConversationMessage({ message }: { message: ShellMessage }) {
 
 interface MissionShellProps {
   currentTitle: string;
-  currentSubtitle: string;
+  currentWorkspacePath: string;
   currentThreadStatus: string;
   conversationMessages: ShellMessage[];
   surfaceBusy: boolean;
@@ -225,7 +207,7 @@ interface MissionShellProps {
 
 export function MissionShell({
   currentTitle,
-  currentSubtitle,
+  currentWorkspacePath,
   currentThreadStatus,
   conversationMessages,
   surfaceBusy,
@@ -243,13 +225,13 @@ export function MissionShell({
     <section className="conversation-shell">
       <header className="mission-header-card">
         <div className="mission-header-main">
-          <span className="mission-kicker">Manager conversation</span>
-          <div className="mission-title-row">
-            <h1>{currentTitle}</h1>
-            <span className="status-chip">{currentThreadStatus || "active"}</span>
-          </div>
-          <p>{currentSubtitle}</p>
+          <span className="mission-kicker">Manager</span>
+          <h1>{currentTitle}</h1>
+          <p className="mission-working-path" title={currentWorkspacePath}>
+            {compactPathLabel(currentWorkspacePath, "Workspace pending")}
+          </p>
         </div>
+        <span className="status-chip">{currentThreadStatus || "active"}</span>
       </header>
 
       {statusMessage ? (
@@ -260,23 +242,13 @@ export function MissionShell({
 
       <div className="conversation-frame">
         <div className="conversation-scroll">
-          <div className="conversation-intro">
-            <div className="conversation-intro-mark">
-              <MessageSquareText size={16} />
-            </div>
-            <div>
-              <strong>Manager only</strong>
-              <p>这轮先只保留 Manager 主对话和真实历史，不让其他模块干扰第一层骨架。</p>
-            </div>
-          </div>
-
           {surfaceBusy ? <div className="conversation-state-card">Syncing manager thread…</div> : null}
 
           <div className="message-column">
             {conversationMessages.length ? (
               conversationMessages.map((message) => <ConversationMessage key={message.id} message={message} />)
             ) : (
-              <div className="conversation-state-card">从这里开始，先把你的目标直接交给 Manager。</div>
+              <div className="conversation-state-card conversation-empty">从这里开始，把这条 thread 的目标直接交给 Manager。</div>
             )}
           </div>
         </div>

@@ -187,6 +187,20 @@ def _manager_stage_kind(stage: str, *, pending_action: dict[str, Any] | None = N
     return "opening"
 
 
+def _manager_parse_failure_summary(parse_status: str) -> str:
+    token = str(parse_status or "").strip().lower()
+    if token == "empty":
+        return "Manager 本轮没有返回可展示的回复，请直接重试。"
+    return "Manager 本轮回复解析失败；原始输出已保留用于恢复与排障，请直接重试或继续下一条指令。"
+
+
+def _manager_turn_response(turn: dict[str, Any]) -> str:
+    parse_status = str(turn.get("parse_status") or "ok").strip().lower()
+    if parse_status not in {"", "ok"}:
+        return _manager_parse_failure_summary(parse_status)
+    return str(turn.get("response") or turn.get("error_text") or "").strip()
+
+
 def _manager_turn_block(
     manager_session_id: str,
     turn: dict[str, Any],
@@ -197,7 +211,7 @@ def _manager_turn_block(
     pending_action = dict(turn.get("pending_action") or {})
     kind = _manager_stage_kind(stage, pending_action=pending_action)
     created_at = str(turn.get("created_at") or now_text()).strip()
-    response = str(turn.get("response") or turn.get("error_text") or "").strip()
+    response = _manager_turn_response(turn)
     draft = dict(turn.get("draft") or {})
     parse_status = str(turn.get("parse_status") or "ok").strip().lower()
     title_map = {
@@ -235,6 +249,7 @@ def _manager_turn_block(
         payload={
             "instruction": str(turn.get("instruction") or "").strip(),
             "response": response,
+            "raw_reply": str(turn.get("raw_reply") or "").strip(),
             "draft": draft,
             "pending_action": pending_action,
             "parse_status": parse_status or "ok",
@@ -543,7 +558,7 @@ def manager_thread_payload(*, config: str | None, manager_session_id: str = "") 
                 tags=["launched"],
             )
         )
-    latest_response = str((turns[-1] or {}).get("response") or "").strip() if turns else ""
+    latest_response = _manager_turn_response(dict(turns[-1] or {})) if turns else ""
     return ManagerThreadDTO(
         thread=summary,
         manager_session_id=token,

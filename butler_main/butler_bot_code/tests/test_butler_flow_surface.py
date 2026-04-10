@@ -438,6 +438,54 @@ class ButlerFlowSurfaceTests(unittest.TestCase):
             self.assertEqual(manager["pending_action"]["preview"], "Create Team + Supervisor")
             self.assertEqual(len(read_manage_turns(root, "manager_session_1")), 2)
 
+    def test_manager_thread_payload_sanitizes_parse_failed_turns(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _config_path(root)
+            session_id = "manager_session_parse_failed"
+            write_manage_session(
+                root,
+                session_id,
+                {
+                    "manager_session_id": session_id,
+                    "active_manage_target": "new",
+                    "manager_stage": "opening",
+                    "updated_at": "2026-04-10 08:47:00",
+                },
+            )
+            append_manage_turn(
+                root,
+                session_id,
+                {
+                    "created_at": "2026-04-10 08:47:00",
+                    "manage_target": "new",
+                    "instruction": "先开一个新 manager thread",
+                    "response": "WARN codex_state::runtime: failed to open state db",
+                    "raw_reply": "WARN codex_state::runtime: failed to open state db",
+                    "error_text": "manager chat returned non-JSON output",
+                    "parse_status": "failed",
+                    "session_recovery": {},
+                    "manager_stage": "discuss",
+                    "draft": {},
+                    "pending_action": {},
+                    "action_ready": False,
+                },
+            )
+
+            manager = flow_surface.manager_thread_payload(config=config, manager_session_id=session_id)
+
+            self.assertEqual(manager["blocks"][0]["status"], "attention")
+            self.assertIn("parse:failed", manager["blocks"][0]["tags"])
+            self.assertIn("解析失败", manager["blocks"][0]["summary"])
+            self.assertNotIn("failed to open state db", manager["blocks"][0]["summary"])
+            self.assertIn("解析失败", manager["blocks"][0]["payload"]["response"])
+            self.assertEqual(
+                manager["blocks"][0]["payload"]["raw_reply"],
+                "WARN codex_state::runtime: failed to open state db",
+            )
+            self.assertIn("解析失败", manager["latest_response"])
+            self.assertNotIn("failed to open state db", manager["latest_response"])
+
     def test_thread_home_keeps_both_manager_and_supervisor_threads_for_linked_flows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
